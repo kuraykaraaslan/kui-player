@@ -1,0 +1,66 @@
+{
+  "name": "@kuraykaraaslan/kui-videoplayer",
+  "version": "0.0.1",
+  "description": "Standalone video player — vanilla TS core + React subpath. HLS/DASH-ready, custom subtitle overlay, speed control, Google Cast, fullscreen, keyboard shortcuts.",
+  "keywords": ["video", "player", "react", "typescript", "chromecast", "subtitles", "kui"],
+  "license": "Apache-2.0",
+  "author": "Kuray Karaaslan <kuraykaraaslan@gmail.com>",
+  "homepage": "https://github.com/kuraykaraaslan/kui-videoplayer#readme",
+  "bugs": { "url": "https://github.com/kuraykaraaslan/kui-videoplayer/issues" },
+  "repository": { "type": "git", "url": "git+https://github.com/kuraykaraaslan/kui-videoplayer.git" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/modules/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/modules/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": ["**/*.css"],
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "react":     { "optional": true },
+    "react-dom": { "optional": true }
+  },
+  "dependencies": {
+    "zustand": "^5.0.0",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-brands-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^3.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "postcss": "^8.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  },
+  "scripts": {
+    "dev":            "vite --config vite.config.demo.ts",
+    "build:js":       "vite build && vite build --config vite.config.react.ts",
+    "build:types":    "tsc -p tsconfig.lib.json",
+    "build:css":      "node scripts/build-css.mjs",
+    "build":          "pnpm build:js && pnpm build:types && pnpm build:css",
+    "build:demo":     "vite build --config vite.config.demo.ts",
+    "prepublishOnly": "pnpm build",
+    "typecheck":      "tsc --noEmit -p tsconfig.lib.json"
+  }
+}
