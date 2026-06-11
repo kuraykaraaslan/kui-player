@@ -2,6 +2,7 @@
 
 @source "../react/**/*.{tsx,ts}";
 @source "../modules/**/*.{ts}";
+@source "../src/**/*.{ts,tsx}";
 
 :root {
   --primary:         #3b82f6;

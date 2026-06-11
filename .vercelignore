@@ -1,0 +1,16 @@
+# Library build artefacts — Vercel only needs the demo bundle.
+dist/
+dist-demo/
+
+# Local-only directories.
+node_modules/
+.pnpm-store/
+
+# Editor / OS noise.
+.vscode/
+.idea/
+.DS_Store
+
+# Test artefacts.
+coverage/
+*.log

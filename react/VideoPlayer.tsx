@@ -162,7 +162,10 @@ function VideoPlayerInner({
         autoPlay={autoPlay}
         loop={loop}
         muted={startMuted}
-        crossOrigin="anonymous"
+        // Only force CORS when subtitle <track>s are present — text tracks are
+        // CORS-restricted. Setting it unconditionally blocks playback of any
+        // video host that doesn't send Access-Control-Allow-Origin.
+        crossOrigin={subtitles && subtitles.length > 0 ? "anonymous" : undefined}
         className="w-full h-full object-contain block"
         onClick={() => engine.togglePlay()}
         style={{ cursor: 'pointer' }}
