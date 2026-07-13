@@ -5,6 +5,7 @@ import { SettingsRow } from './SettingsRow';
 import { SettingsSubMenu } from './SettingsSubMenu';
 import { SettingsOption } from './SettingsOption';
 import { SPEEDS, SUBTITLE_SIZES, SUBTITLE_SIZE_LABELS } from '../../modules/videoplayer/videoplayer.constants';
+import { PLAYER_META } from '../../modules/videoplayer/videoplayer.meta';
 import type {
   QualityOption, SubtitleTrack, AudioTrackOption, SettingsView, SubtitleFontSize,
 } from '../../modules/videoplayer/videoplayer.types';
@@ -12,6 +13,7 @@ import type {
 type SettingsPanelProps = {
   view: SettingsView;
   onChangeView: (view: SettingsView) => void;
+  onAbout: () => void;
   qualities?: QualityOption[];
   subtitles?: SubtitleTrack[];
   audioTracks?: AudioTrackOption[];
@@ -29,7 +31,7 @@ type SettingsPanelProps = {
 
 export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(function SettingsPanel(
   {
-    view, onChangeView, qualities, subtitles, audioTracks,
+    view, onChangeView, onAbout, qualities, subtitles, audioTracks,
     selectedQuality, selectedSubtitle, selectedAudioTrack,
     speed, subtitleFontSize,
     applyQuality, applySpeed, applySubtitle, applySubtitleSize, applyAudioTrack,
@@ -65,6 +67,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
             {audioTracks && audioTracks.length > 1 && (
               <SettingsRow label="Audio Language" value={currentAudioLabel} onClick={() => onChangeView('language')} />
             )}
+            <SettingsRow label="About" value={`v${PLAYER_META.version}`} onClick={onAbout} />
           </div>
         </>
       )}

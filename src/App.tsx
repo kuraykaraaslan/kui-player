@@ -68,10 +68,10 @@ export default function App() {
   return (
     <DemoShell
       brand="KUI Player"
-      version="v0.0.1"
+      version="v0.0.2"
       link={{ href: "https://kuray.dev", label: "kuray.dev" }}
-      github="https://github.com/kuraykaraaslan/kui-videoplayer"
-      npm="https://www.npmjs.com/package/@kuraykaraaslan/kui-videoplayer"
+      github="https://github.com/kuraykaraaslan/kui-player"
+      npm="https://www.npmjs.com/package/@kuraykaraaslan/kui-player"
       sidebarTitle="Library"
       sidebarCount={`${PLAYLIST.length} clips`}
       sidebar={sidebar}

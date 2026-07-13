@@ -16,7 +16,7 @@ export default defineConfig({
         'react',
         'react-dom',
         'react/jsx-runtime',
-        '@kuraykaraaslan/kui-videoplayer',
+        '@kuraykaraaslan/kui-player',
         '@fortawesome/react-fontawesome',
         '@fortawesome/fontawesome-svg-core',
         '@fortawesome/free-solid-svg-icons',

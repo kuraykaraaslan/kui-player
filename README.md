@@ -1,11 +1,11 @@
-# kui-videoplayer
+# kui-player
 
-[![npm](https://img.shields.io/npm/v/@kuraykaraaslan/kui-videoplayer.svg)](https://www.npmjs.com/package/@kuraykaraaslan/kui-videoplayer)
-[![license](https://img.shields.io/npm/l/@kuraykaraaslan/kui-videoplayer.svg)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/@kuraykaraaslan/kui-player.svg)](https://www.npmjs.com/package/@kuraykaraaslan/kui-player)
+[![license](https://img.shields.io/npm/l/@kuraykaraaslan/kui-player.svg)](./LICENSE)
 
 A standalone, framework-light HTML5 video player built on **React 18/19**, **Zustand** and **Tailwind CSS v4**. Ships a framework-agnostic TypeScript core (`VideoPlayerEngine`) that wraps a native `<video>` element, plus a batteries-included React subpath.
 
-> **Status**: early-stage (`0.0.1`). Public API is unstable; expect breaking changes between patch versions until `0.1.0`.
+> **Status**: early-stage (`0.0.2`). Public API is unstable; expect breaking changes between patch versions until `0.1.0`.
 
 ---
 
@@ -27,18 +27,18 @@ A standalone, framework-light HTML5 video player built on **React 18/19**, **Zus
 ## Install
 
 ```bash
-pnpm add @kuraykaraaslan/kui-videoplayer react react-dom
+pnpm add @kuraykaraaslan/kui-player react react-dom
 ```
 
-`react` and `react-dom` are **optional peerDependencies** — only required if you import from `@kuraykaraaslan/kui-videoplayer/react`. `zustand` ships as a direct dependency.
+`react` and `react-dom` are **optional peerDependencies** — only required if you import from `@kuraykaraaslan/kui-player/react`. `zustand` ships as a direct dependency.
 
 ---
 
 ## Quick start — React
 
 ```tsx
-import { VideoPlayer } from "@kuraykaraaslan/kui-videoplayer/react";
-import "@kuraykaraaslan/kui-videoplayer/styles.css";
+import { VideoPlayer } from "@kuraykaraaslan/kui-player/react";
+import "@kuraykaraaslan/kui-player/styles.css";
 
 export default function App() {
   return (
@@ -74,7 +74,7 @@ Import `styles.css` **once** at your app root — it ships the compiled Tailwind
 The `VideoPlayerEngine` attaches to any `HTMLVideoElement` and drives a Zustand vanilla store — no React dependency, mirroring the role of the `Viewer` class in [`@kuraykaraaslan/kui-viewer`](https://www.npmjs.com/package/@kuraykaraaslan/kui-viewer).
 
 ```ts
-import { VideoPlayerEngine } from "@kuraykaraaslan/kui-videoplayer";
+import { VideoPlayerEngine } from "@kuraykaraaslan/kui-player";
 
 const video = document.querySelector("video")!;
 const engine = new VideoPlayerEngine({ startMuted: true, autoHideControls: true });
@@ -135,9 +135,9 @@ Active while the player container is focused:
 
 | Specifier | Contents |
 |---|---|
-| `@kuraykaraaslan/kui-videoplayer` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
-| `@kuraykaraaslan/kui-videoplayer/react` | React `<VideoPlayer />` plus hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`) |
-| `@kuraykaraaslan/kui-videoplayer/styles.css` | Compiled Tailwind v4 tokens. Import once at the app root |
+| `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
+| `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />` plus hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`) |
+| `@kuraykaraaslan/kui-player/styles.css` | Compiled Tailwind v4 tokens. Import once at the app root |
 
 ---
 
