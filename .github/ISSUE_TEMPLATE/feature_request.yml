@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest something the player should do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check `phases/README.md` first — the roadmap may already cover
+        this, in which case a comment there is more useful than a new issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that the player makes hard today?
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+    validations: { required: true }
+  - type: textarea
+    id: size
+    attributes:
+      label: Bundle cost
+      description: >
+        Every kilobyte in the first load is a cost to every consumer. Could this
+        live behind a lazy chunk, an adapter, or an opt-in prop?
+  - type: checkboxes
+    id: deps
+    attributes:
+      label: Dependencies
+      options:
+        - label: This needs no new runtime dependency (or explains why one is unavoidable)

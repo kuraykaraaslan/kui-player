@@ -1,5 +1,5 @@
-import type { AudioTrackOption, QualityOption } from '../videoplayer.types';
-import { heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types';
+import type { AudioTrackOption, QualityOption } from '../videoplayer.types.js';
+import { heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types.js';
 
 // ─── the slice of the dash.js surface we actually touch ──────────────────────
 

@@ -5,7 +5,8 @@
 
 A standalone, framework-light HTML5 video player. Ships a framework-agnostic TypeScript core (`VideoPlayerEngine`) that wraps a native `<video>` element, plus a batteries-included React subpath. **No CSS framework, no icon font, no styling opinions imposed on your app** — one scoped stylesheet themed through CSS custom properties.
 
-> **Status**: early-stage (`0.0.2`). Public API is unstable; expect breaking changes between patch versions until `0.1.0`.
+> **Status**: `0.0.x`, heading for `0.1.0`. The API is stable from here on — see
+> [Upgrading to 0.1.0](#upgrading-to-010) for what changed on the way.
 
 ---
 
@@ -27,12 +28,13 @@ A standalone, framework-light HTML5 video player. Ships a framework-agnostic Typ
 - **Error surface** — a readable overlay with a retry button, plus backed-off automatic retries on network failures (never an endless spinner)
 - **Position-preserving source switching** — quality changes keep time, play state, rate and volume
 - **`playsInline`** by default, so iOS Safari plays in the page instead of its own fullscreen player
-- **19.7 kB gzipped** React subpath, **28 kB** single-file embed — budgets enforced in the build
+- **19.6 kB gzipped** React subpath, **28 kB** single-file embed — budgets enforced in the build
 - **One runtime dependency** (`zustand`), no CSS framework, no icon font
 - **Themed with CSS custom properties** — `--kui-accent` and friends, scoped to `.kui-player`
 - **Bring your own icons** — `icons={{ play: <MyIcon /> }}`
+- **Accessible by default** — full keyboard operation, focus trapping, a live region, AA contrast, axe-clean
 - Framework-agnostic core: Zustand vanilla store, no React imports below `react/`
-- Strict TypeScript throughout
+- Strict TypeScript throughout, tested with Vitest + Playwright
 
 ---
 
@@ -368,6 +370,30 @@ engine.store.subscribe((s) => {
 
 ---
 
+## Accessibility
+
+The player is operable without a mouse and audible without a screen.
+
+- **Every control is reachable by `Tab`** and shows a visible focus ring. While
+  focus is inside the player the controls never auto-hide — tabbing to a faded-out
+  button is a bug, not a feature.
+- **The seek bar is a real slider**: `←`/`→` nudge by 5 s, `PageUp`/`PageDown` by
+  10 %, `Home`/`End` jump to the ends, and it announces its position as
+  *"2:14 of 4:20"* rather than a meaningless percentage.
+- **The settings menu and the About dialog trap focus**, close on `Esc`, and hand
+  focus back to the control that opened them.
+- **A polite live region** announces what a sighted viewer can see: playing,
+  paused, muted, quality, subtitle and audio-track changes, fullscreen, PiP,
+  Cast, and errors. The clock is deliberately *not* announced.
+- **Contrast** across the chrome meets WCAG AA (4.5:1), including the subtitle
+  overlay and the muted text ramps.
+- **`prefers-reduced-motion`** collapses the transitions and slows the spinner.
+
+`pnpm test` runs an axe-core scan over the player at rest, with the menu open,
+with the dialog open and in its error state; all four must come back clean.
+
+---
+
 ## Bundle size
 
 Budgets are enforced by `pnpm size` (and in CI); a build that busts one fails.
@@ -375,14 +401,22 @@ Budgets are enforced by `pnpm size` (and in CI); a build that busts one fails.
 | Bundle | gzip | budget |
 |---|---|---|
 | `dist/index.js` — vanilla core | 8.2 kB | 9 kB |
-| `dist/react/*` — React subpath, first load | 19.7 kB | 20 kB |
-| …plus the lazy chunks (settings, about, cast) | 23.7 kB | 26 kB |
-| `dist/embed.js` — single-file embed | 28.3 kB | 35 kB |
-| `dist/styles.css` | 3.3 kB | 4 kB |
+| `dist/react/*` — React subpath, first load | 19.6 kB | 20 kB |
+| …plus every lazy chunk | 24.2 kB | 26 kB |
+| `dist/embed.js` — single-file embed | 29.8 kB | 35 kB |
+| `dist/styles.css` | 3.5 kB | 4 kB |
 
-Three things are deliberately **not** in the first load: the settings panel, the About
-dialog and the Google Cast integration. Each is a lazy chunk, so a player rendered with
-`enableCast={false}` never downloads a byte of Cast code.
+Four things are deliberately **not** in the first load, each a separate chunk:
+
+| Chunk | Downloaded when |
+|---|---|
+| Settings panel | the viewer opens the menu |
+| About dialog | the viewer opens it from the menu |
+| Google Cast | `enableCast` is on — never with `enableCast={false}` |
+| Touch gestures | the device reports a coarse pointer |
+
+So a desktop player with Cast off ships neither the Cast SDK plumbing nor the gesture
+engine, and a phone loads the gestures right after first paint.
 
 The single-file embed renders with [Preact](https://preactjs.com/) through `preact/compat`
 — react-dom alone is more than the entire size budget for a set of video controls. This
@@ -405,15 +439,43 @@ applies to `dist/embed.js` only; the React subpath uses your React.
 
 ---
 
+## Upgrading to 0.1.0
+
+`0.0.x` was pre-release; these are the breaking changes on the way to `0.1.0`.
+
+| Change | Migration |
+|---|---|
+| The player ships its own scoped stylesheet instead of Tailwind output | Importing `styles.css` is now optional. Remove it, or keep it and pass `injectStyles={false}`. Any CSS you wrote against the old utility classes must move to the `--kui-*` custom properties |
+| FontAwesome is gone | Nothing to do unless you relied on the icon markup; swap glyphs with the `icons` prop |
+| `clsx` and `tailwind-merge` are no longer dependencies | Remove them if you installed them for this package |
+| Store field `seekHoverX` (pixels) → `seekHoverRatio` (0–1) | Only affects code reading the store directly; multiply by the bar width if you need pixels |
+| `useTouchGestures` is no longer exported from `/react` | It is loaded internally on touch devices; there is no supported way to call it directly |
+| Adapters (`createHlsAdapter`, `createDashAdapter`) are exported from the package root, not `/react` | `import { createHlsAdapter } from "@kuraykaraaslan/kui-player"` |
+| `audioTracks` no longer needs a prop to work | Tracks are discovered from the element or the adapter; the prop is a fallback for sources that expose none |
+
+New since `0.0.2`: HLS/DASH adapters, real audio-track switching, Picture-in-Picture,
+touch gestures, iOS fullscreen, an error surface with retry, and the accessibility work
+above.
+
+---
+
 ## Development
 
 ```bash
 pnpm install
-pnpm dev          # Vite playground at http://localhost:5173
-pnpm build        # JS + .d.ts + styles.css + embed → dist/
-pnpm size         # enforce the gzip budgets in package.json
-pnpm typecheck    # tsc --noEmit against the library config
+pnpm dev            # Vite playground at http://localhost:5173
+pnpm build          # JS + .d.ts + styles.css + embed → dist/
+pnpm test           # unit + component tests (Vitest, jsdom, axe-core)
+pnpm test:e2e       # Playwright, against tests/e2e/app
+pnpm size           # enforce the gzip budgets in package.json
+pnpm lint           # ESLint
+pnpm typecheck      # tsc --noEmit against the library config
+pnpm check:package  # publint + arethetypeswrong on the packed tarball
 ```
+
+CI runs all of the above on every pull request, plus the end-to-end suite across
+Chromium, Firefox, WebKit and a mobile emulation. See
+[CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
@@ -425,6 +487,7 @@ pnpm typecheck    # tsc --noEmit against the library config
 - `react/icons/` — the inline SVG icon set (and the override mechanism).
 - `react/styles/` — `player.css`, the one stylesheet, plus its injection helpers.
 - `src/` — Vite dev playground (not bundled into the published package).
+- `tests/` — unit and component tests, plus the end-to-end harness in `tests/e2e/app`.
 - `scripts/` — build helpers (`build-css.mjs`, `check-size.mjs`).
 - `phases/` — the roadmap: what is built, what is next, and why.
 

@@ -1,31 +1,51 @@
 import {
-  Suspense, lazy, useCallback, useEffect, useRef, useState,
+  Suspense, lazy, useCallback, useEffect, useRef, useState, useSyncExternalStore,
   type ReactNode, type RefObject,
 } from 'react';
-import { cn } from '../libs/utils/cn';
-import { formatTime } from '../modules/videoplayer/videoplayer.format';
-import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine';
-import { useVideoPlayerStore } from './hooks/useVideoPlayerStore';
-import { ControlRow } from './parts/ControlRow';
-import { ProgressBar } from './parts/ProgressBar';
+import { cn } from '../libs/utils/cn.js';
+import { formatTime } from '../modules/videoplayer/videoplayer.format.js';
+import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine.js';
+import { useVideoPlayerStore } from './hooks/useVideoPlayerStore.js';
+import { ControlRow } from './parts/ControlRow.js';
+import { ProgressBar } from './parts/ProgressBar.js';
 import {
-  CastOverlay, ErrorOverlay, GestureOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
-} from './parts/Overlays';
-import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types';
-import { useSubtitleCues } from './hooks/useSubtitleCues';
-import { useTouchGestures } from './hooks/useTouchGestures';
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import type { CastApi } from './parts/CastController';
+  CastOverlay, ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
+} from './parts/Overlays.js';
+import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types.js';
+import { useSubtitleCues } from './hooks/useSubtitleCues.js';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
+import { useFocusTrap } from './hooks/useFocusTrap.js';
+import { usePlayerAnnouncements } from './hooks/usePlayerAnnouncements.js';
+import type { CastApi } from './parts/CastController.js';
 
 // Split out of the main chunk: the settings menu and the About dialog are only
 // reachable after a click, and the Cast SDK plumbing never loads at all unless
 // `enableCast` is on.
-const SettingsPanel = lazy(() => import('./parts/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
-const AboutModal = lazy(() => import('./parts/AboutModal').then((m) => ({ default: m.AboutModal })));
-const CastController = lazy(() => import('./parts/CastController'));
+const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => ({ default: m.SettingsPanel })));
+const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
+const CastController = lazy(() => import('./parts/CastController.js'));
+const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
+
+/*
+ * Touch gestures are pointless — and not worth downloading — without a coarse
+ * pointer. Read as an external store so the server snapshot is a plain `false`
+ * (identical markup everywhere) and a hybrid device that switches input mode is
+ * picked up without a re-mount.
+ */
+const COARSE_POINTER = '(pointer: coarse)';
+const coarseQuery = () =>
+  (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(COARSE_POINTER) : null);
+
+function subscribeCoarsePointer(onChange: () => void): () => void {
+  const mq = coarseQuery();
+  mq?.addEventListener('change', onChange);
+  return () => mq?.removeEventListener('change', onChange);
+}
+const hasCoarsePointer = () => coarseQuery()?.matches ?? false;
+const hasCoarsePointerOnServer = () => false;
 import type {
   AudioTrackOption, CastState, GestureOptions, QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
-} from '../modules/videoplayer/videoplayer.types';
+} from '../modules/videoplayer/videoplayer.types.js';
 
 /**
  * The controls chrome of the player — everything that renders around a `<video>`
@@ -94,7 +114,7 @@ export function VideoPlayerChrome({
   const isPip             = useVideoPlayerStore(s => s.isPip);
   const pipSupported      = useVideoPlayerStore(s => s.pipSupported);
   const showControls      = useVideoPlayerStore(s => s.showControls);
-  const seekHoverX        = useVideoPlayerStore(s => s.seekHoverX);
+  const seekHoverRatio    = useVideoPlayerStore(s => s.seekHoverRatio);
   const showSettings      = useVideoPlayerStore(s => s.showSettings);
   const settingsView      = useVideoPlayerStore(s => s.settingsView);
   const selectedQuality   = useVideoPlayerStore(s => s.selectedQuality);
@@ -110,9 +130,8 @@ export function VideoPlayerChrome({
   const setSettingsView   = useVideoPlayerStore(s => s.setSettingsView);
   const setSelectedQuality   = useVideoPlayerStore(s => s.setSelectedQuality);
   const setSelectedSubtitle  = useVideoPlayerStore(s => s.setSelectedSubtitle);
-  const setSelectedAudioTrack= useVideoPlayerStore(s => s.setSelectedAudioTrack);
   const setSubtitleFontSize  = useVideoPlayerStore(s => s.setSubtitleFontSize);
-  const setSeekHoverX        = useVideoPlayerStore(s => s.setSeekHoverX);
+  const setSeekHoverRatio    = useVideoPlayerStore(s => s.setSeekHoverRatio);
 
   const isCasting = castState === 'connected';
 
@@ -129,9 +148,10 @@ export function VideoPlayerChrome({
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
   useKeyboardShortcuts({ containerRef, engine });
-  const { feedback, suppressClick, handlers: gestureHandlers } = useTouchGestures({
-    containerRef, videoRef, engine, gestures, enabled: !isCasting,
-  });
+  const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
+  const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
+  const suppressRef = useRef<() => boolean>(() => false);
+  const suppressClick = useCallback(() => suppressRef.current(), []);
 
   // An adapter (hls.js / dash.js) publishes real renditions; when it does they
   // replace the consumer's static `qualities` list and gain an "Auto" entry.
@@ -169,6 +189,35 @@ export function VideoPlayerChrome({
 
   const closeSettings = useCallback(() => { setShowSettings(false); setSettingsView('main'); }, [setShowSettings, setSettingsView]);
 
+  // Keyboard focus stays inside an open menu or dialog, and returns to the
+  // control that opened it when they close.
+  useFocusTrap(settingsPanelRef, showSettings, closeSettings);
+
+  /*
+   * Which input device put focus where it is. This is the `:focus-visible`
+   * heuristic, tracked ourselves so the behaviour is identical everywhere and
+   * testable: keyboard focus pins the chrome open, a click or tap does not.
+   */
+  const modality = useRef<'keyboard' | 'pointer'>('keyboard');
+  const notePointer = useCallback(() => { modality.current = 'pointer'; }, []);
+  const noteKeyboard = useCallback(() => { modality.current = 'keyboard'; }, []);
+
+  // A *control* holding keyboard focus must never fade out from under the
+  // viewer. Focus on the container itself is only what a click or tap leaves
+  // behind — pinning on that would disable auto-hide and tap-to-toggle.
+  const handleFocusIn = useCallback((e: React.FocusEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target === e.currentTarget) return;
+    if (!target.closest('button, a, input, [role="slider"]')) return;
+    // An open menu or dialog always pins, however it was opened.
+    const inOverlay = target.closest('.kui-panel, .kui-modal') !== null;
+    if (inOverlay || modality.current === 'keyboard') engine.setKeyboardFocus(true);
+  }, [engine]);
+  const handleFocusOut = useCallback((e: React.FocusEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    engine.setKeyboardFocus(false);
+  }, [engine]);
+
   const applySpeed       = useCallback((s: number) => { engine.setSpeed(s); closeSettings(); }, [engine, closeSettings]);
   // Snapshot position/play state *before* the consumer swaps the source, so the
   // engine can restore it on the next `loadedmetadata` — whichever way the swap
@@ -192,12 +241,19 @@ export function VideoPlayerChrome({
   const applyAudioTrack  = useCallback((i: number) => { engine.setAudioTrack(i); onAudioTrackChange?.(i); closeSettings(); }, [engine, onAudioTrackChange, closeSettings]);
   const applySubtitleSize= useCallback((sz: SubtitleFontSize) => { setSubtitleFontSize(sz); setSettingsView('main'); }, [setSubtitleFontSize, setSettingsView]);
 
-  const seekToClientX = useCallback((clientX: number) => {
+  /** Pointer x → 0–1 along the bar. Reading layout is fine in a handler. */
+  const ratioAt = useCallback((clientX: number) => {
     const bar = progressRef.current;
-    if (!bar) return;
+    if (!bar) return null;
     const rect = bar.getBoundingClientRect();
-    engine.seekByRatio((clientX - rect.left) / rect.width);
-  }, [engine]);
+    if (rect.width === 0) return null;
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }, []);
+
+  const seekToClientX = useCallback((clientX: number) => {
+    const ratio = ratioAt(clientX);
+    if (ratio !== null) engine.seekByRatio(ratio);
+  }, [engine, ratioAt]);
 
   const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     seekToClientX(e.clientX);
@@ -214,27 +270,20 @@ export function VideoPlayerChrome({
   const handleScrubMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!scrubbing.current) return;
     e.preventDefault();
-    const bar = progressRef.current;
-    if (bar) {
-      const rect = bar.getBoundingClientRect();
-      setSeekHoverX(Math.max(0, Math.min(rect.width, e.clientX - rect.left)));
-    }
+    setSeekHoverRatio(ratioAt(e.clientX));
     seekToClientX(e.clientX);
-  }, [seekToClientX, setSeekHoverX]);
+  }, [ratioAt, seekToClientX, setSeekHoverRatio]);
 
   const handleScrubEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!scrubbing.current) return;
     scrubbing.current = false;
     e.currentTarget.releasePointerCapture?.(e.pointerId);
-    if (e.pointerType === 'touch') setSeekHoverX(null);
-  }, [setSeekHoverX]);
+    if (e.pointerType === 'touch') setSeekHoverRatio(null);
+  }, [setSeekHoverRatio]);
 
   const handleSeekMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const bar = progressRef.current;
-    if (!bar) return;
-    const rect = bar.getBoundingClientRect();
-    setSeekHoverX(Math.max(0, Math.min(rect.width, e.clientX - rect.left)));
-  }, [setSeekHoverX]);
+    setSeekHoverRatio(ratioAt(e.clientX));
+  }, [ratioAt, setSeekHoverRatio]);
 
   const handleFullscreen = useCallback(() => {
     if (onToggleFullscreen) { onToggleFullscreen(); return; }
@@ -244,9 +293,7 @@ export function VideoPlayerChrome({
   const handleTogglePip = useCallback(() => { void engine.togglePictureInPicture(); }, [engine]);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const seekHoverPct = seekHoverX !== null && progressRef.current
-    ? (seekHoverX / progressRef.current.getBoundingClientRect().width) * 100 : null;
-  const hoverTime = seekHoverPct !== null ? formatTime((seekHoverPct / 100) * duration) : null;
+  const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   return (
     <div
@@ -256,18 +303,35 @@ export function VideoPlayerChrome({
       className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', className)}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
+      onFocus={handleFocusIn}
+      onBlur={handleFocusOut}
+      onPointerDownCapture={notePointer}
+      onKeyDownCapture={noteKeyboard}
       onClick={skin
         ? (e) => { if (e.target === e.currentTarget && !isCasting && !suppressClick()) engine.togglePlay(); }
         : undefined}
-      {...gestureHandlers}
     >
       {children}
+
+      <div className="kui-sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </div>
 
       {isCasting && <CastOverlay castDeviceName={castDeviceName} title={title} />}
       {error && <ErrorOverlay error={error} retrying={retrying} onRetry={() => engine.retry()} />}
       {!error && loading && <LoadingOverlay />}
       {!error && !loading && <CenterPlayOverlay playing={playing} />}
-      <GestureOverlay feedback={feedback} />
+      {touchDevice && gestures !== false && (
+        <Suspense fallback={null}>
+          <GestureLayer
+            containerRef={containerRef}
+            videoRef={videoRef}
+            gestures={gestures}
+            enabled={!isCasting}
+            suppressRef={suppressRef}
+          />
+        </Suspense>
+      )}
       {cueText && (
         <SubtitleOverlay cueText={cueText} effectiveControls={effectiveControls} subtitleFontSize={subtitleFontSize} />
       )}
@@ -320,15 +384,16 @@ export function VideoPlayerChrome({
             ref={progressRef}
             progress={progress}
             buffered={buffered}
-            seekHoverX={seekHoverX}
-            seekHoverPct={seekHoverPct}
+            seekHoverRatio={seekHoverRatio}
             hoverTime={hoverTime}
             onSeek={handleSeek}
             onSeekMouseMove={handleSeekMouseMove}
-            onSeekLeave={() => setSeekHoverX(null)}
+            onSeekLeave={() => setSeekHoverRatio(null)}
             onScrubStart={handleScrubStart}
             onScrubMove={handleScrubMove}
             onScrubEnd={handleScrubEnd}
+            onSeekBy={(d) => engine.seekBy(d)}
+            onSeekToRatio={(r) => engine.seekByRatio(r)}
             valueText={`${formatTime(currentTime)} of ${formatTime(duration)}`}
           />
           <ControlRow

@@ -1,8 +1,8 @@
-import { createVideoPlayerStore, type VideoPlayerStoreApi } from './videoplayer.store';
-import { AUTO_QUALITY, AUTO_QUALITY_VALUE, type MediaAdapter, type MediaAdapterHost } from './adapters/adapter.types';
+import { createVideoPlayerStore, type VideoPlayerStoreApi } from './videoplayer.store.js';
+import { AUTO_QUALITY, AUTO_QUALITY_VALUE, type MediaAdapter, type MediaAdapterHost } from './adapters/adapter.types.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
-} from './videoplayer.types';
+} from './videoplayer.types.js';
 
 // ─── vendor-prefixed surfaces the DOM lib does not declare ───────────────────
 
@@ -117,6 +117,13 @@ export class VideoPlayerEngine {
 
   autoHideControls: boolean;
   controlsVisible: boolean | undefined;
+  /**
+   * Set while focus is inside the player. Auto-hide stays off for as long as it
+   * is true — tabbing to a control that has faded out is an accessibility bug,
+   * not a feature.
+   */
+  keyboardFocus = false;
+
   readonly maxAutoRetries: number;
   readonly preferNativeIosFullscreen: boolean;
 
@@ -216,6 +223,26 @@ export class VideoPlayerEngine {
     const onEnded    = () => { s().setPlaying(false); this.forceShow(); };
     const onFSChange = () => this.syncFullscreenState();
     const onError    = () => this.handleError(video);
+
+    /*
+     * A `<source>` that fails fires `error` at itself, and the element is left
+     * with `networkState === NETWORK_NO_SOURCE` and a null `error` — no `error`
+     * event on the video at all. Without this, a 404 on the only source leaves
+     * the player spinning forever, which is precisely what the error UI exists
+     * to prevent. Source events do not bubble, so listen in the capture phase.
+     */
+    const onSourceError = (e: Event) => {
+      if ((e.target as HTMLElement | null)?.tagName !== 'SOURCE') return;
+      // Give the resource selection algorithm a tick to try the next source.
+      setTimeout(() => {
+        if (this.video !== video) return;
+        if (video.error || video.networkState !== 3 /* NETWORK_NO_SOURCE */) return;
+        // The element reports no `MediaError` here, but the situation is exactly
+        // MEDIA_ERR_SRC_NOT_SUPPORTED: nothing in the source list can be played.
+        this.handleError(video, describeMediaError({ code: 4 } as MediaError));
+      }, 0);
+    };
+    video.addEventListener('error', onSourceError, true);
     const onEnterPip = () => s().setIsPip(true);
     const onLeavePip = () => s().setIsPip(false);
     const onPresentationModeChange = () => {
@@ -262,6 +289,7 @@ export class VideoPlayerEngine {
     trackList?.addEventListener?.('change', onTrackListChange);
 
     this.listeners = () => {
+      video.removeEventListener('error', onSourceError, true);
       for (const [type, handler] of bindings) video.removeEventListener(type, handler);
       document.removeEventListener('fullscreenchange', onFSChange);
       document.removeEventListener('webkitfullscreenchange', onFSChange);
@@ -291,8 +319,8 @@ export class VideoPlayerEngine {
 
   // ── Errors & retry ─────────────────────────────────────────────────────────
 
-  private handleError(video: HTMLVideoElement): void {
-    const err = describeMediaError(video.error);
+  private handleError(video: HTMLVideoElement, override?: PlayerError): void {
+    const err = override ?? describeMediaError(video.error);
     const s = this.store.getState();
     s.setLoading(false);
     s.setPlaying(false);
@@ -545,7 +573,10 @@ export class VideoPlayerEngine {
 
   /** Mirror the element's own audio renditions (Safari) into the store. */
   private syncNativeAudioTracks(): void {
-    if (this.activeAdapter?.getAudioTracks) return; // the adapter owns the list
+    // Any attached adapter owns the media pipeline, and with it the audio
+    // rendition list — whether it exposes `getAudioTracks` or only pushes
+    // tracks through the host. Reading the element here would wipe them.
+    if (this.activeAdapter) return;
     const list = (this.video as VendorVideo | null)?.audioTracks;
     const s = this.store.getState();
     if (!list || list.length < 2) {
@@ -769,7 +800,7 @@ export class VideoPlayerEngine {
     if (this.isControlled) return;
     if (this.hideTimer) clearTimeout(this.hideTimer);
     this.store.getState().setShowControls(true);
-    if (isPlaying && this.autoHideControls && !this.isCasting) {
+    if (isPlaying && this.autoHideControls && !this.isCasting && !this.keyboardFocus) {
       this.hideTimer = setTimeout(() => this.store.getState().setShowControls(false), 3000);
     }
   }
@@ -780,14 +811,25 @@ export class VideoPlayerEngine {
 
   hideIfPlaying(): void {
     const s = this.store.getState();
+    if (this.keyboardFocus) return;
     if (!this.isControlled && this.autoHideControls && s.playing) s.setShowControls(false);
   }
 
   resetHideTimer(): void { this.scheduleHide(this.store.getState().playing); }
 
+  /**
+   * Report whether the keyboard is inside the player. Entering pins the chrome
+   * open; leaving hands it back to the auto-hide timer.
+   */
+  setKeyboardFocus(inside: boolean): void {
+    this.keyboardFocus = inside;
+    if (inside) this.forceShow();
+    else this.resetHideTimer();
+  }
+
   /** Reveal or dismiss the chrome — what a single tap does on touch devices. */
   toggleControls(): void {
-    if (this.isControlled) return;
+    if (this.isControlled || this.keyboardFocus) return;
     const s = this.store.getState();
     if (s.showControls) {
       if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }

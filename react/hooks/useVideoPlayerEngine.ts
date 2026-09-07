@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { VideoPlayerEngineContext } from '../VideoPlayerEngineContext';
+import { VideoPlayerEngineContext } from '../VideoPlayerEngineContext.js';
 
 export function useVideoPlayerEngine() {
   const engine = useContext(VideoPlayerEngineContext);

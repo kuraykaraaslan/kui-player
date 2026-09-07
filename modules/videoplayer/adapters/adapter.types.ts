@@ -1,4 +1,4 @@
-import type { AudioTrackOption, PlayerError, QualityOption } from '../videoplayer.types';
+import type { AudioTrackOption, PlayerError, QualityOption } from '../videoplayer.types.js';
 
 /**
  * What an adapter may push back into the player while it is attached — level

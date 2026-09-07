@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react';
-import type { SubtitleTrack } from '../../modules/videoplayer/videoplayer.types';
+import type { SubtitleTrack } from '../../modules/videoplayer/videoplayer.types.js';
 
 type Options = {
   videoRef: RefObject<HTMLVideoElement | null>;

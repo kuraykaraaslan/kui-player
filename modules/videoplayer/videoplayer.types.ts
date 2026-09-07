@@ -1,4 +1,4 @@
-import type { MediaAdapter } from './adapters/adapter.types';
+import type { MediaAdapter } from './adapters/adapter.types.js';
 
 export type QualityOption = { label: string; value: string };
 export type SubtitleTrack = { label: string; srclang?: string; src: string };

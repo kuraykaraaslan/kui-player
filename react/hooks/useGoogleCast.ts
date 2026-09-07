@@ -2,8 +2,8 @@ import { useCallback, useEffect, type RefObject } from 'react';
 import type {
   CastState, CastFrameworkNs, ChromeCastNs,
   RemotePlayer, RemotePlayerController, VideoSource,
-} from '../../modules/videoplayer/videoplayer.types';
-import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
+} from '../../modules/videoplayer/videoplayer.types.js';
+import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine.js';
 
 type Options = {
   enableCast: boolean;

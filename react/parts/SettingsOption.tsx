@@ -1,5 +1,5 @@
-import { cn } from '../../libs/utils/cn';
-import { Icon } from '../icons';
+import { cn } from '../../libs/utils/cn.js';
+import { Icon } from '../icons/index.js';
 
 type SettingsOptionProps = { label: string; sublabel?: string; selected: boolean; onClick: () => void };
 

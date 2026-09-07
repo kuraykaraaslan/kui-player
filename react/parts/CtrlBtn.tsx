@@ -1,4 +1,4 @@
-import { cn } from '../../libs/utils/cn';
+import { cn } from '../../libs/utils/cn.js';
 
 type CtrlBtnProps = {
   onClick: () => void;

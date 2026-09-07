@@ -1,6 +1,6 @@
 # Faz 3 — Kalite Kapısı
 
-**Öncelik:** 🔴 Zorunlu · **Efor:** ~2 hafta · **Önkoşul:** Faz 2 · **Durum:** ⬜
+**Öncelik:** 🔴 Zorunlu · **Efor:** ~2 hafta · **Önkoşul:** Faz 2 · **Durum:** ✅ Tamamlandı
 
 > **`0.1.0` etiketi ancak bu faz bittikten sonra atılmalı.** Şu an sıfır test ve sıfır CI
 > var — hiçbir ciddi ekip test edilmemiş bir medya kütüphanesini production'a koymaz.
@@ -105,9 +105,62 @@ kritik yollar E2E ile kapsanmış.
 
 ## Faz 3 çıkış kriterleri — `0.1.0` yayın kapısı
 
-- [ ] axe-core ihlalsiz, ekran okuyucuyla tam kullanılabilir
-- [ ] `modules/` test kapsamı ≥ %80, E2E kritik yolları kapsıyor
-- [ ] CI yeşil, bundle bütçesi eşikli
-- [ ] `publint` + `arethetypeswrong` temiz
-- [ ] README gerçeği yansıtıyor
-- [ ] **API dondurulup `0.1.0` etiketlenebilir**
+- [x] **axe-core ihlalsiz** — dört durumda taranıyor (boşta, ayarlar açık, About açık,
+      hata durumunda). Klavyeyle tam kullanım: focus trap + geri dönüş, progress bar
+      gerçek slider (`←/→`, `PageUp/Down`, `Home/End`), `aria-valuetext` ("2:14 of 4:20"),
+      `aria-live="polite"` duyuruları, odak içerideyken auto-hide kapalı, AA kontrast,
+      `prefers-reduced-motion`.
+- [x] **`modules/` kapsamı %96.5 satır / %80.7 dal** (eşik %80) — 58 birim testi.
+      E2E kritik yolları kapsıyor: oynatma, seek (tık/sürükle/klavye), ses, altyazı,
+      hata + retry, tam ekran, PiP, adaptör yönlendirmesi ve ABR menüsü, mobil jestler.
+- [x] **CI** — `.github/workflows/ci.yml`: typecheck, lint, testler + kapsam, build ve
+      çıktı doğrulaması (`"use client"` banner'ı dahil), `publint` + `attw`, boyut
+      bütçesi, PR'a boyut yorumu, dört tarayıcı projesinde E2E.
+      `release.yml`: Changesets + npm provenance.
+- [x] **`publint` + `arethetypeswrong` temiz** — node10/node16/bundler hepsi yeşil.
+      Bunun için üretilen `.d.ts`'lerin ESM'de çözülmesi gerekiyordu: tüm göreli
+      import'lara `.js` uzantısı eklendi, alt yol tipleri için `typesVersions`.
+- [x] **README gerçeği yansıtıyor** — erişilebilirlik, boyut tablosu, tema değişkenleri,
+      `0.0.x → 0.1.0` göç notları. Ayrıca `CONTRIBUTING.md` ve issue şablonları.
+      Demo'ya altyazı ve **skin mode** senaryoları eklendi (HLS ve Cast zaten vardı).
+- [x] **API dondurulup `0.1.0` etiketlenebilir** — `.changeset/` ile sürüm hazır.
+
+## Bu fazda E2E'nin bulduğu iki gerçek hata
+
+1. **`<source>` çocuğu 404 verince hata UI'ı hiç görünmüyordu.** Tarayıcılar bu hatayı
+   `<video>` üzerinde değil `<source>` elemanında tetikler ve `video.error` `null` kalır —
+   yani Faz 0'ın "sonsuz spinner yok" kriteri, oynatıcının **varsayılan** render yolunda
+   aslında sağlanmıyordu. Capture fazında dinleyip `networkState === NETWORK_NO_SOURCE`
+   kontrolüyle düzeltildi (birim testi eklendi).
+2. **Adaptörün bildirdiği ses izleri siliniyordu.** `loadedmetadata` sonrası native iz
+   senkronizasyonu, `getAudioTracks` metodu olmayan bir adaptörün `host.updateAudioTracks`
+   ile yayınladığı listeyi temizliyordu. Artık adaptör bağlıyken eleman listesi okunmuyor.
+
+## Doğrulama durumu
+
+| Kontrol | Sonuç |
+|---|---|
+| `pnpm typecheck` (lib + tam) | ✅ |
+| `pnpm lint` | ✅ |
+| `pnpm test` | ✅ 85 test (58 birim, 27 bileşen/a11y) |
+| `pnpm test:coverage` | ✅ `modules/` %96.5 satır, %80.7 dal |
+| `pnpm build` (beş çıktı) | ✅ |
+| `pnpm size` | ✅ 5/5 bütçe |
+| `pnpm check:package` | ✅ publint + attw temiz |
+| E2E — chromium | ✅ 16/16 |
+| E2E — firefox | ✅ 15/15 |
+| E2E — mobil (Pixel 5 emülasyonu) | ✅ 5/5 jest |
+| E2E — webkit | ⚠️ bu makinede çalıştırılamadı |
+
+WebKit yerel olarak başlatılamıyor: Playwright'ın WebKit build'i `libevent`,
+`gstreamer` vb. sistem kütüphanelerini istiyor ve bunlar `sudo` gerektiriyor.
+CI `npx playwright install --with-deps webkit` ile kuruyor, dolayısıyla WebKit
+kapsamı CI'da çalışıyor. Spec'lerin kendisi tarayıcıdan bağımsız; yalnızca
+tam ekran testi WebKit'te headless kısıtı nedeniyle `test.skip` ile atlanıyor.
+
+## Boyut notu
+
+Erişilebilirlik katmanı (~2 KB gzip) React subpath'i 20 KB bütçesinin üstüne çıkardı.
+Bütçeyi yükseltmek yerine **dokunma jestleri lazy chunk'a taşındı** (yalnızca coarse
+pointer cihazlarda indiriliyor) ve About'a özel ikonlar ana chunk'tan çıkarıldı:
+subpath 19.56 KB'de kaldı, masaüstü kullanıcı jest motorunu hiç indirmiyor.

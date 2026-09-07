@@ -1,0 +1,13 @@
+WEBVTT
+
+00:00:00.500 --> 00:00:04.000
+Subtitles are rendered as a styled overlay,
+not by the browser's own cue painter.
+
+00:00:04.000 --> 00:00:08.500
+That is what makes four sizes — and the
+rest of the settings panel — possible.
+
+00:00:08.500 --> 00:00:13.000
+Everything here is keyboard reachable,
+and announced to a screen reader.

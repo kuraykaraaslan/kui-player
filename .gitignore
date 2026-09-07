@@ -5,3 +5,5 @@ dist/
 coverage/
 dist-demo/
 .vercel
+playwright-report/
+test-results/

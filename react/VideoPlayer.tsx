@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from 'react';
-import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine';
-import { VideoPlayerEngineContext } from './VideoPlayerEngineContext';
-import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine';
-import { VideoPlayerChrome } from './VideoPlayerChrome';
-import { IconProvider, type IconOverrides } from './icons';
-import { usePlayerStyles } from './styles';
-import type { VideoPlayerProps } from '../modules/videoplayer/videoplayer.types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine.js';
+import { VideoPlayerEngineContext } from './VideoPlayerEngineContext.js';
+import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine.js';
+import { VideoPlayerChrome } from './VideoPlayerChrome.js';
+import { IconProvider, type IconOverrides } from './icons/index.js';
+import { usePlayerStyles } from './styles/index.js';
+import type { VideoPlayerProps } from '../modules/videoplayer/videoplayer.types.js';
 
 export type VideoPlayerComponentProps = VideoPlayerProps & {
   /** Swap any built-in icon: `icons={{ play: <MyPlay /> }}`. */
@@ -23,27 +23,25 @@ const NO_ICON_OVERRIDES: IconOverrides = {};
 
 export function VideoPlayer(props: VideoPlayerComponentProps) {
   usePlayerStyles(props.injectStyles ?? true);
-  const engineRef = useRef<VideoPlayerEngine | null>(null);
-  if (!engineRef.current) {
-    engineRef.current = new VideoPlayerEngine({
-      defaultQuality: props.defaultQuality ?? props.qualities?.[0]?.value,
-      startMuted: props.startMuted,
-      autoHideControls: props.autoHideControls ?? true,
-      controlsVisible: props.controlsVisible,
-      adapters: props.adapters,
-      preferNativeIosFullscreen: props.preferNativeIosFullscreen,
-    });
-  }
+  // One engine per player, created on first render and never replaced.
+  const [engine] = useState(() => new VideoPlayerEngine({
+    defaultQuality: props.defaultQuality ?? props.qualities?.[0]?.value,
+    startMuted: props.startMuted,
+    autoHideControls: props.autoHideControls ?? true,
+    controlsVisible: props.controlsVisible,
+    adapters: props.adapters,
+    preferNativeIosFullscreen: props.preferNativeIosFullscreen,
+  }));
 
   useEffect(() => {
-    engineRef.current?.updateProps({
+    engine.updateProps({
       controlsVisible: props.controlsVisible,
       autoHideControls: props.autoHideControls ?? true,
     });
-  }, [props.controlsVisible, props.autoHideControls]);
+  }, [engine, props.controlsVisible, props.autoHideControls]);
 
   return (
-    <VideoPlayerEngineContext.Provider value={engineRef.current}>
+    <VideoPlayerEngineContext.Provider value={engine}>
       <IconProvider value={props.icons ?? NO_ICON_OVERRIDES}>
         <VideoPlayerInner {...props} />
       </IconProvider>

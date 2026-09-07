@@ -1,7 +1,7 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type {
   AudioTrackOption, CastState, PlayerError, QualityOption, SettingsView, SubtitleFontSize,
-} from './videoplayer.types';
+} from './videoplayer.types.js';
 
 export type VideoPlayerState = {
   playing: boolean;
@@ -24,7 +24,8 @@ export type VideoPlayerState = {
   /** Whether the attached element can enter Picture-in-Picture at all. */
   pipSupported: boolean;
   showControls: boolean;
-  seekHoverX: number | null;
+  /** Where the pointer is hovering the seek bar, as a 0–1 ratio of its width. */
+  seekHoverRatio: number | null;
   showSettings: boolean;
   settingsView: SettingsView;
   selectedQuality: string;
@@ -60,7 +61,7 @@ export type VideoPlayerActions = {
   setIsPip:              (v: boolean) => void;
   setPipSupported:       (v: boolean) => void;
   setShowControls:       (v: boolean) => void;
-  setSeekHoverX:         (v: number | null) => void;
+  setSeekHoverRatio:     (v: number | null) => void;
   setShowSettings:       (v: boolean) => void;
   setSettingsView:       (v: SettingsView) => void;
   setSelectedQuality:    (v: string) => void;
@@ -101,7 +102,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     isPip: false,
     pipSupported: false,
     showControls: true,
-    seekHoverX: null,
+    seekHoverRatio: null,
     showSettings: false,
     settingsView: 'main',
     selectedQuality: opts.defaultQuality ?? '',
@@ -131,7 +132,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setIsPip:              (v) => set({ isPip: v }),
     setPipSupported:       (v) => set({ pipSupported: v }),
     setShowControls:       (v) => set({ showControls: v }),
-    setSeekHoverX:         (v) => set({ seekHoverX: v }),
+    setSeekHoverRatio:     (v) => set({ seekHoverRatio: v }),
     setShowSettings:       (v) => set({ showSettings: v }),
     setSettingsView:       (v) => set({ settingsView: v }),
     setSelectedQuality:    (v) => set({ selectedQuality: v }),

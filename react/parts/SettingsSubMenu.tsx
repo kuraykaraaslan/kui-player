@@ -1,4 +1,4 @@
-import { Icon } from '../icons';
+import { Icon } from '../icons/index.js';
 
 type SettingsSubMenuProps = { title: string; onBack: () => void; children: React.ReactNode };
 
@@ -9,7 +9,7 @@ export function SettingsSubMenu({ title, onBack, children }: SettingsSubMenuProp
         <Icon name="chevronLeft" />
         <span>{title}</span>
       </button>
-      <div className="kui-panel-body" role="menu">{children}</div>
+      <div className="kui-panel-body" role="menu" aria-label={title}>{children}</div>
     </div>
   );
 }

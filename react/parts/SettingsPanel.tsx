@@ -1,14 +1,14 @@
 import { forwardRef } from 'react';
-import { Icon } from '../icons';
-import { SettingsRow } from './SettingsRow';
-import { SettingsSubMenu } from './SettingsSubMenu';
-import { SettingsOption } from './SettingsOption';
-import { SPEEDS, SUBTITLE_SIZES, SUBTITLE_SIZE_LABELS } from '../../modules/videoplayer/videoplayer.constants';
-import { PLAYER_META } from '../../modules/videoplayer/videoplayer.meta';
-import { AUTO_QUALITY_VALUE } from '../../modules/videoplayer/adapters/adapter.types';
+import { Icon } from '../icons/index.js';
+import { SettingsRow } from './SettingsRow.js';
+import { SettingsSubMenu } from './SettingsSubMenu.js';
+import { SettingsOption } from './SettingsOption.js';
+import { SPEEDS, SUBTITLE_SIZES, SUBTITLE_SIZE_LABELS } from '../../modules/videoplayer/videoplayer.constants.js';
+import { PLAYER_META } from '../../modules/videoplayer/videoplayer.meta.js';
+import { AUTO_QUALITY_VALUE } from '../../modules/videoplayer/adapters/adapter.types.js';
 import type {
   QualityOption, SubtitleTrack, AudioTrackOption, SettingsView, SubtitleFontSize,
-} from '../../modules/videoplayer/videoplayer.types';
+} from '../../modules/videoplayer/videoplayer.types.js';
 
 type SettingsPanelProps = {
   view: SettingsView;
@@ -50,8 +50,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
     <div
       ref={ref}
       className="kui-panel"
-      role="menu"
-      aria-label="Player settings"
+      tabIndex={-1}
     >
       {view === 'main' && (
         <>
@@ -59,7 +58,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
             <Icon name="settings" />
             <p>Settings</p>
           </div>
-          <div className="kui-panel-body">
+          <div className="kui-panel-body" role="menu" aria-label="Player settings">
             {qualities && qualities.length > 0 && (
               <SettingsRow label="Quality" value={currentQualityLabel} onClick={() => onChangeView('quality')} />
             )}

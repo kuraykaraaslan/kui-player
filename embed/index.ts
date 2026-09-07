@@ -1,4 +1,4 @@
-import { mountSkin, type SkinOptions } from './mountSkin';
+import { mountSkin, type SkinOptions } from './mountSkin.js';
 
 // Injected by Vite `define` at build time (see vite.config.embed.ts).
 declare const __KUI_EMBED_VERSION__: string;

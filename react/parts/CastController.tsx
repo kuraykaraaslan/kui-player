@@ -1,7 +1,7 @@
 import { useEffect, type RefObject } from 'react';
-import { useGoogleCast } from '../hooks/useGoogleCast';
-import { useVideoPlayerEngine } from '../hooks/useVideoPlayerEngine';
-import type { CastState, VideoSource } from '../../modules/videoplayer/videoplayer.types';
+import { useGoogleCast } from '../hooks/useGoogleCast.js';
+import { useVideoPlayerEngine } from '../hooks/useVideoPlayerEngine.js';
+import type { CastState, VideoSource } from '../../modules/videoplayer/videoplayer.types.js';
 
 export type CastApi = { toggleCast: () => void };
 

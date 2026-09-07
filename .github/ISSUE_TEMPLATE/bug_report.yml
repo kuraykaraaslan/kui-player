@@ -1,0 +1,63 @@
+name: Bug report
+description: Something in the player does not behave as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Media bugs are almost always browser- and source-specific, so the
+        details below are what make a report actionable.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you saw, and what you expected instead.
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Steps, or a minimal snippet. A link to a reproduction is best.
+      placeholder: |
+        1. Render <VideoPlayer src="…" />
+        2. Click …
+        3. …
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: kui-player version
+      placeholder: 0.1.0
+    validations: { required: true }
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      multiple: true
+      options: [Chrome, Firefox, Safari (macOS), Safari (iOS), Edge, Android Chrome, Other]
+    validations: { required: true }
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source type
+      options:
+        - Progressive (MP4/WebM)
+        - HLS with hls.js adapter
+        - HLS native (Safari)
+        - DASH with dash.js adapter
+        - Other
+    validations: { required: true }
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How is it mounted?
+      options:
+        - React <VideoPlayer>
+        - Vanilla VideoPlayerEngine
+        - Skin mode / single-script embed
+    validations: { required: true }
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      render: shell

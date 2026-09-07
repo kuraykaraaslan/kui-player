@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  verify:
+    name: Typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:coverage
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  build:
+    name: Build, package checks, size budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Verify the published artefacts exist
+        run: |
+          set -euo pipefail
+          for file in \
+            dist/index.js \
+            dist/react/index.js \
+            dist/embed.js \
+            dist/styles.css \
+            dist/modules/index.d.ts \
+            dist/react/index.d.ts
+          do
+            test -s "$file" || { echo "::error::missing or empty build output: $file"; exit 1; }
+          done
+          # The React subpath must stay a client boundary for the App Router.
+          head -1 dist/react/index.js | grep -q '"use client"' \
+            || { echo '::error::dist/react/index.js lost its "use client" banner'; exit 1; }
+
+      - name: Package exports and types map
+        run: pnpm check:package
+
+      - name: Bundle size budget
+        run: pnpm size
+
+      - name: Comment the bundle sizes on the PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('node:child_process');
+            const table = execSync('node scripts/check-size.mjs', { encoding: 'utf8' });
+            const body = `### Bundle size\n\n\`\`\`\n${table}\`\`\``;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number,
+            });
+            const previous = comments.find((c) => c.user.type === 'Bot' && c.body.startsWith('### Bundle size'));
+            if (previous) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }
+
+  e2e:
+    name: End-to-end (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit, mobile]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install the browser
+        run: npx playwright install --with-deps ${{ matrix.browser == 'mobile' && 'chromium' || matrix.browser }}
+      - run: pnpm test:e2e --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 7

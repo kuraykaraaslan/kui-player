@@ -1,8 +1,8 @@
 import { createRoot, type Root } from 'react-dom/client';
-import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine';
-import { VideoPlayerEngineContext } from '../react/VideoPlayerEngineContext';
-import { VideoPlayerChrome } from '../react/VideoPlayerChrome';
-import { PLAYER_CSS } from '../react/styles';
+import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine.js';
+import { VideoPlayerEngineContext } from '../react/VideoPlayerEngineContext.js';
+import { VideoPlayerChrome } from '../react/VideoPlayerChrome.js';
+import { PLAYER_CSS } from '../react/styles/index.js';
 
 export interface SkinOptions {
   /** Playback rate to apply on mount (leaves the element's rate alone if omitted). */

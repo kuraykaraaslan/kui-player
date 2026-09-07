@@ -1,6 +1,6 @@
 import { useStore } from 'zustand/react';
-import type { VideoPlayerStore, VideoPlayerStoreApi } from '../../modules/videoplayer/videoplayer.store';
-import { useVideoPlayerEngine } from './useVideoPlayerEngine';
+import type { VideoPlayerStore, VideoPlayerStoreApi } from '../../modules/videoplayer/videoplayer.store.js';
+import { useVideoPlayerEngine } from './useVideoPlayerEngine.js';
 
 export function useVideoPlayerStore<T>(selector: (s: VideoPlayerStore) => T): T {
   const engine = useVideoPlayerEngine();

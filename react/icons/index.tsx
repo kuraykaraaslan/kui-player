@@ -16,8 +16,7 @@ export type IconName =
   | 'expand' | 'compress' | 'settings' | 'pip' | 'cast'
   | 'chevronLeft' | 'chevronRight' | 'check' | 'close'
   | 'spinner' | 'alert' | 'retry'
-  | 'skipBack' | 'skipForward' | 'brightness'
-  | 'globe' | 'linkedin' | 'npm';
+  | 'skipBack' | 'skipForward' | 'brightness';
 
 /** Replace any icon with your own node: `icons={{ play: <MyPlay /> }}`. */
 export type IconOverrides = Partial<Record<IconName, ReactNode>>;
@@ -70,9 +69,6 @@ const PATHS: Record<Exclude<IconName, 'spinner' | 'brightness'>, string> = {
   retry: 'M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h8V3l-3.35 3.35z',
   skipBack: 'M11 18V6l-8.5 6zm9 0V6l-8.5 6z',
   skipForward: 'M4 18l8.5-6L4 6zm9 0 8.5-6L13 6z',
-  globe: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-2.95a15.7 15.7 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.9 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14A7.8 7.8 0 0 1 4 12c0-.69.1-1.36.26-2h3.38a16.5 16.5 0 0 0 0 4H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.7 15.7 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82A13.9 13.9 0 0 1 12 19.96zM14.34 14H9.66a14.7 14.7 0 0 1 0-4h4.68a14.7 14.7 0 0 1 0 4zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14a16.5 16.5 0 0 0 0-4h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z',
-  linkedin: 'M4.98 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM3 9h4v12H3V9zm7 0h3.8v1.71h.05a4.17 4.17 0 0 1 3.75-2.06c4.01 0 4.75 2.64 4.75 6.07V21h-4v-5.5c0-1.31-.02-3-1.83-3-1.83 0-2.11 1.43-2.11 2.9V21h-4V9z',
-  npm: 'M2 4v16h9.33v-2.67H16V20h6V4H2zm2.67 2.67h4V16H6.67V9.33H5.33V16H4.67V6.67zm5.33 0h4V16h-2.67V9.33h-1.33V16h-.67V6.67h.67zm5.33 0h4V16h-1.33V9.33h-1.33V16h-1.34V6.67z',
 };
 
 /** The one animated glyph — rotation comes from the `kui-spin` class. */

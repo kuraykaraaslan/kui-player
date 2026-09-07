@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from 'react';
-import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
+import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine.js';
 
 type Options = {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -13,6 +13,12 @@ export function useKeyboardShortcuts({ containerRef, engine }: Options) {
       if (!c) return;
       const focused = document.activeElement;
       if (!c.contains(focused) && focused !== c) return;
+
+      // A focused slider or text field owns its own arrow/space handling; the
+      // player must not seek while someone is dragging the volume with a key.
+      const target = e.target as HTMLElement | null;
+      const interactive = target?.closest?.('input, textarea, select, [role="slider"], [contenteditable="true"]');
+      if (interactive && e.key !== 'Escape') return;
 
       const s = engine.store.getState();
 

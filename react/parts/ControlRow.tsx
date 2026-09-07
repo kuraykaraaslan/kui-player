@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { cn } from '../../libs/utils/cn';
-import { Icon, type IconName } from '../icons';
-import { CtrlBtn } from './CtrlBtn';
-import { formatTime } from '../../modules/videoplayer/videoplayer.format';
-import type { CastState } from '../../modules/videoplayer/videoplayer.types';
+import { cn } from '../../libs/utils/cn.js';
+import { Icon, type IconName } from '../icons/index.js';
+import { CtrlBtn } from './CtrlBtn.js';
+import { formatTime } from '../../modules/videoplayer/videoplayer.format.js';
+import type { CastState } from '../../modules/videoplayer/videoplayer.types.js';
 
 type ControlRowProps = {
   playing: boolean;
@@ -75,6 +75,7 @@ export function ControlRow({
       <CtrlBtn
         onClick={onToggleSettings}
         aria-label="Settings"
+        aria-haspopup="menu"
         aria-expanded={showSettings}
         active={showSettings}
         className={cn(showSettings && 'kui-btn--spin')}

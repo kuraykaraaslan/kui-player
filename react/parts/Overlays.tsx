@@ -1,9 +1,9 @@
-import { cn } from '../../libs/utils/cn';
-import { Icon } from '../icons';
-import { formatTime } from '../../modules/videoplayer/videoplayer.format';
-import { SUBTITLE_SIZES } from '../../modules/videoplayer/videoplayer.constants';
-import type { GestureFeedback } from '../hooks/useTouchGestures';
-import type { PlayerError, SubtitleFontSize } from '../../modules/videoplayer/videoplayer.types';
+import { cn } from '../../libs/utils/cn.js';
+import { Icon } from '../icons/index.js';
+import { formatTime } from '../../modules/videoplayer/videoplayer.format.js';
+import { SUBTITLE_SIZES } from '../../modules/videoplayer/videoplayer.constants.js';
+import type { GestureFeedback } from '../hooks/useTouchGestures.js';
+import type { PlayerError, SubtitleFontSize } from '../../modules/videoplayer/videoplayer.types.js';
 
 export function CastOverlay({ castDeviceName, title }: { castDeviceName: string | null; title?: string }) {
   return (

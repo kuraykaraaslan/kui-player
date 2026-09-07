@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
-import type { GestureOptions } from '../../modules/videoplayer/videoplayer.types';
+import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine.js';
+import type { GestureOptions } from '../../modules/videoplayer/videoplayer.types.js';
 
 /** What the on-screen gesture hint is currently reporting. */
 export type GestureFeedback =
@@ -110,7 +110,7 @@ export function useTouchGestures({ containerRef, videoRef, engine, gestures = tr
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   }, []);
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
+  const onPointerDown = useCallback((e: PointerEvent) => {
     if (!active || e.pointerType !== 'touch') return;
     // Never swallow input aimed at a real control.
     if ((e.target as HTMLElement).closest('button, input, [role="slider"]')) return;
@@ -146,7 +146,7 @@ export function useTouchGestures({ containerRef, videoRef, engine, gestures = tr
     }
   }, [active, containerRef, engine, opts.longPressSpeed, opts.longPressRate, showFeedback]);
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
+  const onPointerMove = useCallback((e: PointerEvent) => {
     const g = gestureRef.current;
     if (!active || !g || e.pointerId !== g.pointerId) return;
     const rect = containerRef.current?.getBoundingClientRect();
@@ -191,7 +191,7 @@ export function useTouchGestures({ containerRef, videoRef, engine, gestures = tr
     }
   }, [active, containerRef, engine, opts.horizontalScrub, opts.verticalVolume, opts.verticalBrightness, applyBrightness, cancelLongPress, showFeedback]);
 
-  const endGesture = useCallback((e: React.PointerEvent) => {
+  const endGesture = useCallback((e: PointerEvent) => {
     const g = gestureRef.current;
     if (!active || !g || e.pointerId !== g.pointerId) return;
     gestureRef.current = null;
@@ -241,7 +241,7 @@ export function useTouchGestures({ containerRef, videoRef, engine, gestures = tr
     }, opts.doubleTapSeek ? DOUBLE_TAP_MS : 0);
   }, [active, cancelLongPress, containerRef, engine, feedback, opts.doubleTapSeek, opts.seekStep, showFeedback]);
 
-  const onPointerCancel = useCallback((e: React.PointerEvent) => {
+  const onPointerCancel = useCallback((e: PointerEvent) => {
     const g = gestureRef.current;
     if (!g || e.pointerId !== g.pointerId) return;
     gestureRef.current = null;
@@ -250,16 +250,22 @@ export function useTouchGestures({ containerRef, videoRef, engine, gestures = tr
     showFeedback(null);
   }, [cancelLongPress, engine, showFeedback]);
 
-  return {
-    feedback,
-    suppressClick,
-    handlers: active
-      ? {
-          onPointerDown,
-          onPointerMove,
-          onPointerUp: endGesture,
-          onPointerCancel,
-        }
-      : {},
-  };
+  // Attach natively rather than through React props: this hook is loaded lazily
+  // by a layer component that has no JSX of the container to spread onto.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!active || !el) return;
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', endGesture);
+    el.addEventListener('pointercancel', onPointerCancel);
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('pointermove', onPointerMove);
+      el.removeEventListener('pointerup', endGesture);
+      el.removeEventListener('pointercancel', onPointerCancel);
+    };
+  }, [active, containerRef, onPointerDown, onPointerMove, endGesture, onPointerCancel]);
+
+  return { feedback, suppressClick };
 }
