@@ -1,5 +1,5 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { CastState, SettingsView, SubtitleFontSize } from './videoplayer.types';
+import type { CastState, PlayerError, SettingsView, SubtitleFontSize } from './videoplayer.types';
 
 export type VideoPlayerState = {
   playing: boolean;
@@ -10,6 +10,11 @@ export type VideoPlayerState = {
   muted: boolean;
   speed: number;
   loading: boolean;
+  seeking: boolean;
+  /** Last fatal media error, or `null` while playback is healthy. */
+  error: PlayerError | null;
+  /** True while an automatic (backed-off) retry is pending. */
+  retrying: boolean;
   isFullscreen: boolean;
   showControls: boolean;
   seekHoverX: number | null;
@@ -32,6 +37,9 @@ export type VideoPlayerActions = {
   setMuted:              (v: boolean) => void;
   setSpeed:              (v: number) => void;
   setLoading:            (v: boolean) => void;
+  setSeeking:            (v: boolean) => void;
+  setError:              (v: PlayerError | null) => void;
+  setRetrying:           (v: boolean) => void;
   setIsFullscreen:       (v: boolean) => void;
   setShowControls:       (v: boolean) => void;
   setSeekHoverX:         (v: number | null) => void;
@@ -63,6 +71,9 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     muted: opts.startMuted ?? false,
     speed: 1,
     loading: true,
+    seeking: false,
+    error: null,
+    retrying: false,
     isFullscreen: false,
     showControls: true,
     seekHoverX: null,
@@ -83,6 +94,9 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setMuted:              (v) => set({ muted: v }),
     setSpeed:              (v) => set({ speed: v }),
     setLoading:            (v) => set({ loading: v }),
+    setSeeking:            (v) => set({ seeking: v }),
+    setError:              (v) => set({ error: v }),
+    setRetrying:           (v) => set({ retrying: v }),
     setIsFullscreen:       (v) => set({ isFullscreen: v }),
     setShowControls:       (v) => set({ showControls: v }),
     setSeekHoverX:         (v) => set({ seekHoverX: v }),

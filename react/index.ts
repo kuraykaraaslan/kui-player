@@ -1,3 +1,5 @@
+"use client";
+
 export { VideoPlayer } from './VideoPlayer';
 export { VideoPlayerChrome } from './VideoPlayerChrome';
 export type { VideoPlayerChromeProps } from './VideoPlayerChrome';
@@ -13,6 +15,7 @@ export type {
   AudioTrackOption,
   SubtitleFontSize,
   CastState,
+  PlayerError,
 } from '../modules/videoplayer/videoplayer.types';
 
 export type { VideoPlayerState, VideoPlayerStore, VideoPlayerStoreApi } from '../modules/videoplayer/videoplayer.store';

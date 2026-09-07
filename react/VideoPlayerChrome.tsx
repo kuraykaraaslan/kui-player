@@ -7,7 +7,7 @@ import { ControlRow } from './parts/ControlRow';
 import { ProgressBar } from './parts/ProgressBar';
 import { SettingsPanel } from './parts/SettingsPanel';
 import { AboutModal } from './parts/AboutModal';
-import { CastOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay } from './parts/Overlays';
+import { CastOverlay, ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay } from './parts/Overlays';
 import { useSubtitleCues } from './hooks/useSubtitleCues';
 import { useGoogleCast } from './hooks/useGoogleCast';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -69,6 +69,8 @@ export function VideoPlayerChrome({
   const muted             = useVideoPlayerStore(s => s.muted);
   const speed             = useVideoPlayerStore(s => s.speed);
   const loading           = useVideoPlayerStore(s => s.loading);
+  const error             = useVideoPlayerStore(s => s.error);
+  const retrying          = useVideoPlayerStore(s => s.retrying);
   const isFullscreen      = useVideoPlayerStore(s => s.isFullscreen);
   const showControls      = useVideoPlayerStore(s => s.showControls);
   const seekHoverX        = useVideoPlayerStore(s => s.seekHoverX);
@@ -116,7 +118,15 @@ export function VideoPlayerChrome({
   const closeSettings = useCallback(() => { setShowSettings(false); setSettingsView('main'); }, [setShowSettings, setSettingsView]);
 
   const applySpeed       = useCallback((s: number) => { engine.setSpeed(s); closeSettings(); }, [engine, closeSettings]);
-  const applyQuality     = useCallback((v: string) => { setSelectedQuality(v); onQualityChange?.(v); closeSettings(); }, [setSelectedQuality, onQualityChange, closeSettings]);
+  // Snapshot position/play state *before* the consumer swaps the source, so the
+  // engine can restore it on the next `loadedmetadata` — whichever way the swap
+  // happens (our `switchSource`, or a `src` prop change driven by the callback).
+  const applyQuality     = useCallback((v: string) => {
+    engine.captureRestorePoint();
+    setSelectedQuality(v);
+    onQualityChange?.(v);
+    closeSettings();
+  }, [engine, setSelectedQuality, onQualityChange, closeSettings]);
   const applySubtitle    = useCallback((i: number | null) => { setSelectedSubtitle(i); closeSettings(); }, [setSelectedSubtitle, closeSettings]);
   const applyAudioTrack  = useCallback((i: number) => { setSelectedAudioTrack(i); onAudioTrackChange?.(i); closeSettings(); }, [setSelectedAudioTrack, onAudioTrackChange, closeSettings]);
   const applySubtitleSize= useCallback((sz: SubtitleFontSize) => { setSubtitleFontSize(sz); setSettingsView('main'); }, [setSubtitleFontSize, setSettingsView]);
@@ -164,8 +174,9 @@ export function VideoPlayerChrome({
       {children}
 
       {isCasting && <CastOverlay castDeviceName={castDeviceName} title={title} />}
-      {loading && <LoadingOverlay />}
-      {!loading && <CenterPlayOverlay playing={playing} />}
+      {error && <ErrorOverlay error={error} retrying={retrying} onRetry={() => engine.retry()} />}
+      {!error && loading && <LoadingOverlay />}
+      {!error && !loading && <CenterPlayOverlay playing={playing} />}
       {cueText && (
         <SubtitleOverlay cueText={cueText} effectiveControls={effectiveControls} subtitleFontSize={subtitleFontSize} />
       )}

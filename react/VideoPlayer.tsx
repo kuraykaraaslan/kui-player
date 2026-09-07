@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+"use client";
+
+import { useEffect, useMemo, useRef } from 'react';
 import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine';
 import { VideoPlayerEngineContext } from './VideoPlayerEngineContext';
 import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine';
@@ -32,7 +34,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
 
 function VideoPlayerInner({
   src, poster, title, autoPlay = false, loop = false, startMuted = false,
-  qualities, subtitles, audioTracks, onQualityChange, onAudioTrackChange,
+  playsInline = true, qualities, subtitles, audioTracks, onQualityChange, onAudioTrackChange,
   enableCast = true, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerProps) {
   const engine = useVideoPlayerEngine();
@@ -46,7 +48,21 @@ function VideoPlayerInner({
     return () => engine.detach();
   }, [engine]);
 
-  const sources = Array.isArray(src) ? src : [src];
+  const sources = useMemo(() => (Array.isArray(src) ? src : [src]), [src]);
+  const srcKey = useMemo(
+    () => sources.map((s) => (typeof s === 'string' ? s : s.src)).join('|'),
+    [sources],
+  );
+
+  // Changing <source> children does not reload the element on its own. Re-run
+  // load() so a consumer-driven source swap (the usual `onQualityChange` shape)
+  // actually takes effect — the engine restores position/play state afterwards.
+  const mountedSrcKey = useRef(srcKey);
+  useEffect(() => {
+    if (mountedSrcKey.current === srcKey) return;
+    mountedSrcKey.current = srcKey;
+    videoRef.current?.load();
+  }, [srcKey]);
 
   return (
     <VideoPlayerChrome
@@ -70,6 +86,9 @@ function VideoPlayerInner({
         autoPlay={autoPlay}
         loop={loop}
         muted={startMuted}
+        playsInline={playsInline}
+        // Older iOS builds (< 10) only honour the vendor-prefixed attribute.
+        {...(playsInline ? { 'webkit-playsinline': 'true' } : {})}
         // Only force CORS when subtitle <track>s are present — text tracks are
         // CORS-restricted. Setting it unconditionally blocks playback of any
         // video host that doesn't send Access-Control-Allow-Origin.

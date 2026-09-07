@@ -22,7 +22,12 @@ export default defineConfig({
         '@fortawesome/free-solid-svg-icons',
         '@fortawesome/free-brands-svg-icons',
       ],
-      output: { preserveModules: false },
+      output: {
+        preserveModules: false,
+        // Rollup strips module-level directives when bundling — re-emit it so
+        // the React subpath stays a client boundary under the Next.js App Router.
+        banner: '"use client";',
+      },
     },
     outDir: 'dist',
     emptyOutDir: false,

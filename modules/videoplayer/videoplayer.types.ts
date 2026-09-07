@@ -14,6 +14,21 @@ export type SettingsView =
 
 export type CastState = 'unavailable' | 'available' | 'connecting' | 'connected';
 
+/**
+ * A `MediaError` flattened into something the store can hold and the UI can render.
+ * `code` mirrors `MediaError.code` (1–4); `0` means the element reported an error
+ * without one (rare, but `video.error` is nullable).
+ */
+export type PlayerError = {
+  code: number;
+  /** Machine-readable name, e.g. `MEDIA_ERR_SRC_NOT_SUPPORTED`. */
+  name: string;
+  /** Human-readable message suitable for the error overlay. */
+  message: string;
+  /** Whether a retry has a plausible chance of succeeding (network / decode). */
+  recoverable: boolean;
+};
+
 export type VideoPlayerProps = {
   src: string | VideoSource | (string | VideoSource)[];
   poster?: string;
@@ -27,6 +42,12 @@ export type VideoPlayerProps = {
   audioTracks?: AudioTrackOption[];
   onQualityChange?: (value: string) => void;
   onAudioTrackChange?: (index: number) => void;
+  /**
+   * Play inline on iOS Safari instead of handing off to the native fullscreen
+   * player. Defaults to `true` — turning it off means our chrome is never seen
+   * on iPhone.
+   */
+  playsInline?: boolean;
   controlsVisible?: boolean;
   autoHideControls?: boolean;
   onControlsVisibilityChange?: (visible: boolean) => void;

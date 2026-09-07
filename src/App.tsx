@@ -19,6 +19,8 @@ const PLAYLIST: Clip[] = [
   { id: "oceans", title: "Oceans", src: "https://vjs.zencdn.net/v/oceans.mp4", poster: "https://vjs.zencdn.net/v/oceans.png", duration: "0:46" },
   { id: "test", title: "HD Test Pattern", src: `${W3}/video/movie_300.mp4`, poster: `${W3}/video/poster.png`, duration: "0:28" },
   { id: "bbb-trailer", title: "Big Buck Bunny — Trailer", src: `${W3}/bunny/trailer.mp4`, poster: `${W3}/bunny/poster.png`, duration: "0:33" },
+  // Deliberately broken — exercises the error overlay / retry path.
+  { id: "broken", title: "Broken source (404)", src: `${W3}/does-not-exist.mp4`, poster: `${W3}/bunny/poster.png`, duration: "—" },
 ];
 
 const QUALITIES = [

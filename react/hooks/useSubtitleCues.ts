@@ -24,6 +24,11 @@ export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Optio
 
     track.mode = 'hidden';
 
+    // A source swap (quality change / retry) resets every track back to
+    // 'disabled' — re-arm the selected one once the new media is ready.
+    const reapply = () => { track.mode = 'hidden'; };
+    video.addEventListener('loadedmetadata', reapply);
+
     const onCueChange = () => {
       const active = track.activeCues;
       if (!active || active.length === 0) { setCueText(null); return; }
@@ -34,7 +39,10 @@ export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Optio
     };
 
     track.addEventListener('cuechange', onCueChange);
-    return () => track.removeEventListener('cuechange', onCueChange);
+    return () => {
+      track.removeEventListener('cuechange', onCueChange);
+      video.removeEventListener('loadedmetadata', reapply);
+    };
   }, [videoRef, selectedSubtitle, subtitles]);
 
   return cueText;

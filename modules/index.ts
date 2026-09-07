@@ -13,6 +13,7 @@ export type {
   SubtitleFontSize,
   SettingsView,
   CastState,
+  PlayerError,
   CastSession,
   CastContextInstance,
   RemotePlayer,
