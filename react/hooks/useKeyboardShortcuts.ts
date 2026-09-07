@@ -24,9 +24,12 @@ export function useKeyboardShortcuts({ containerRef, engine }: Options) {
         case 'ArrowUp':    e.preventDefault(); engine.setVolume(s.volume + 0.1); break;
         case 'ArrowDown':  e.preventDefault(); engine.setVolume(s.volume - 0.1); break;
         case 'm': e.preventDefault(); engine.toggleMute(); break;
-        case 'f': e.preventDefault(); if (c) engine.toggleFullscreen(c); break;
+        case 'f': e.preventDefault(); engine.toggleFullscreen(c); break;
+        case 'i': e.preventDefault(); void engine.togglePictureInPicture(); break;
         case 'Escape':
           if (s.showSettings) { e.preventDefault(); s.setShowSettings(false); s.setSettingsView('main'); }
+          // Emulated fullscreen gets no browser-provided escape hatch — wire one.
+          else if (s.fakeFullscreen) { e.preventDefault(); engine.exitFullscreen(c); }
           break;
       }
     };

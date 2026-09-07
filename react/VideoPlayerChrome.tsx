@@ -7,12 +7,16 @@ import { ControlRow } from './parts/ControlRow';
 import { ProgressBar } from './parts/ProgressBar';
 import { SettingsPanel } from './parts/SettingsPanel';
 import { AboutModal } from './parts/AboutModal';
-import { CastOverlay, ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay } from './parts/Overlays';
+import {
+  CastOverlay, ErrorOverlay, GestureOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
+} from './parts/Overlays';
+import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types';
 import { useSubtitleCues } from './hooks/useSubtitleCues';
+import { useTouchGestures } from './hooks/useTouchGestures';
 import { useGoogleCast } from './hooks/useGoogleCast';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type {
-  AudioTrackOption, CastState, QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
+  AudioTrackOption, CastState, GestureOptions, QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
 } from '../modules/videoplayer/videoplayer.types';
 
 /**
@@ -43,6 +47,12 @@ export interface VideoPlayerChromeProps {
   onQualityChange?: (value: string) => void;
   onAudioTrackChange?: (index: number) => void;
   enableCast?: boolean;
+  /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
+  enablePictureInPicture?: boolean;
+  /** Touch gestures; `false` turns them all off. Default `true`. */
+  gestures?: boolean | GestureOptions;
+  /** Enter fullscreen when a phone rotates to landscape while playing. Default `false`. */
+  autoFullscreenOnLandscape?: boolean;
   onCastStateChange?: (state: CastState) => void;
   onControlsVisibilityChange?: (visible: boolean) => void;
   className?: string;
@@ -51,7 +61,8 @@ export interface VideoPlayerChromeProps {
 export function VideoPlayerChrome({
   videoRef, children, skin = false, onToggleFullscreen,
   src = '', poster, title, qualities, subtitles, audioTracks,
-  onQualityChange, onAudioTrackChange, enableCast = true, onCastStateChange,
+  onQualityChange, onAudioTrackChange, enableCast = true, enablePictureInPicture = true,
+  gestures = true, autoFullscreenOnLandscape = false, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -72,11 +83,16 @@ export function VideoPlayerChrome({
   const error             = useVideoPlayerStore(s => s.error);
   const retrying          = useVideoPlayerStore(s => s.retrying);
   const isFullscreen      = useVideoPlayerStore(s => s.isFullscreen);
+  const isPip             = useVideoPlayerStore(s => s.isPip);
+  const pipSupported      = useVideoPlayerStore(s => s.pipSupported);
   const showControls      = useVideoPlayerStore(s => s.showControls);
   const seekHoverX        = useVideoPlayerStore(s => s.seekHoverX);
   const showSettings      = useVideoPlayerStore(s => s.showSettings);
   const settingsView      = useVideoPlayerStore(s => s.settingsView);
   const selectedQuality   = useVideoPlayerStore(s => s.selectedQuality);
+  const adaptiveQualities = useVideoPlayerStore(s => s.adaptiveQualities);
+  const activeQualityLabel= useVideoPlayerStore(s => s.activeQualityLabel);
+  const adaptiveAudioTracks = useVideoPlayerStore(s => s.adaptiveAudioTracks);
   const selectedSubtitle  = useVideoPlayerStore(s => s.selectedSubtitle);
   const selectedAudioTrack= useVideoPlayerStore(s => s.selectedAudioTrack);
   const subtitleFontSize  = useVideoPlayerStore(s => s.subtitleFontSize);
@@ -103,6 +119,32 @@ export function VideoPlayerChrome({
   const { toggleCast } = useGoogleCast({ enableCast, videoRef, src, title, poster, engine, onCastStateChange });
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
   useKeyboardShortcuts({ containerRef, engine });
+  const { feedback, suppressClick, handlers: gestureHandlers } = useTouchGestures({
+    containerRef, videoRef, engine, gestures, enabled: !isCasting,
+  });
+
+  // An adapter (hls.js / dash.js) publishes real renditions; when it does they
+  // replace the consumer's static `qualities` list and gain an "Auto" entry.
+  const adaptive = adaptiveQualities.length > 0;
+  const qualityOptions = adaptive
+    ? [{ label: 'Auto', value: AUTO_QUALITY_VALUE }, ...adaptiveQualities]
+    : qualities;
+  const effectiveAudioTracks = adaptiveAudioTracks.length > 1 ? adaptiveAudioTracks : audioTracks;
+
+  // Rotating a phone into landscape is the clearest "make this big" signal there is.
+  useEffect(() => {
+    if (!autoFullscreenOnLandscape || typeof window === 'undefined' || !window.matchMedia) return;
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+    const landscape = window.matchMedia('(orientation: landscape)');
+    const onChange = () => {
+      const c = containerRef.current;
+      if (!c) return;
+      if (landscape.matches) { if (engine.store.getState().playing) engine.enterFullscreen(c); }
+      else engine.exitFullscreen(c);
+    };
+    landscape.addEventListener('change', onChange);
+    return () => landscape.removeEventListener('change', onChange);
+  }, [autoFullscreenOnLandscape, engine]);
 
   useEffect(() => {
     if (!showSettings) return;
@@ -122,21 +164,60 @@ export function VideoPlayerChrome({
   // engine can restore it on the next `loadedmetadata` — whichever way the swap
   // happens (our `switchSource`, or a `src` prop change driven by the callback).
   const applyQuality     = useCallback((v: string) => {
+    if (adaptive) {
+      // The adapter switches renditions in place — no source swap, no reload.
+      engine.selectQuality(v);
+      onQualityChange?.(v);
+      closeSettings();
+      return;
+    }
     engine.captureRestorePoint();
     setSelectedQuality(v);
     onQualityChange?.(v);
     closeSettings();
-  }, [engine, setSelectedQuality, onQualityChange, closeSettings]);
+  }, [adaptive, engine, setSelectedQuality, onQualityChange, closeSettings]);
   const applySubtitle    = useCallback((i: number | null) => { setSelectedSubtitle(i); closeSettings(); }, [setSelectedSubtitle, closeSettings]);
-  const applyAudioTrack  = useCallback((i: number) => { setSelectedAudioTrack(i); onAudioTrackChange?.(i); closeSettings(); }, [setSelectedAudioTrack, onAudioTrackChange, closeSettings]);
+  // Actually switches the rendition (adapter or the element's own track list)
+  // instead of only telling the consumer about it.
+  const applyAudioTrack  = useCallback((i: number) => { engine.setAudioTrack(i); onAudioTrackChange?.(i); closeSettings(); }, [engine, onAudioTrackChange, closeSettings]);
   const applySubtitleSize= useCallback((sz: SubtitleFontSize) => { setSubtitleFontSize(sz); setSettingsView('main'); }, [setSubtitleFontSize, setSettingsView]);
 
-  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const seekToClientX = useCallback((clientX: number) => {
     const bar = progressRef.current;
     if (!bar) return;
     const rect = bar.getBoundingClientRect();
-    engine.seekByRatio((e.clientX - rect.left) / rect.width);
+    engine.seekByRatio((clientX - rect.left) / rect.width);
   }, [engine]);
+
+  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    seekToClientX(e.clientX);
+  }, [seekToClientX]);
+
+  // Dragging the bar scrubs live — the only way to seek precisely on a phone.
+  const scrubbing = useRef(false);
+  const handleScrubStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    scrubbing.current = true;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    seekToClientX(e.clientX);
+  }, [seekToClientX]);
+
+  const handleScrubMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubbing.current) return;
+    e.preventDefault();
+    const bar = progressRef.current;
+    if (bar) {
+      const rect = bar.getBoundingClientRect();
+      setSeekHoverX(Math.max(0, Math.min(rect.width, e.clientX - rect.left)));
+    }
+    seekToClientX(e.clientX);
+  }, [seekToClientX, setSeekHoverX]);
+
+  const handleScrubEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubbing.current) return;
+    scrubbing.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (e.pointerType === 'touch') setSeekHoverX(null);
+  }, [setSeekHoverX]);
 
   const handleSeekMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const bar = progressRef.current;
@@ -149,6 +230,8 @@ export function VideoPlayerChrome({
     if (onToggleFullscreen) { onToggleFullscreen(); return; }
     if (containerRef.current) engine.toggleFullscreen(containerRef.current);
   }, [onToggleFullscreen, engine]);
+
+  const handleTogglePip = useCallback(() => { void engine.togglePictureInPicture(); }, [engine]);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const seekHoverPct = seekHoverX !== null && progressRef.current
@@ -169,7 +252,10 @@ export function VideoPlayerChrome({
       )}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
-      onClick={skin ? (e) => { if (e.target === e.currentTarget && !isCasting) engine.togglePlay(); } : undefined}
+      onClick={skin
+        ? (e) => { if (e.target === e.currentTarget && !isCasting && !suppressClick()) engine.togglePlay(); }
+        : undefined}
+      {...gestureHandlers}
     >
       {children}
 
@@ -177,6 +263,7 @@ export function VideoPlayerChrome({
       {error && <ErrorOverlay error={error} retrying={retrying} onRetry={() => engine.retry()} />}
       {!error && loading && <LoadingOverlay />}
       {!error && !loading && <CenterPlayOverlay playing={playing} />}
+      <GestureOverlay feedback={feedback} />
       {cueText && (
         <SubtitleOverlay cueText={cueText} effectiveControls={effectiveControls} subtitleFontSize={subtitleFontSize} />
       )}
@@ -186,7 +273,7 @@ export function VideoPlayerChrome({
           'absolute inset-0 flex flex-col justify-end transition-opacity duration-300 z-20',
           effectiveControls ? 'opacity-100' : 'opacity-0 pointer-events-none',
         )}
-        onClick={(e) => { if (e.target === e.currentTarget && !isCasting) engine.togglePlay(); }}
+        onClick={(e) => { if (e.target === e.currentTarget && !isCasting && !suppressClick()) engine.togglePlay(); }}
       >
         <div
           className="absolute inset-0 pointer-events-none"
@@ -198,10 +285,11 @@ export function VideoPlayerChrome({
             view={settingsView}
             onChangeView={setSettingsView}
             onAbout={() => { setShowAbout(true); closeSettings(); }}
-            qualities={qualities}
+            qualities={qualityOptions}
             subtitles={subtitles}
-            audioTracks={audioTracks}
+            audioTracks={effectiveAudioTracks}
             selectedQuality={selectedQuality}
+            activeQualityLabel={activeQualityLabel}
             selectedSubtitle={selectedSubtitle}
             selectedAudioTrack={selectedAudioTrack}
             speed={speed}
@@ -225,6 +313,10 @@ export function VideoPlayerChrome({
             onSeek={handleSeek}
             onSeekMouseMove={handleSeekMouseMove}
             onSeekLeave={() => setSeekHoverX(null)}
+            onScrubStart={handleScrubStart}
+            onScrubMove={handleScrubMove}
+            onScrubEnd={handleScrubEnd}
+            valueText={`${formatTime(currentTime)} of ${formatTime(duration)}`}
           />
           <ControlRow
             playing={playing}
@@ -236,6 +328,9 @@ export function VideoPlayerChrome({
             showSettings={showSettings}
             enableCast={enableCast}
             castState={castState}
+            showPip={enablePictureInPicture && pipSupported}
+            isPip={isPip}
+            onTogglePip={handleTogglePip}
             onPlay={() => engine.togglePlay()}
             onSeekBy={(d) => engine.seekBy(d)}
             onToggleMute={() => engine.toggleMute()}

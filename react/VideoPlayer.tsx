@@ -15,6 +15,8 @@ export function VideoPlayer(props: VideoPlayerProps) {
       startMuted: props.startMuted,
       autoHideControls: props.autoHideControls ?? true,
       controlsVisible: props.controlsVisible,
+      adapters: props.adapters,
+      preferNativeIosFullscreen: props.preferNativeIosFullscreen,
     });
   }
 
@@ -35,7 +37,8 @@ export function VideoPlayer(props: VideoPlayerProps) {
 function VideoPlayerInner({
   src, poster, title, autoPlay = false, loop = false, startMuted = false,
   playsInline = true, qualities, subtitles, audioTracks, onQualityChange, onAudioTrackChange,
-  enableCast = true, onCastStateChange, onControlsVisibilityChange, className,
+  adapters, enableCast = true, enablePictureInPicture = true, gestures = true,
+  autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerProps) {
   const engine = useVideoPlayerEngine();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -53,6 +56,25 @@ function VideoPlayerInner({
     () => sources.map((s) => (typeof s === 'string' ? s : s.src)).join('|'),
     [sources],
   );
+  const primarySrc = useMemo(() => {
+    const first = sources[0];
+    return first === undefined ? '' : typeof first === 'string' ? first : first.src;
+  }, [sources]);
+
+  // Does a registered adapter claim this source? Decided from the props alone —
+  // pure and DOM-free, so it holds on the server too. When it does, the element
+  // gets no <source> children: the adapter owns the media pipeline.
+  const adapterManaged = useMemo(
+    () => (adapters ?? []).some((a) => a.canPlay(primarySrc)),
+    [adapters, primarySrc],
+  );
+
+  useEffect(() => { engine.setAdapters(adapters ?? []); }, [engine, adapters]);
+
+  useEffect(() => {
+    if (!adapterManaged || !videoRef.current) return;
+    void engine.loadSource(primarySrc);
+  }, [engine, adapterManaged, primarySrc]);
 
   // Changing <source> children does not reload the element on its own. Re-run
   // load() so a consumer-driven source swap (the usual `onQualityChange` shape)
@@ -61,8 +83,8 @@ function VideoPlayerInner({
   useEffect(() => {
     if (mountedSrcKey.current === srcKey) return;
     mountedSrcKey.current = srcKey;
-    videoRef.current?.load();
-  }, [srcKey]);
+    if (!adapterManaged) videoRef.current?.load();
+  }, [srcKey, adapterManaged]);
 
   return (
     <VideoPlayerChrome
@@ -76,6 +98,9 @@ function VideoPlayerInner({
       onQualityChange={onQualityChange}
       onAudioTrackChange={onAudioTrackChange}
       enableCast={enableCast}
+      enablePictureInPicture={enablePictureInPicture}
+      gestures={gestures}
+      autoFullscreenOnLandscape={autoFullscreenOnLandscape}
       onCastStateChange={onCastStateChange}
       onControlsVisibilityChange={onControlsVisibilityChange}
       className={className}
@@ -97,7 +122,7 @@ function VideoPlayerInner({
         onClick={() => engine.togglePlay()}
         style={{ cursor: 'pointer' }}
       >
-        {sources.map((s, i) =>
+        {!adapterManaged && sources.map((s, i) =>
           typeof s === 'string'
             ? <source key={i} src={s} />
             : <source key={i} src={s.src} type={s.type} />,

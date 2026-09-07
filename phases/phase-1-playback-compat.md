@@ -1,6 +1,6 @@
 # Faz 1 — Oynatma Uyumluluğu
 
-**Öncelik:** 🔴 Zorunlu · **Efor:** ~2 hafta · **Önkoşul:** Faz 0 · **Durum:** ⬜
+**Öncelik:** 🔴 Zorunlu · **Efor:** ~2 hafta · **Önkoşul:** Faz 0 · **Durum:** ✅ Tamamlandı
 
 > Faz 0 mevcut özellikleri çalışır hâle getirdi. Bu faz, 2026'da bir video player'dan
 > beklenen **taban uyumluluğu** sağlıyor. Bunlar olmadan kütüphane "demo" kategorisinde kalır.
@@ -106,9 +106,19 @@ yanlışlıkla tetiklenme yok.
 
 ## Faz 1 çıkış kriterleri
 
-- [ ] Chrome/Firefox'ta HLS oynatılıyor (hls.js opsiyonel peer ile)
-- [ ] Kalite menüsü ABR seviyelerini otomatik dolduruyor + "Otomatik" seçeneği var
-- [ ] Ses izi değiştirme gerçekten çalışıyor
-- [ ] PiP var
-- [ ] Mobil jestler tam
-- [ ] iOS dahil tam ekran çalışıyor
+- [x] Chrome/Firefox'ta HLS oynatılıyor — `createHlsAdapter`, `engine.use()` / `adapters` prop.
+      `hls.js` bundle'a girmiyor: ctor dışarıdan veriliyor ya da `window.Hls`'ten alınıyor.
+- [x] Kalite menüsü ABR seviyelerini otomatik dolduruyor + "Otomatik" seçeneği var —
+      `adaptiveQualities` + `activeQualityLabel` ("Auto · 720p")
+- [x] Ses izi değiştirme gerçekten çalışıyor — `engine.setAudioTrack()`; adaptör yolu,
+      Safari'nin `video.audioTracks` yolu ve otomatik keşif
+- [x] PiP var — `engine.togglePictureInPicture()`, `isPip`/`pipSupported`, buton + `i`,
+      Cast bağlıyken devre dışı
+- [x] Mobil jestler tam — `useTouchGestures`: çift dokunma seek, tek dokunma kontroller,
+      uzun basma 2×, yatay scrub, dikey ses/parlaklık; progress bar 44px hedef
+- [x] iOS dahil tam ekran çalışıyor — yetenek zinciri + taklit tam ekran (`fakeFullscreen`),
+      `Esc` ile çıkış, opsiyonel `autoFullscreenOnLandscape`
+
+**Doğrulama:** `tsc` (lib + tam), beş build, ve derlenmiş engine üzerinde 35 davranış
+kontrolü (adaptör yaşam döngüsü, ABR/Auto, ses izi, PiP, tam ekran fallback'i, hls/dash
+adaptör seçimi).

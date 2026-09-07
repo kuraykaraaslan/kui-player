@@ -44,6 +44,12 @@
     </style>
   </head>
   <body>
+    <!--
+      hls.js is NOT a dependency of kui-player — the demo loads it from a CDN to
+      exercise the same `window.Hls` pickup path a no-build embed would use.
+      `createHlsAdapter()` finds it here; without it the HLS clip simply fails.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

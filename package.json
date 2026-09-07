@@ -1,8 +1,8 @@
 {
   "name": "@kuraykaraaslan/kui-player",
   "version": "0.0.2",
-  "description": "Standalone video player — vanilla TS core + React subpath. Native <video> playback (HLS only where the browser supports it natively), custom subtitle overlay, speed control, Google Cast, fullscreen, keyboard shortcuts.",
-  "keywords": ["video", "player", "react", "typescript", "chromecast", "subtitles", "kui"],
+  "description": "Standalone video player — vanilla TS core + React subpath. Native <video> playback with optional hls.js/dash.js adapters, custom subtitle overlay, speed control, Picture-in-Picture, touch gestures, Google Cast, fullscreen, keyboard shortcuts.",
+  "keywords": ["video", "player", "react", "typescript", "hls", "dash", "chromecast", "subtitles", "picture-in-picture", "kui"],
   "license": "Apache-2.0",
   "author": "Kuray Karaaslan <kuraykaraaslan@gmail.com>",
   "homepage": "https://github.com/kuraykaraaslan/kui-player#readme",

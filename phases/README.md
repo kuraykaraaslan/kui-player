@@ -22,7 +22,7 @@ yarışına girerse kaybeder. Strateji:
 | Faz | Başlık | Öncelik | Efor | Durum |
 |---|---|---|---|---|
 | [0](./phase-0-stabilization.md) | Stabilizasyon | 🔴 Blocker | ~1 hafta | ✅ |
-| [1](./phase-1-playback-compat.md) | Oynatma uyumluluğu | 🔴 Zorunlu | ~2 hafta | ⬜ |
+| [1](./phase-1-playback-compat.md) | Oynatma uyumluluğu | 🔴 Zorunlu | ~2 hafta | ✅ |
 | [2](./phase-2-bundle-integration.md) | Bundle & entegrasyon | 🔴 Zorunlu | ~2 hafta | ⬜ |
 | [3](./phase-3-quality-gate.md) | Kalite kapısı | 🔴 Zorunlu | ~2 hafta | ⬜ |
 | [4](./phase-4-expected-features.md) | Beklenen özellikler | 🟡 Olsa iyi | ~4 hafta | ⬜ |

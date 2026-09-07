@@ -3,7 +3,7 @@ import { cn } from '../../libs/utils/cn';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPlay, faPause, faVolumeHigh, faVolumeLow, faVolumeOff,
-  faExpand, faCompress, faRotateLeft, faRotateRight, faGear,
+  faExpand, faCompress, faRotateLeft, faRotateRight, faGear, faClone,
 } from '@fortawesome/free-solid-svg-icons';
 import { faChromecast } from '@fortawesome/free-brands-svg-icons';
 import { CtrlBtn } from './CtrlBtn';
@@ -20,6 +20,10 @@ type ControlRowProps = {
   showSettings: boolean;
   enableCast: boolean;
   castState: CastState;
+  /** Hidden entirely when the browser has no Picture-in-Picture. */
+  showPip: boolean;
+  isPip: boolean;
+  onTogglePip: () => void;
   onPlay: () => void;
   onSeekBy: (delta: number) => void;
   onToggleMute: () => void;
@@ -31,7 +35,8 @@ type ControlRowProps = {
 
 export function ControlRow({
   playing, muted, volume, currentTime, duration, isFullscreen, showSettings,
-  enableCast, castState, onPlay, onSeekBy, onToggleMute, onVolumeChange,
+  enableCast, castState, showPip, isPip, onTogglePip,
+  onPlay, onSeekBy, onToggleMute, onVolumeChange,
   onToggleSettings, onToggleCast, onToggleFullscreen,
 }: ControlRowProps) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
@@ -83,6 +88,19 @@ export function ControlRow({
           active={castState === 'connected' || castState === 'connecting'}
         >
           <FontAwesomeIcon icon={faChromecast} className={cn('text-sm', castState === 'connecting' && 'animate-pulse')} aria-hidden="true" />
+        </CtrlBtn>
+      )}
+
+      {showPip && (
+        <CtrlBtn
+          onClick={onTogglePip}
+          aria-label={isPip ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+          aria-pressed={isPip}
+          active={isPip}
+          disabled={castState === 'connected'}
+          className={cn(castState === 'connected' && 'opacity-40 cursor-not-allowed')}
+        >
+          <FontAwesomeIcon icon={faClone} className="text-sm" aria-hidden="true" />
         </CtrlBtn>
       )}
 

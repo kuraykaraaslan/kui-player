@@ -6,6 +6,7 @@ import { SettingsSubMenu } from './SettingsSubMenu';
 import { SettingsOption } from './SettingsOption';
 import { SPEEDS, SUBTITLE_SIZES, SUBTITLE_SIZE_LABELS } from '../../modules/videoplayer/videoplayer.constants';
 import { PLAYER_META } from '../../modules/videoplayer/videoplayer.meta';
+import { AUTO_QUALITY_VALUE } from '../../modules/videoplayer/adapters/adapter.types';
 import type {
   QualityOption, SubtitleTrack, AudioTrackOption, SettingsView, SubtitleFontSize,
 } from '../../modules/videoplayer/videoplayer.types';
@@ -18,6 +19,8 @@ type SettingsPanelProps = {
   subtitles?: SubtitleTrack[];
   audioTracks?: AudioTrackOption[];
   selectedQuality: string;
+  /** Rendition ABR actually settled on — shown beside "Auto". */
+  activeQualityLabel?: string | null;
   selectedSubtitle: number | null;
   selectedAudioTrack: number;
   speed: number;
@@ -32,13 +35,15 @@ type SettingsPanelProps = {
 export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(function SettingsPanel(
   {
     view, onChangeView, onAbout, qualities, subtitles, audioTracks,
-    selectedQuality, selectedSubtitle, selectedAudioTrack,
+    selectedQuality, activeQualityLabel, selectedSubtitle, selectedAudioTrack,
     speed, subtitleFontSize,
     applyQuality, applySpeed, applySubtitle, applySubtitleSize, applyAudioTrack,
   },
   ref,
 ) {
-  const currentQualityLabel = qualities?.find((q) => q.value === selectedQuality)?.label ?? 'Auto';
+  const currentQualityLabel = selectedQuality === AUTO_QUALITY_VALUE
+    ? (activeQualityLabel ? `Auto · ${activeQualityLabel}` : 'Auto')
+    : (qualities?.find((q) => q.value === selectedQuality)?.label ?? 'Auto');
   const currentSubtitleLabel = selectedSubtitle !== null ? (subtitles?.[selectedSubtitle]?.label ?? 'Off') : 'Off';
   const currentAudioLabel = audioTracks?.[selectedAudioTrack]?.label ?? '';
 
@@ -75,7 +80,13 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
       {view === 'quality' && qualities && (
         <SettingsSubMenu title="Quality" onBack={() => onChangeView('main')}>
           {qualities.map((q) => (
-            <SettingsOption key={q.value} label={q.label} selected={selectedQuality === q.value} onClick={() => applyQuality(q.value)} />
+            <SettingsOption
+              key={q.value}
+              label={q.label}
+              sublabel={q.value === AUTO_QUALITY_VALUE && activeQualityLabel ? `currently ${activeQualityLabel}` : undefined}
+              selected={selectedQuality === q.value}
+              onClick={() => applyQuality(q.value)}
+            />
           ))}
         </SettingsSubMenu>
       )}

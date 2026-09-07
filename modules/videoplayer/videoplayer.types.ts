@@ -1,3 +1,5 @@
+import type { MediaAdapter } from './adapters/adapter.types';
+
 export type QualityOption = { label: string; value: string };
 export type SubtitleTrack = { label: string; srclang?: string; src: string };
 export type AudioTrackOption = { label: string; language?: string };
@@ -29,6 +31,24 @@ export type PlayerError = {
   recoverable: boolean;
 };
 
+/** Which touch gestures are live. `true` enables the safe defaults. */
+export type GestureOptions = {
+  /** Double-tap the left/right half to seek ∓10s. Default `true`. */
+  doubleTapSeek?: boolean;
+  /** Seconds a double-tap seeks. Default `10`. */
+  seekStep?: number;
+  /** Hold to play at 2×, release to restore. Default `true`. */
+  longPressSpeed?: boolean;
+  /** Rate applied while holding. Default `2`. */
+  longPressRate?: number;
+  /** Drag vertically on the right half to change volume. Default `true`. */
+  verticalVolume?: boolean;
+  /** Drag vertically on the left half to dim the picture. Default `false`. */
+  verticalBrightness?: boolean;
+  /** Drag horizontally to scrub. Default `true`. */
+  horizontalScrub?: boolean;
+};
+
 export type VideoPlayerProps = {
   src: string | VideoSource | (string | VideoSource)[];
   poster?: string;
@@ -48,6 +68,16 @@ export type VideoPlayerProps = {
    * on iPhone.
    */
   playsInline?: boolean;
+  /** Streaming adapters to consult for `src` — see `createHlsAdapter`. */
+  adapters?: MediaAdapter[];
+  /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
+  enablePictureInPicture?: boolean;
+  /** Touch gestures. `false` disables them entirely. Default `true`. */
+  gestures?: boolean | GestureOptions;
+  /** Go fullscreen automatically when a phone is rotated to landscape. Default `false`. */
+  autoFullscreenOnLandscape?: boolean;
+  /** On iOS, use the OS video player for fullscreen instead of emulating it. Default `false`. */
+  preferNativeIosFullscreen?: boolean;
   controlsVisible?: boolean;
   autoHideControls?: boolean;
   onControlsVisibilityChange?: (visible: boolean) => void;
