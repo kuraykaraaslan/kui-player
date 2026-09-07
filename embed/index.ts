@@ -1,12 +1,7 @@
-import { config } from '@fortawesome/fontawesome-svg-core';
 import { mountSkin, type SkinOptions } from './mountSkin';
 
 // Injected by Vite `define` at build time (see vite.config.embed.ts).
 declare const __KUI_EMBED_VERSION__: string;
-
-// Never let Font Awesome inject a <style> into the host page <head> — it would
-// pollute the page and trip strict CSP. All styling lives inside our shadow root.
-config.autoAddCss = false;
 
 export interface TepegozVideoPlayerApi {
   readonly version: string;

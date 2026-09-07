@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@kuraykaraaslan/kui-player.svg)](https://www.npmjs.com/package/@kuraykaraaslan/kui-player)
 [![license](https://img.shields.io/npm/l/@kuraykaraaslan/kui-player.svg)](./LICENSE)
 
-A standalone, framework-light HTML5 video player built on **React 18/19**, **Zustand** and **Tailwind CSS v4**. Ships a framework-agnostic TypeScript core (`VideoPlayerEngine`) that wraps a native `<video>` element, plus a batteries-included React subpath.
+A standalone, framework-light HTML5 video player. Ships a framework-agnostic TypeScript core (`VideoPlayerEngine`) that wraps a native `<video>` element, plus a batteries-included React subpath. **No CSS framework, no icon font, no styling opinions imposed on your app** — one scoped stylesheet themed through CSS custom properties.
 
 > **Status**: early-stage (`0.0.2`). Public API is unstable; expect breaking changes between patch versions until `0.1.0`.
 
@@ -27,6 +27,10 @@ A standalone, framework-light HTML5 video player built on **React 18/19**, **Zus
 - **Error surface** — a readable overlay with a retry button, plus backed-off automatic retries on network failures (never an endless spinner)
 - **Position-preserving source switching** — quality changes keep time, play state, rate and volume
 - **`playsInline`** by default, so iOS Safari plays in the page instead of its own fullscreen player
+- **19.7 kB gzipped** React subpath, **28 kB** single-file embed — budgets enforced in the build
+- **One runtime dependency** (`zustand`), no CSS framework, no icon font
+- **Themed with CSS custom properties** — `--kui-accent` and friends, scoped to `.kui-player`
+- **Bring your own icons** — `icons={{ play: <MyIcon /> }}`
 - Framework-agnostic core: Zustand vanilla store, no React imports below `react/`
 - Strict TypeScript throughout
 
@@ -45,8 +49,9 @@ that only serves MP4 pays nothing for HLS support.
 | DASH (`.mpd`) | ❌ nowhere | ✅ everywhere with `dash.js` |
 
 ```tsx
-import Hls from "hls.js";                    // your dependency, not ours
-import { VideoPlayer, createHlsAdapter } from "@kuraykaraaslan/kui-player/react";
+import Hls from "hls.js";                          // your dependency, not ours
+import { createHlsAdapter } from "@kuraykaraaslan/kui-player";
+import { VideoPlayer } from "@kuraykaraaslan/kui-player/react";
 
 const adapters = [createHlsAdapter({ Hls })];  // build this once, outside render
 
@@ -94,7 +99,6 @@ pnpm add @kuraykaraaslan/kui-player react react-dom
 
 ```tsx
 import { VideoPlayer } from "@kuraykaraaslan/kui-player/react";
-import "@kuraykaraaslan/kui-player/styles.css";
 
 export default function App() {
   return (
@@ -121,7 +125,66 @@ export default function App() {
 }
 ```
 
-Import `styles.css` **once** at your app root — it ships the compiled Tailwind v4 design tokens the component depends on.
+That is the whole setup: the player injects its own stylesheet on first render.
+
+---
+
+## Styling and theming
+
+The player ships a **single scoped stylesheet**. Every rule lives under `.kui-player` and
+every class is `kui-`-prefixed, so it cannot collide with your CSS, and it needs no
+framework of its own — it works the same in a Tailwind app, a CSS-modules app, or an app
+with no styling stack at all.
+
+Theme it by overriding custom properties anywhere above the player:
+
+```css
+.my-player {
+  --kui-accent: #e11d48;
+  --kui-radius: 4px;
+  --kui-control-size: 2.5rem;
+  --kui-font: "Inter", system-ui, sans-serif;
+}
+```
+
+```tsx
+<VideoPlayer src={src} className="my-player" />
+```
+
+| Property | Default | Controls |
+|---|---|---|
+| `--kui-accent` | `#3b82f6` | progress fill, selected menu entries, active buttons |
+| `--kui-bg` | `#000` | the letterbox behind the video |
+| `--kui-surface` | `rgba(0,0,0,.9)` | settings panel |
+| `--kui-surface-raised` | `#16181d` | About dialog |
+| `--kui-text` / `--kui-text-muted` / `--kui-text-faint` | white ramp | typography |
+| `--kui-border` | `rgba(255,255,255,.12)` | panel borders |
+| `--kui-radius` / `--kui-radius-sm` | `12px` / `6px` | corner rounding |
+| `--kui-control-size` / `--kui-control-size-primary` | `2rem` / `2.25rem` | button hit areas |
+| `--kui-icon-size` | `0.875rem` | icon scale |
+| `--kui-font` / `--kui-font-size` | `inherit` / `0.875rem` | typography |
+| `--kui-scrim` | gradient | the fade behind the controls |
+| `--kui-focus` | `#fff` | focus ring |
+
+**Where the CSS comes from.** `<VideoPlayer>` injects it once per document, before first
+paint, and repeated players share the one `<style>` element. If you would rather link it
+yourself — a strict CSP, or to keep the head under your control — import the stylesheet
+and turn injection off:
+
+```tsx
+import "@kuraykaraaslan/kui-player/styles.css";
+
+<VideoPlayer src={src} injectStyles={false} />;
+```
+
+`PLAYER_CSS` is also exported as a string for inlining, and `injectPlayerStyles(root)`
+takes a `ShadowRoot` if you are mounting inside one.
+
+**Icons** are inline SVG (about a kilobyte for the whole set). Replace any of them:
+
+```tsx
+<VideoPlayer src={src} icons={{ play: <MyPlay />, pause: <MyPause /> }} />
+```
 
 ---
 
@@ -140,12 +203,16 @@ export default function Page() {
 }
 ```
 
-Import the stylesheet once from the root layout:
+Optionally link the stylesheet from the root layout:
 
 ```tsx
 // app/layout.tsx
-import "@kuraykaraaslan/kui-player/styles.css";
+import "@kuraykaraaslan/kui-player/styles.css";   // optional, see Styling and theming
 ```
+
+Injecting styles from the client (the default) means server-rendered markup paints
+unstyled for one frame; linking the stylesheet in the root layout and passing
+`injectStyles={false}` avoids that.
 
 The vanilla core (`@kuraykaraaslan/kui-player`) is SSR-safe on its own: constructing a
 `VideoPlayerEngine` touches no browser global. `document` is only read from `attach()`,
@@ -270,6 +337,8 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `preferNativeIosFullscreen` | `boolean` | use the iOS OS player instead of emulated fullscreen |
 | `onCastStateChange` | `(state: CastState) => void` | cast lifecycle |
 | `className` | `string` | root element class |
+| `icons` | `IconOverrides` | replace any built-in glyph |
+| `injectStyles` | `boolean` | defaults to `true`; `false` if you link `styles.css` yourself |
 
 ---
 
@@ -294,19 +363,45 @@ engine.store.subscribe((s) => {
 | Specifier | Contents |
 |---|---|
 | `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
-| `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />` plus hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`) |
-| `@kuraykaraaslan/kui-player/styles.css` | Compiled Tailwind v4 tokens. Import once at the app root |
+| `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />`, hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`, `useTouchGestures`), `Icon`/`IconProvider`, `PLAYER_CSS` |
+| `@kuraykaraaslan/kui-player/styles.css` | The player stylesheet, if you would rather link it than let the component inject it |
+
+---
+
+## Bundle size
+
+Budgets are enforced by `pnpm size` (and in CI); a build that busts one fails.
+
+| Bundle | gzip | budget |
+|---|---|---|
+| `dist/index.js` — vanilla core | 8.2 kB | 9 kB |
+| `dist/react/*` — React subpath, first load | 19.7 kB | 20 kB |
+| …plus the lazy chunks (settings, about, cast) | 23.7 kB | 26 kB |
+| `dist/embed.js` — single-file embed | 28.3 kB | 35 kB |
+| `dist/styles.css` | 3.3 kB | 4 kB |
+
+Three things are deliberately **not** in the first load: the settings panel, the About
+dialog and the Google Cast integration. Each is a lazy chunk, so a player rendered with
+`enableCast={false}` never downloads a byte of Cast code.
+
+The single-file embed renders with [Preact](https://preactjs.com/) through `preact/compat`
+— react-dom alone is more than the entire size budget for a set of video controls. This
+applies to `dist/embed.js` only; the React subpath uses your React.
 
 ---
 
 ## Stack
 
 - [React](https://react.dev/) 18 / 19 (optional peer)
-- [Zustand](https://github.com/pmndrs/zustand) v5 (vanilla store)
-- [Tailwind CSS](https://tailwindcss.com/) v4 (design tokens)
-- [Font Awesome](https://fontawesome.com/) (control icons)
-- [Google Cast Web SDK](https://developers.google.com/cast/docs/web_sender) (Chromecast)
-- [`clsx`](https://github.com/lukeed/clsx) + [`tailwind-merge`](https://github.com/dcastil/tailwind-merge) (`cn()` helper)
+- [Zustand](https://github.com/pmndrs/zustand) v5 (vanilla store) — the **only** runtime dependency
+- [Google Cast Web SDK](https://developers.google.com/cast/docs/web_sender) (Chromecast, loaded lazily by the page)
+- Everything else — icons, styles, class-name helper — is in-tree
+
+> **On `zustand`:** the published bundles include it, so there is no version negotiation
+> at runtime; it stays a dependency because the emitted types reference `StoreApi`. If
+> your app also uses zustand you will ship two small copies — they never interact, since
+> the player's store is internal. Removing the dependency entirely is
+> [Phase 4.12](./phases/phase-4-expected-features.md).
 
 ---
 
@@ -315,7 +410,8 @@ engine.store.subscribe((s) => {
 ```bash
 pnpm install
 pnpm dev          # Vite playground at http://localhost:5173
-pnpm build        # JS + .d.ts + styles.css → dist/
+pnpm build        # JS + .d.ts + styles.css + embed → dist/
+pnpm size         # enforce the gzip budgets in package.json
 pnpm typecheck    # tsc --noEmit against the library config
 ```
 
@@ -326,8 +422,10 @@ pnpm typecheck    # tsc --noEmit against the library config
 - `modules/` — vanilla core (engine, store, adapters, format, constants, types). No React imports.
 - `react/` — React subpath: `<VideoPlayer />`, control parts, settings panels, and hooks (cast, subtitle cues, keyboard, touch gestures).
 - `libs/` — cross-cutting utilities (`cn()`).
+- `react/icons/` — the inline SVG icon set (and the override mechanism).
+- `react/styles/` — `player.css`, the one stylesheet, plus its injection helpers.
 - `src/` — Vite dev playground (not bundled into the published package).
-- `scripts/` — build helpers (`build-css.mjs`).
+- `scripts/` — build helpers (`build-css.mjs`, `check-size.mjs`).
 - `phases/` — the roadmap: what is built, what is next, and why.
 
 ---

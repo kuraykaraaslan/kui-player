@@ -1,6 +1,5 @@
 import { forwardRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGear } from '@fortawesome/free-solid-svg-icons';
+import { Icon } from '../icons';
 import { SettingsRow } from './SettingsRow';
 import { SettingsSubMenu } from './SettingsSubMenu';
 import { SettingsOption } from './SettingsOption';
@@ -50,15 +49,17 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
   return (
     <div
       ref={ref}
-      className="absolute bottom-14 right-4 w-60 bg-black/90 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl overflow-hidden z-20"
+      className="kui-panel"
+      role="menu"
+      aria-label="Player settings"
     >
       {view === 'main' && (
         <>
-          <div className="px-4 py-2.5 border-b border-white/10 flex items-center gap-2">
-            <FontAwesomeIcon icon={faGear} className="text-white/50 text-xs" aria-hidden="true" />
-            <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">Settings</p>
+          <div className="kui-panel-head">
+            <Icon name="settings" />
+            <p>Settings</p>
           </div>
-          <div className="py-1">
+          <div className="kui-panel-body">
             {qualities && qualities.length > 0 && (
               <SettingsRow label="Quality" value={currentQualityLabel} onClick={() => onChangeView('quality')} />
             )}

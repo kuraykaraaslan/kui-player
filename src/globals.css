@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-@source "../react/**/*.{tsx,ts}";
-@source "../modules/**/*.{ts}";
+/* Demo-only Tailwind. The library itself ships no Tailwind classes any more —
+   its styles live in react/styles/player.css — so only src/ is scanned. */
 @source "../src/**/*.{ts,tsx}";
 
 :root {

@@ -2,7 +2,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine';
 import { VideoPlayerEngineContext } from '../react/VideoPlayerEngineContext';
 import { VideoPlayerChrome } from '../react/VideoPlayerChrome';
-import { EMBED_CSS } from './embed-css.generated';
+import { PLAYER_CSS } from '../react/styles';
 
 export interface SkinOptions {
   /** Playback rate to apply on mount (leaves the element's rate alone if omitted). */
@@ -11,8 +11,8 @@ export interface SkinOptions {
   autoHideControls?: boolean;
   /** Enable keyboard shortcuts while the pointer is over the player (default true). */
   enableKeyboard?: boolean;
-  /** 'dark' (default) matches the player's chrome; 'light' only shifts accents. */
-  theme?: 'light' | 'dark';
+  /** Accent colour for the controls — sets `--kui-accent` on the overlay. */
+  accent?: string;
 }
 
 const HOST_Z = 2147483000;
@@ -22,7 +22,7 @@ let sharedSheet: CSSStyleSheet | null = null;
 function embedStyleSheet(): CSSStyleSheet {
   if (!sharedSheet) {
     sharedSheet = new CSSStyleSheet();
-    sharedSheet.replaceSync(EMBED_CSS);
+    sharedSheet.replaceSync(PLAYER_CSS);
   }
   return sharedSheet;
 }
@@ -55,7 +55,7 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () =
   shadow.adoptedStyleSheets = [embedStyleSheet()];
   const mountEl = document.createElement('div');
   mountEl.style.cssText = 'width:100%;height:100%;';
-  if ((opts.theme ?? 'dark') === 'dark') mountEl.classList.add('dark');
+  if (opts.accent) mountEl.style.setProperty('--kui-accent', opts.accent);
   shadow.appendChild(mountEl);
   document.body.appendChild(host);
 

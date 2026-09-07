@@ -1,20 +1,28 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import {
+  Suspense, lazy, useCallback, useEffect, useRef, useState,
+  type ReactNode, type RefObject,
+} from 'react';
 import { cn } from '../libs/utils/cn';
 import { formatTime } from '../modules/videoplayer/videoplayer.format';
 import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine';
 import { useVideoPlayerStore } from './hooks/useVideoPlayerStore';
 import { ControlRow } from './parts/ControlRow';
 import { ProgressBar } from './parts/ProgressBar';
-import { SettingsPanel } from './parts/SettingsPanel';
-import { AboutModal } from './parts/AboutModal';
 import {
   CastOverlay, ErrorOverlay, GestureOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
 } from './parts/Overlays';
 import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types';
 import { useSubtitleCues } from './hooks/useSubtitleCues';
 import { useTouchGestures } from './hooks/useTouchGestures';
-import { useGoogleCast } from './hooks/useGoogleCast';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import type { CastApi } from './parts/CastController';
+
+// Split out of the main chunk: the settings menu and the About dialog are only
+// reachable after a click, and the Cast SDK plumbing never loads at all unless
+// `enableCast` is on.
+const SettingsPanel = lazy(() => import('./parts/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
+const AboutModal = lazy(() => import('./parts/AboutModal').then((m) => ({ default: m.AboutModal })));
+const CastController = lazy(() => import('./parts/CastController'));
 import type {
   AudioTrackOption, CastState, GestureOptions, QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
 } from '../modules/videoplayer/videoplayer.types';
@@ -116,7 +124,9 @@ export function VideoPlayerChrome({
 
   useEffect(() => { onControlsVisibilityChange?.(effectiveControls); }, [effectiveControls, onControlsVisibilityChange]);
 
-  const { toggleCast } = useGoogleCast({ enableCast, videoRef, src, title, poster, engine, onCastStateChange });
+  const castApi = useRef<CastApi | null>(null);
+  const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
+  const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
   useKeyboardShortcuts({ containerRef, engine });
   const { feedback, suppressClick, handlers: gestureHandlers } = useTouchGestures({
@@ -243,13 +253,7 @@ export function VideoPlayerChrome({
       ref={containerRef}
       tabIndex={0}
       aria-label={title ? `Video: ${title}` : 'Video player'}
-      className={cn(
-        'relative overflow-hidden select-none outline-none',
-        skin
-          ? 'w-full h-full'
-          : 'bg-black rounded-xl aspect-video min-h-[10rem] focus-visible:ring-2 focus-visible:ring-border-focus',
-        className,
-      )}
+      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', className)}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
       onClick={skin
@@ -268,41 +272,50 @@ export function VideoPlayerChrome({
         <SubtitleOverlay cueText={cueText} effectiveControls={effectiveControls} subtitleFontSize={subtitleFontSize} />
       )}
 
+      {enableCast && (
+        <Suspense fallback={null}>
+          <CastController
+            videoRef={videoRef}
+            src={src}
+            title={title}
+            poster={poster}
+            onCastStateChange={onCastStateChange}
+            onApi={onCastApi}
+          />
+        </Suspense>
+      )}
+
       <div
-        className={cn(
-          'absolute inset-0 flex flex-col justify-end transition-opacity duration-300 z-20',
-          effectiveControls ? 'opacity-100' : 'opacity-0 pointer-events-none',
-        )}
+        className={cn('kui-chrome', !effectiveControls && 'is-hidden')}
         onClick={(e) => { if (e.target === e.currentTarget && !isCasting && !suppressClick()) engine.togglePlay(); }}
       >
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 30%, transparent 60%)' }}
-        />
+        <div className="kui-scrim" />
         {showSettings && (
-          <SettingsPanel
-            ref={settingsPanelRef}
-            view={settingsView}
-            onChangeView={setSettingsView}
-            onAbout={() => { setShowAbout(true); closeSettings(); }}
-            qualities={qualityOptions}
-            subtitles={subtitles}
-            audioTracks={effectiveAudioTracks}
-            selectedQuality={selectedQuality}
-            activeQualityLabel={activeQualityLabel}
-            selectedSubtitle={selectedSubtitle}
-            selectedAudioTrack={selectedAudioTrack}
-            speed={speed}
-            subtitleFontSize={subtitleFontSize}
-            applyQuality={applyQuality}
-            applySpeed={applySpeed}
-            applySubtitle={applySubtitle}
-            applySubtitleSize={applySubtitleSize}
-            applyAudioTrack={applyAudioTrack}
-          />
+          <Suspense fallback={null}>
+            <SettingsPanel
+              ref={settingsPanelRef}
+              view={settingsView}
+              onChangeView={setSettingsView}
+              onAbout={() => { setShowAbout(true); closeSettings(); }}
+              qualities={qualityOptions}
+              subtitles={subtitles}
+              audioTracks={effectiveAudioTracks}
+              selectedQuality={selectedQuality}
+              activeQualityLabel={activeQualityLabel}
+              selectedSubtitle={selectedSubtitle}
+              selectedAudioTrack={selectedAudioTrack}
+              speed={speed}
+              subtitleFontSize={subtitleFontSize}
+              applyQuality={applyQuality}
+              applySpeed={applySpeed}
+              applySubtitle={applySubtitle}
+              applySubtitleSize={applySubtitleSize}
+              applyAudioTrack={applyAudioTrack}
+            />
+          </Suspense>
         )}
-        <div className="relative px-4 pb-3 pt-6 space-y-2.5">
-          {title && <p className="text-white/90 text-sm font-medium truncate leading-tight">{title}</p>}
+        <div className="kui-controls">
+          {title && <p className="kui-title">{title}</p>}
           <ProgressBar
             ref={progressRef}
             progress={progress}
@@ -342,7 +355,11 @@ export function VideoPlayerChrome({
         </div>
       </div>
 
-      <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
+      {showAbout && (
+        <Suspense fallback={null}>
+          <AboutModal open onClose={() => setShowAbout(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

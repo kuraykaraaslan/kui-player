@@ -9,14 +9,7 @@ export default defineConfig({
       formats: ['es'],
       fileName: () => 'index.js',
     },
-    rollupOptions: {
-      external: [
-        '@fortawesome/react-fontawesome',
-        '@fortawesome/fontawesome-svg-core',
-        '@fortawesome/free-solid-svg-icons',
-        '@fortawesome/free-brands-svg-icons',
-      ],
-    },
+    rollupOptions: { external: [] },
     outDir: 'dist',
     target: 'es2022',
     sourcemap: true,

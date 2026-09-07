@@ -17,13 +17,12 @@ export default defineConfig({
         'react-dom',
         'react/jsx-runtime',
         '@kuraykaraaslan/kui-player',
-        '@fortawesome/react-fontawesome',
-        '@fortawesome/fontawesome-svg-core',
-        '@fortawesome/free-solid-svg-icons',
-        '@fortawesome/free-brands-svg-icons',
       ],
       output: {
         preserveModules: false,
+        // Cast / settings / about split out of the entry chunk. The shared
+        // chunk rollup extracts alongside them would otherwise be `index2.js`.
+        chunkFileNames: (chunk) => (chunk.name === 'index' ? 'react/player.js' : 'react/[name].js'),
         // Rollup strips module-level directives when bundling — re-emit it so
         // the React subpath stays a client boundary under the Next.js App Router.
         banner: '"use client";',

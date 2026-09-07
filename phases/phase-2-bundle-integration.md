@@ -1,6 +1,6 @@
 # Faz 2 — Bundle ve Entegrasyon
 
-**Öncelik:** 🔴 Zorunlu · **Efor:** ~2 hafta · **Önkoşul:** Faz 1 · **Durum:** ⬜
+**Öncelik:** 🔴 Zorunlu · **Efor:** ~2 hafta · **Önkoşul:** Faz 1 · **Durum:** ✅ Tamamlandı
 
 > Player artık çalışıyor. Bu faz onu **benimsenebilir** yapıyor. Mevcut boyut ve
 > Tailwind kuplajı, ciddi projelerin kütüphaneyi elemesine yol açan iki gerekçe.
@@ -17,7 +17,9 @@
 | Video.js v10 + SPF (HLS dahil) | 38.7 KB |
 | Vidstack (tüm çekirdek, tree-shakeable) | 54 KB |
 | Video.js v8 çekirdek | 75.2 KB |
-| **kui-player `dist/embed.js` (bugün)** | **~97 KB** |
+| **kui-player `dist/embed.js` (Faz 2 öncesi)** | **~106 KB** |
+| **kui-player `dist/embed.js` (Faz 2 sonrası)** | **28.3 KB** |
+| **kui-player React subpath (Faz 2 sonrası)** | **19.7 KB** |
 
 Şu an pazarın **en büyük** oynatıcısıyız ve en az özelliğe sahibiz. Bu sürdürülemez.
 
@@ -94,12 +96,39 @@ görünüyor. Tailwind kullanan bir projede host stilleriyle çakışma yok.
 
 **Hedef:** Sıfır runtime bağımlılık. Rakiplerin çoğu bunu sağlıyor.
 
+**Sonuç:** `clsx` + `tailwind-merge` kaldırıldı (`cn()` artık 10 satırlık bir birleştirici),
+dört FontAwesome paketi kaldırıldı. Geriye tek runtime bağımlılığı olarak `zustand` kaldı:
+bundle'a dahil edildiği için runtime'da sürüm pazarlığı yok, `dependencies`'te kalmasının
+sebebi üretilen `.d.ts`'lerin `StoreApi` tipine referans vermesi. Çift kopya riski
+README'de dokümante edildi.
+
 ---
 
 ## Faz 2 çıkış kriterleri
 
-- [ ] React subpath ≤ 20 KB gzip, embed ≤ 35 KB gzip
-- [ ] FontAwesome bağımlılığı yok
-- [ ] Tailwind'siz projede çalışıyor, CSS değişkenleriyle temalanıyor
-- [ ] Cast kodu opsiyonel chunk
-- [ ] `size-limit` CI'da eşikli çalışıyor
+- [x] React subpath **19.68 KB** gzip (bütçe 20), embed **28.31 KB** gzip (bütçe 35).
+      Çekirdek 8.21 KB, stylesheet 3.26 KB.
+- [x] FontAwesome bağımlılığı yok — `react/icons/` altında ~25 inline SVG, `Icon`
+      bileşeni + `icons={{ play: <MyIcon/> }}` override'ı
+- [x] Tailwind'siz projede çalışıyor — kütüphanede tek bir `player.css`, tüm sınıflar
+      `kui-` önekli ve `.kui-player` altında; tema `--kui-accent` vb. custom property'lerle.
+      `styles.css` import'u artık opsiyonel (bileşen kendi stilini enjekte ediyor,
+      `injectStyles={false}` ile kapatılabilir).
+- [x] Cast kodu opsiyonel chunk — `CastController` lazy; `SettingsPanel` ve `AboutModal` de
+      ayrı chunk. `enableCast={false}` ile Cast kodu hiç indirilmiyor.
+- [x] Boyut bütçeleri eşikli ölçülüyor — `pnpm size` (`scripts/check-size.mjs`),
+      bütçeler `package.json` içindeki `size-limit` alanında. CI bağlanması Faz 3.3'te.
+
+**Not — `size-limit` yerine kendi betiğimiz:** gzip ölçüp eşikle karşılaştırmak 60 satır;
+sıfır bağımlılık iddiasındaki bir kütüphanenin boyut kapısının kendi bağımlılık ağacını
+getirmesi tutarsız olurdu. Bütçe formatı `size-limit` ile aynı, ileride araca geçmek
+konfigürasyon değişikliği.
+
+**Not — embed'de Preact:** `dist/embed.js` `preact/compat` ile derleniyor; react-dom tek
+başına ~40 KB gzip, yani bütçenin tamamından büyük. Yalnızca embed build'ine ait bir alias,
+React subpath'i etkilemiyor, Preact devDependency.
+
+**Doğrulama:** `tsc` (lib + tam), beş build, `pnpm size` (5 bütçenin hepsi geçiyor),
+derlenmiş engine üzerinde 62 davranış kontrolü ve React ağacının sunucuda render edildiği
+12 kontrol (Tailwind sınıfı sızmıyor, ikonlar inline SVG, adaptör kaynakları `<source>`
+üretmiyor).

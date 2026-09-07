@@ -37,7 +37,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
       aria-valuenow={Math.round(progress)}
       aria-valuetext={valueText}
       tabIndex={0}
-      className="relative -my-3 flex h-11 cursor-pointer touch-none items-center group/seek"
+      className="kui-seek"
       onClick={onSeek}
       onMouseMove={onSeekMouseMove}
       onMouseLeave={onSeekLeave}
@@ -46,23 +46,15 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
       onPointerUp={onScrubEnd}
       onPointerCancel={onScrubEnd}
     >
-      <div ref={ref} className="relative h-1.5 w-full rounded-full bg-white/20 transition-all group-hover/seek:h-2">
-        <div className="absolute inset-y-0 left-0 rounded-full bg-white/25" style={{ width: `${buffered}%` }} />
-        <div className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+      <div ref={ref} className="kui-seek-track">
+        <div className="kui-seek-buffered" style={{ width: `${buffered}%` }} />
+        <div className="kui-seek-played" style={{ width: `${progress}%` }} />
         {seekHoverPct !== null && (
-          <div className="absolute inset-y-0 left-0 rounded-full bg-white/15" style={{ width: `${seekHoverPct}%` }} />
+          <div className="kui-seek-hover" style={{ width: `${seekHoverPct}%` }} />
         )}
-        <div
-          className="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-md transition-opacity group-hover/seek:opacity-100"
-          style={{ left: `calc(${progress}% - 7px)` }}
-        />
+        <div className="kui-seek-thumb" style={{ left: `calc(${progress}% - 7px)` }} />
         {hoverTime && seekHoverX !== null && (
-          <div
-            className="pointer-events-none absolute -top-8 -translate-x-1/2 whitespace-nowrap rounded bg-black/80 px-1.5 py-0.5 text-xs text-white"
-            style={{ left: seekHoverX }}
-          >
-            {hoverTime}
-          </div>
+          <div className="kui-seek-tip" style={{ left: seekHoverX }}>{hoverTime}</div>
         )}
       </div>
     </div>

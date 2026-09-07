@@ -5,9 +5,24 @@ import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine';
 import { VideoPlayerEngineContext } from './VideoPlayerEngineContext';
 import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine';
 import { VideoPlayerChrome } from './VideoPlayerChrome';
+import { IconProvider, type IconOverrides } from './icons';
+import { usePlayerStyles } from './styles';
 import type { VideoPlayerProps } from '../modules/videoplayer/videoplayer.types';
 
-export function VideoPlayer(props: VideoPlayerProps) {
+export type VideoPlayerComponentProps = VideoPlayerProps & {
+  /** Swap any built-in icon: `icons={{ play: <MyPlay /> }}`. */
+  icons?: IconOverrides;
+  /**
+   * Inject the player stylesheet on first render (default `true`). Set `false`
+   * when the app imports `@kuraykaraaslan/kui-player/styles.css` itself.
+   */
+  injectStyles?: boolean;
+};
+
+const NO_ICON_OVERRIDES: IconOverrides = {};
+
+export function VideoPlayer(props: VideoPlayerComponentProps) {
+  usePlayerStyles(props.injectStyles ?? true);
   const engineRef = useRef<VideoPlayerEngine | null>(null);
   if (!engineRef.current) {
     engineRef.current = new VideoPlayerEngine({
@@ -29,7 +44,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
 
   return (
     <VideoPlayerEngineContext.Provider value={engineRef.current}>
-      <VideoPlayerInner {...props} />
+      <IconProvider value={props.icons ?? NO_ICON_OVERRIDES}>
+        <VideoPlayerInner {...props} />
+      </IconProvider>
     </VideoPlayerEngineContext.Provider>
   );
 }
@@ -118,9 +135,8 @@ function VideoPlayerInner({
         // CORS-restricted. Setting it unconditionally blocks playback of any
         // video host that doesn't send Access-Control-Allow-Origin.
         crossOrigin={subtitles && subtitles.length > 0 ? 'anonymous' : undefined}
-        className="w-full h-full object-contain block"
+        className="kui-video"
         onClick={() => engine.togglePlay()}
-        style={{ cursor: 'pointer' }}
       >
         {!adapterManaged && sources.map((s, i) =>
           typeof s === 'string'
