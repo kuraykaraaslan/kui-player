@@ -13,7 +13,24 @@ export interface SkinOptions {
   enableKeyboard?: boolean;
   /** Accent colour for the controls — sets `--kui-accent` on the overlay. */
   accent?: string;
+  /**
+   * Hide the element's own native controls while skinned, and put them back on
+   * unmount (default true). Two control bars stacked on one video is the single
+   * most common way this goes wrong.
+   */
+  hideNativeControls?: boolean;
+  /** Title shown in the overlay. Defaults to the element's `title` attribute. */
+  title?: string;
+  /**
+   * Offer the Google Cast button (default false). Turning it on loads Google's
+   * Cast sender SDK from gstatic.com — the only external request this library
+   * can make, and only when you ask for it.
+   */
+  cast?: boolean;
 }
+
+/** Marks a skinned element, so a second pass can skip it. */
+export const SKINNED_ATTR = 'data-kui-skinned';
 
 const HOST_Z = 2147483000;
 const FS_Z = 2147483647;
@@ -35,6 +52,13 @@ function embedStyleSheet(): CSSStyleSheet {
 export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () => void {
   const engine = new VideoPlayerEngine({ autoHideControls: opts.autoHideControls ?? true });
   engine.attach(video);
+
+  // Take over the element's own controls; `unmount` restores exactly what it
+  // found, attribute or property.
+  const hadControlsAttr = video.hasAttribute('controls');
+  const hadControls = video.controls;
+  if (opts.hideNativeControls ?? true) video.controls = false;
+  video.setAttribute(SKINNED_ATTR, '');
 
   // Seed the store from the live element so the UI reflects reality immediately.
   const st = engine.store.getState();
@@ -195,7 +219,15 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () =
   const root: Root = createRoot(mountEl);
   root.render(
     <VideoPlayerEngineContext.Provider value={engine}>
-      <VideoPlayerChrome skin videoRef={videoRef} enableCast={false} onToggleFullscreen={toggleFullscreen} />
+      <VideoPlayerChrome
+        skin
+        videoRef={videoRef}
+        title={opts.title ?? video.title ?? undefined}
+        src={video.currentSrc || video.src}
+        poster={video.poster || undefined}
+        enableCast={opts.cast ?? false}
+        onToggleFullscreen={toggleFullscreen}
+      />
     </VideoPlayerEngineContext.Provider>,
   );
 
@@ -213,5 +245,8 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () =
     root.unmount();
     engine.dispose();
     host.remove();
+    video.removeAttribute(SKINNED_ATTR);
+    video.controls = hadControls;
+    if (hadControlsAttr) video.setAttribute('controls', ''); else video.removeAttribute('controls');
   };
 }

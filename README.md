@@ -3,7 +3,15 @@
 [![npm](https://img.shields.io/npm/v/@kuraykaraaslan/kui-player.svg)](https://www.npmjs.com/package/@kuraykaraaslan/kui-player)
 [![license](https://img.shields.io/npm/l/@kuraykaraaslan/kui-player.svg)](./LICENSE)
 
-A standalone, framework-light HTML5 video player. Ships a framework-agnostic TypeScript core (`VideoPlayerEngine`) that wraps a native `<video>` element, plus a batteries-included React subpath. **No CSS framework, no icon font, no styling opinions imposed on your app** — one scoped stylesheet themed through CSS custom properties.
+**A video player chrome you can put on any `<video>` element — including one your page already has.** One `<script>` tag dresses the videos a site already renders, without touching how they are delivered. Cast-first, zero-telemetry, ~20 kB.
+
+It is not another general-purpose player framework. It is the controls layer: accessible, themeable through CSS custom properties, and mountable over a `<video>` that some other pipeline (progressive, hls.js, MSE, blob) is already feeding. Use it as a React component, as a vanilla engine, or as a skin over markup you do not control.
+
+```html
+<!-- every <video> on the page, dressed, no build step -->
+<script src="https://cdn.jsdelivr.net/npm/@kuraykaraaslan/kui-player/dist/embed.js"
+        data-auto="video" data-accent="#f97316"></script>
+```
 
 > **Status**: `0.0.x`, heading for `0.1.0`. The API is stable from here on — see
 > [Upgrading to 0.1.0](#upgrading-to-010) for what changed on the way.
@@ -12,6 +20,9 @@ A standalone, framework-light HTML5 video player. Ships a framework-agnostic Typ
 
 ## Features
 
+- **Skin mode** — adopt a `<video>` the page already owns; the media pipeline is untouched
+- **Zero external requests** — no telemetry, no fonts, no CDN icons, nothing in browser storage; [proven by a CI test](#privacy)
+- **Cast as a real target** — queue, custom receiver, subtitle hand-off, and a position-preserving return to local playback
 - **Native `<video>` core** — plus optional HLS/DASH adapters (see [Streaming formats](#streaming-formats))
 - **Adaptive streaming** — bring your own `hls.js` / `dash.js`; the quality menu fills itself from the manifest and gains an **Auto** entry
 - **Real audio-track switching** — element-level (Safari) or through the adapter
@@ -35,6 +46,92 @@ A standalone, framework-light HTML5 video player. Ships a framework-agnostic Typ
 - **Accessible by default** — full keyboard operation, focus trapping, a live region, AA contrast, axe-clean
 - Framework-agnostic core: Zustand vanilla store, no React imports below `react/`
 - Strict TypeScript throughout, tested with Vitest + Playwright
+
+---
+
+## Skin mode — bring your own `<video>`
+
+The differentiator, and the reason this library exists separately from the players it
+sits next to: **kui-player can take over a `<video>` element it did not create.**
+
+```html
+<video id="clip" src="/media/talk.mp4" poster="/media/talk.jpg" controls></video>
+
+<script src="https://cdn.jsdelivr.net/npm/@kuraykaraaslan/kui-player/dist/embed.js"
+        data-auto="video"></script>
+```
+
+That is the whole integration: no markup changes, no build step, no re-encoding, no
+change to how the media is delivered. The element keeps its source and its pipeline —
+progressive, hls.js, MSE, blob — and only the controls change.
+
+- Renders into a **shadow root**, so the host page's CSS cannot reach the controls and
+  the controls cannot leak into the page.
+- **Hides the element's own controls** while skinned and restores them exactly on unmount.
+- Tracks the **visible player box**, not the raw element size, which is what keeps the
+  overlay aligned inside letterboxed third-party players.
+- Keeps skinning videos that appear later, for single-page apps.
+
+From JavaScript, or from a bundler:
+
+```js
+const skins = kuiPlayer.skinAll("article video", { accent: "#f97316" });
+skins.stop();   // every skin removed, native controls back
+```
+
+```ts
+import { mountSkin, skinAll } from "@kuraykaraaslan/kui-player/skin";
+```
+
+There is a [live demo](./skin.html), a [recipe](./recipes/skin-mode.md), and a
+[WordPress plugin](./wordpress/kui-player) that applies it site-wide.
+
+---
+
+## Privacy
+
+**The player makes no network request other than the media you point it at.** No
+telemetry, no fonts, no CDN-hosted icons, no analytics, and nothing written to
+`localStorage`, `sessionStorage` or cookies.
+
+Google Cast is the single exception: enabling it loads Google's sender SDK from
+`gstatic.com`. That is why `enableCast` defaults to **off** — you opt into the one
+request the library can make.
+
+This is not a slogan. `tests/e2e/privacy.spec.ts` drives the player through playback,
+the settings menu, subtitles and the About dialog while recording every request, and
+fails if anything leaves the page's own origin. It runs in CI on every pull request.
+
+---
+
+## Casting
+
+Cast is treated as a real playback target rather than a bolt-on:
+
+```tsx
+<VideoPlayer
+  src={video.mp4}
+  enableCast
+  castQueue={[
+    { src: episodeOne, title: "Episode 1", poster: posterOne },
+    { src: episodeTwo, title: "Episode 2", poster: posterTwo, startTime: 30 },
+  ]}
+  castReceiverAppId="ABCD1234"
+/>
+```
+
+- **Queues** — the receiver owns the playlist; the overlay shows the position and moves
+  through it.
+- **Custom receiver app id** — brand the TV side.
+- **Subtitles follow the session** — track lists go with the media, and changing the
+  subtitle while connected is sent to the receiver, not to a `<video>` nobody is watching.
+- **Handoff back** — when the session ends, local playback resumes at the position the
+  receiver reached, playing if it was playing.
+- **Failure is visible** — a blocked SDK or a refused session surfaces as a message
+  instead of a button that silently does nothing.
+
+Everything Cast-related lives in a lazy chunk, so `enableCast={false}` (the default)
+downloads none of it.
 
 ---
 
@@ -138,7 +235,9 @@ every class is `kui-`-prefixed, so it cannot collide with your CSS, and it needs
 framework of its own — it works the same in a Tailwind app, a CSS-modules app, or an app
 with no styling stack at all.
 
-Theme it by overriding custom properties anywhere above the player:
+Theme it by setting custom properties on the player **or on any ancestor** — the
+stylesheet reads the public tokens rather than redeclaring them, so an inherited value
+actually wins:
 
 ```css
 .my-player {
@@ -167,6 +266,8 @@ Theme it by overriding custom properties anywhere above the player:
 | `--kui-font` / `--kui-font-size` | `inherit` / `0.875rem` | typography |
 | `--kui-scrim` | gradient | the fade behind the controls |
 | `--kui-focus` | `#fff` | focus ring |
+
+In skin mode the same tokens are set through the `accent` option or `data-accent`.
 
 **Where the CSS comes from.** `<VideoPlayer>` injects it once per document, before first
 paint, and repeated players share the one `<style>` element. If you would rather link it
@@ -332,7 +433,9 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `controlsVisible` | `boolean` | controlled visibility |
 | `autoHideControls` | `boolean` | hide after 3s while playing |
 | `onControlsVisibilityChange` | `(visible) => void` | visibility callback |
-| `enableCast` | `boolean` | enable the Google Cast button |
+| `enableCast` | `boolean` | defaults to **`false`** — enabling it loads Google's Cast SDK from gstatic.com |
+| `castQueue` | `CastQueueItem[]` | cast a playlist; the receiver owns the queue |
+| `castReceiverAppId` | `string` | custom receiver application id |
 | `enablePictureInPicture` | `boolean` | defaults to `true`; the button hides itself where PiP is unsupported |
 | `gestures` | `boolean \| GestureOptions` | touch gestures, see [Touch gestures](#touch-gestures) |
 | `autoFullscreenOnLandscape` | `boolean` | fullscreen when a phone rotates while playing |
@@ -366,7 +469,9 @@ engine.store.subscribe((s) => {
 |---|---|
 | `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
 | `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />`, hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`, `useTouchGestures`), `Icon`/`IconProvider`, `PLAYER_CSS` |
+| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll` — skin mode for bundler users |
 | `@kuraykaraaslan/kui-player/styles.css` | The player stylesheet, if you would rather link it than let the component inject it |
+| `dist/embed.js` | The single-script build: installs `window.kuiPlayer` and auto-starts from `data-*` attributes |
 
 ---
 
@@ -452,10 +557,21 @@ applies to `dist/embed.js` only; the React subpath uses your React.
 | `useTouchGestures` is no longer exported from `/react` | It is loaded internally on touch devices; there is no supported way to call it directly |
 | Adapters (`createHlsAdapter`, `createDashAdapter`) are exported from the package root, not `/react` | `import { createHlsAdapter } from "@kuraykaraaslan/kui-player"` |
 | `audioTracks` no longer needs a prop to work | Tracks are discovered from the element or the adapter; the prop is a fallback for sources that expose none |
+| `enableCast` now defaults to `false` | Pass `enableCast` explicitly. The default keeps the zero-external-request guarantee intact |
+| The embed's global is `window.kuiPlayer` | `window.__tepegozVideoPlayer` still points at the same object, but is deprecated |
 
 New since `0.0.2`: HLS/DASH adapters, real audio-track switching, Picture-in-Picture,
 touch gestures, iOS fullscreen, an error surface with retry, and the accessibility work
 above.
+
+---
+
+## For AI assistants
+
+[`llms.txt`](./llms.txt) and [`llms-full.txt`](./llms-full.txt) describe the whole API
+surface in one fetch, and the [recipes](./recipes) are copy-pasteable integrations for
+Next.js, Vite, hls.js, skin mode and WordPress. Both are served as plain files from the
+demo deployment, alongside the markdown docs.
 
 ---
 
@@ -488,6 +604,9 @@ Chromium, Firefox, WebKit and a mobile emulation. See
 - `react/styles/` — `player.css`, the one stylesheet, plus its injection helpers.
 - `src/` — Vite dev playground (not bundled into the published package).
 - `tests/` — unit and component tests, plus the end-to-end harness in `tests/e2e/app`.
+- `embed/` — skin mode: `mountSkin`, `skinAll`, and the single-script bundle entry.
+- `recipes/` — copy-pasteable integrations, also served from the demo.
+- `wordpress/` — the WordPress plugin that applies skin mode site-wide.
 - `scripts/` — build helpers (`build-css.mjs`, `check-size.mjs`).
 - `phases/` — the roadmap: what is built, what is next, and why.
 

@@ -1,0 +1,34 @@
+# kui-player
+
+> A video player chrome you can put on any `<video>` element — including one a page
+> already owns. Vanilla TypeScript core plus a React subpath, ~19.7 kB gzipped, one
+> runtime dependency, no CSS framework, no icon font, and no network request other
+> than the media you point it at.
+
+kui-player is not trying to be a general-purpose player framework. It is the controls
+layer: accessible, themeable through CSS custom properties, and mountable over a
+`<video>` that some other pipeline (progressive, hls.js, MSE, blob) is already feeding.
+
+- Package: `@kuraykaraaslan/kui-player` (npm, Apache-2.0, ESM only)
+- Entry points: `.` (vanilla core), `./react`, `./styles.css`
+- Requires React 18/19 only for the `./react` subpath; the core has no framework
+
+## Documentation
+
+- [README](https://github.com/kuraykaraaslan/kui-player/blob/main/README.md): install, props, theming, streaming, accessibility, bundle budgets
+- [llms-full.txt](https://github.com/kuraykaraaslan/kui-player/blob/main/llms-full.txt): the complete API surface, types and recipes in one file
+- [Recipes](https://github.com/kuraykaraaslan/kui-player/tree/main/recipes): copy-pasteable integrations (Next.js, Vite, WordPress, skin mode, hls.js)
+- [CONTRIBUTING](https://github.com/kuraykaraaslan/kui-player/blob/main/CONTRIBUTING.md): the rules a change has to satisfy
+- [Roadmap](https://github.com/kuraykaraaslan/kui-player/tree/main/phases): what is built, what is next, and why
+
+## The three ways to use it
+
+- **React component** — `<VideoPlayer src="…" />` from `@kuraykaraaslan/kui-player/react`. Client boundary is declared for the Next.js App Router.
+- **Vanilla engine** — `new VideoPlayerEngine()` then `engine.attach(videoElement)`; drives a Zustand vanilla store you can subscribe to.
+- **Skin mode** — one `<script>` tag dresses videos the page already has: `<script src="…/dist/embed.js" data-auto="video"></script>`. No build step, no markup change.
+
+## What it deliberately does not do
+
+- Ship an HLS or DASH engine. Bring `hls.js` or `dash.js` and pass an adapter; nothing is bundled for apps that do not stream.
+- Send telemetry, load fonts, or fetch icons. Google Cast is the one external request, it is opt-in, and a CI test enforces the rest.
+- Impose styling. One scoped stylesheet, every class prefixed `kui-`, themed with `--kui-*` custom properties.

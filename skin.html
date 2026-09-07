@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kui-player — skin mode</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        padding: 2rem 1.5rem 4rem;
+        background: #0b0d10;
+        color: #e6e9ef;
+        font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 60rem; margin: 0 auto; }
+      h1 { font-size: 1.6rem; margin: 0 0 .35rem; }
+      .lede { color: #98a2b3; max-width: 46rem; margin: 0 0 1.75rem; }
+      h2 { font-size: 1rem; margin: 2.5rem 0 .35rem; }
+      p.note { color: #98a2b3; font-size: .875rem; margin: 0 0 .85rem; }
+      video { width: 100%; display: block; background: #000; border-radius: 10px; }
+      .bar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1rem; }
+      button {
+        border: 1px solid #2a3140; background: #151922; color: inherit; font: inherit;
+        padding: .45rem .8rem; border-radius: 8px; cursor: pointer;
+      }
+      button:hover { background: #1d2330; }
+      button[aria-pressed="true"] { border-color: #f97316; color: #f97316; }
+      code { background: #151922; padding: .1rem .35rem; border-radius: 4px; font-size: .85em; }
+      .status { color: #98a2b3; font-size: .85rem; }
+      /* A stand-in for a third-party player: letterboxed box with its own bar. */
+      .fake-player { background: #11141a; border: 1px solid #222836; border-radius: 10px; padding: 12px; }
+      .fake-player video { border-radius: 6px; }
+      .fake-bar { display: flex; gap: .5rem; align-items: center; margin-top: 8px; color: #667085; font-size: .8rem; }
+      .fake-bar span { height: 4px; background: #222836; border-radius: 99px; flex: 1; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Bring your own <code>&lt;video&gt;</code></h1>
+      <p class="lede">
+        Every video below belongs to this page — kui-player did not create any of them.
+        Skin mode adopts the element that is already there and overlays its chrome on
+        top, leaving the media pipeline (progressive, hls.js, MSE, blob) untouched.
+        One script tag, no build step, and it comes off as cleanly as it went on.
+      </p>
+
+      <div class="bar">
+        <button id="toggle" type="button" aria-pressed="false">Skin every video</button>
+        <button id="accent" type="button">Accent: orange</button>
+        <span class="status" id="status">Not skinned — these are the browser's own controls.</span>
+      </div>
+
+      <h2>1 · A plain element with native controls</h2>
+      <p class="note">Its own control bar is hidden while skinned, and restored on unmount.</p>
+      <video id="one" controls preload="metadata"
+             poster="https://media.w3.org/2010/05/sintel/poster.png"
+             src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+
+      <h2>2 · Wrapped by another player's markup</h2>
+      <p class="note">
+        The overlay measures the visible player box, not the raw pixel size of the
+        element — the case that breaks naive overlays on YouTube-style layouts.
+      </p>
+      <div class="fake-player">
+        <video id="two" preload="metadata"
+               poster="https://media.w3.org/2010/05/bunny/poster.png"
+               src="https://media.w3.org/2010/05/bunny/trailer.mp4"></video>
+        <div class="fake-bar">host player chrome <span></span> 0:33</div>
+      </div>
+
+      <h2>3 · Added to the DOM later</h2>
+      <p class="note">
+        Single-page apps mount their players after the script runs, so skinning keeps
+        watching. Press the button to insert one.
+      </p>
+      <button id="add" type="button">Insert another video</button>
+      <div id="late"></div>
+    </main>
+    <script type="module" src="/src/skin-demo.ts"></script>
+  </body>
+</html>

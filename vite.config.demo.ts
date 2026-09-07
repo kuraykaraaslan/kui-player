@@ -1,9 +1,48 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { minifiedCssRaw } from "./vite.plugin.css-raw";
 import { createRequire } from "module";
+import { readFileSync, readdirSync } from "fs";
 import { resolve } from "path";
 
 const require = createRequire(import.meta.url);
+
+/*
+ * Publishes the agent-facing docs alongside the demo: `llms.txt`, the full
+ * reference, and every recipe served as plain markdown. Developers increasingly
+ * ask an assistant which player to use, and an assistant can only answer from
+ * what it can fetch.
+ */
+function docsPlugin(): Plugin {
+  const root = resolve(__dirname);
+  const files = () => [
+    { from: resolve(root, "llms.txt"), to: "llms.txt" },
+    { from: resolve(root, "llms-full.txt"), to: "llms-full.txt" },
+    { from: resolve(root, "README.md"), to: "README.md" },
+    { from: resolve(root, "CONTRIBUTING.md"), to: "CONTRIBUTING.md" },
+    ...readdirSync(resolve(root, "recipes"))
+      .filter((name) => name.endsWith(".md"))
+      .map((name) => ({ from: resolve(root, "recipes", name), to: `recipes/${name}` })),
+  ];
+
+  return {
+    name: "kui-docs",
+    generateBundle() {
+      for (const file of files()) {
+        this.emitFile({ type: "asset", fileName: file.to, source: readFileSync(file.from, "utf8") });
+      }
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url ?? "").replace(/^\//, "").split("?")[0];
+        const match = files().find((file) => file.to === url);
+        if (!match) return next();
+        res.setHeader("Content-Type", url.endsWith(".md") ? "text/markdown; charset=utf-8" : "text/plain; charset=utf-8");
+        res.end(readFileSync(match.from, "utf8"));
+      });
+    },
+  };
+}
 
 /*
  * Demo-site build config (deployed to Vercel).
@@ -17,7 +56,7 @@ const require = createRequire(import.meta.url);
  */
 export default defineConfig({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
-  plugins: [react()],
+  plugins: [react(), docsPlugin(), minifiedCssRaw()],
   resolve: {
     // The repo has a top-level ./react folder (the library's React subpath
     // source) whose name collides with the npm `react` package. Vite's dep
@@ -35,6 +74,12 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   build: {
+    rollupOptions: {
+      input: {
+        index: resolve(__dirname, "index.html"),
+        skin: resolve(__dirname, "skin.html"),
+      },
+    },
     outDir: "dist-demo",
     emptyOutDir: true,
     target: "es2022",

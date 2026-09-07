@@ -14,7 +14,20 @@ export type SettingsView =
   | 'subtitle-size'
   | 'language';
 
-export type CastState = 'unavailable' | 'available' | 'connecting' | 'connected';
+export type CastState = 'unavailable' | 'available' | 'connecting' | 'connected' | 'error';
+
+/** One entry in a Cast queue. `src` is the only required field. */
+export type CastQueueItem = {
+  src: string;
+  /** MIME type; defaults to `video/mp4`. */
+  type?: string;
+  title?: string;
+  poster?: string;
+  /** Where the receiver should start this item. */
+  startTime?: number;
+  /** Subtitle tracks to hand to the receiver alongside the media. */
+  subtitles?: SubtitleTrack[];
+};
 
 /**
  * A `MediaError` flattened into something the store can hold and the UI can render.
@@ -82,15 +95,31 @@ export type VideoPlayerProps = {
   autoHideControls?: boolean;
   onControlsVisibilityChange?: (visible: boolean) => void;
   enableCast?: boolean;
+  /**
+   * Cast a playlist instead of the single current source. The first item is
+   * loaded on connect; the receiver owns the rest of the queue.
+   */
+  castQueue?: CastQueueItem[];
+  /** A custom receiver application id — brand the TV side of the session. */
+  castReceiverAppId?: string;
   onCastStateChange?: (state: CastState) => void;
   className?: string;
 };
 
 // ─── internal Cast SDK type surface ──────────────────────────────────────────
 
+export type CastMediaSession = {
+  currentTime?: number;
+  queueNext: (success: () => void, error: (e: unknown) => void) => void;
+  queuePrev: (success: () => void, error: (e: unknown) => void) => void;
+  editTracksInfo: (request: unknown, success: () => void, error: (e: unknown) => void) => void;
+  getEstimatedTime?: () => number;
+};
 export type CastSession = {
   getCastDevice: () => { friendlyName: string } | null;
   loadMedia: (request: unknown) => Promise<void>;
+  queueLoad?: (request: unknown) => Promise<void>;
+  getMediaSession?: () => CastMediaSession | null;
 };
 export type CastContextInstance = {
   setOptions: (opts: { receiverApplicationId: string; autoJoinPolicy: string }) => void;
@@ -130,8 +159,24 @@ export type ChromeCastNs = {
   Image: new (url: string) => unknown;
   media: {
     DEFAULT_MEDIA_RECEIVER_APP_ID: string;
-    MediaInfo: new (contentId: string, contentType: string) => { metadata?: unknown };
+    MediaInfo: new (contentId: string, contentType: string) => {
+      metadata?: unknown;
+      tracks?: unknown[];
+    };
     GenericMediaMetadata: new () => { title?: string; images?: unknown[] };
-    LoadRequest: new (mediaInfo: unknown) => { currentTime?: number };
+    LoadRequest: new (mediaInfo: unknown) => { currentTime?: number; activeTrackIds?: number[] };
+    QueueLoadRequest?: new (items: unknown[]) => { startIndex?: number; repeatMode?: string };
+    QueueItem?: new (mediaInfo: unknown) => { startTime?: number };
+    Track?: new (id: number, type: string) => {
+      trackContentId?: string;
+      trackContentType?: string;
+      subtype?: string;
+      name?: string;
+      language?: string;
+    };
+    TrackType?: { TEXT: string };
+    TextTrackType?: { SUBTITLES: string };
+    EditTracksInfoRequest?: new (activeTrackIds: number[]) => unknown;
+    RepeatMode?: { OFF: string };
   };
 };

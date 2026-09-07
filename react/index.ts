@@ -24,6 +24,7 @@ export type {
   AudioTrackOption,
   SubtitleFontSize,
   CastState,
+  CastQueueItem,
   PlayerError,
   GestureOptions,
 } from '../modules/videoplayer/videoplayer.types.js';

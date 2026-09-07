@@ -6,13 +6,15 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react(), minifiedCssRaw()],
   resolve: { alias: { '@': resolve(__dirname, '.') } },
-  // `public/` belongs to the demo site, not to the published package.
+  // Skin mode as an importable ESM entry (`@kuraykaraaslan/kui-player/skin`),
+// built separately so its shared code never reshapes the React entry's chunks.
+// `public/` belongs to the demo site, not to the published package.
   publicDir: false,
   build: {
     lib: {
-      entry: resolve(__dirname, 'react/index.ts'),
+      entry: resolve(__dirname, 'embed/skin.ts'),
       formats: ['es'],
-      fileName: () => 'react/index.js',
+      fileName: () => 'skin/index.js',
     },
     rollupOptions: {
       external: [
@@ -23,11 +25,7 @@ export default defineConfig({
       ],
       output: {
         preserveModules: false,
-        // Cast / settings / about split out of the entry chunk. The shared
-        // chunk rollup extracts alongside them would otherwise be `index2.js`.
-        chunkFileNames: (chunk) => (chunk.name === 'index' ? 'react/player.js' : 'react/[name].js'),
-        // Rollup strips module-level directives when bundling — re-emit it so
-        // the React subpath stays a client boundary under the Next.js App Router.
+        chunkFileNames: 'skin/[name].js',
         banner: '"use client";',
       },
     },

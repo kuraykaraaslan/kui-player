@@ -1,6 +1,6 @@
 # Faz 5 — Niş Farklılaşma
 
-**Öncelik:** 🟣 Stratejik · **Efor:** ~3 hafta · **Durum:** ⬜
+**Öncelik:** 🟣 Stratejik · **Efor:** ~3 hafta · **Durum:** ✅ Tamamlandı
 
 > **Bu, projenin kazanma fazı.** Faz 0–4 bizi "kabul edilebilir" yapıyor; kimseyi
 > Vidstack'ten veya Video.js v10'dan kopartmıyor. Bu faz kopartıyor.
@@ -120,9 +120,45 @@ geliştiriciler oynatıcı seçimini artık asistanlarına soruyor.
 
 ## Faz 5 çıkış kriterleri
 
-- [ ] README'nin ilk paragrafı "yeni bir genel amaçlı player" değil,
-      **"herhangi bir `<video>` etiketine tek script ile giydirilen, Cast-öncelikli,
-      sıfır-telemetri chrome katmanı"** diyor
-- [ ] Skin mode'un kendi demo sayfası ve WordPress eklentisi var
-- [ ] Sıfır-dış-istek iddiası CI testiyle kanıtlanıyor
-- [ ] `llms.txt` yayında
+- [x] **README'nin ilk paragrafı konumlandırmayı söylüyor:** "sayfanızın zaten sahip
+      olduğu `<video>` dahil, herhangi bir `<video>` elemanına giydirilen bir player
+      chrome'u… Cast-öncelikli, sıfır-telemetri, ~20 KB" — hemen ardından tek satırlık
+      `<script>` örneği. "Skin mode" ve "Privacy" bölümleri Features'ın hemen altında.
+- [x] **Skin mode'un kendi demo sayfası var** (`skin.html`): native kontrollü bir video,
+      üçüncü-parti player markup'ıyla sarılmış bir video, ve sonradan DOM'a eklenen bir
+      video; accent değiştirme ve tamamen kaldırma düğmeleriyle.
+      **WordPress eklentisi** `wordpress/kui-player` altında (filtre tabanlı yapılandırma,
+      CDN veya kendi sunucun).
+- [x] **Sıfır-dış-istek iddiası testle kanıtlanıyor** — `tests/e2e/privacy.spec.ts`:
+      oynatma + ayarlar + altyazı + About akışı boyunca her isteği kaydedip sayfanın
+      kendi origin'i dışına çıkan varsa kırılıyor; `localStorage`/`sessionStorage`/cookie
+      boş kalmalı; font/CDN/analytics kalıpları ayrıca taranıyor; Cast açıldığında **tek**
+      dış isteğin gstatic Cast SDK'sı olduğu doğrulanıyor. CI'da her PR'da koşuyor.
+- [x] **`llms.txt` + `llms-full.txt`** kökte, demo dağıtımından düz dosya olarak
+      sunuluyor; `recipes/` altında beş kopyala-yapıştır entegrasyon (Next.js, Vite,
+      hls.js/dash.js, skin mode, WordPress) markdown olarak da servis ediliyor.
+
+## Bu fazda alınan iki karar
+
+**`enableCast` varsayılanı `false` oldu.** Cast SDK'sı gstatic'ten yükleniyor; "sıfır dış
+istek" iddiası ancak varsayılan kapalıyken doğru olabilirdi. Artık tek dış istek
+kullanıcının açıkça istediği bir şey ve testle sınırlandırılmış durumda. (Kırıcı değişiklik,
+göç notlarında.)
+
+**Embed global'i `window.kuiPlayer` oldu**; `window.__tepegozVideoPlayer` aynı nesneye
+işaret etmeye devam ediyor ama artık deprecated. Ürünleştirmenin bir parçası isimlendirme.
+
+## Boyut
+
+| Bundle | gzip | bütçe |
+|---|---|---|
+| çekirdek | 8.54 KB | 9 |
+| React subpath (ilk yükleme) | 19.81 KB | 20 |
+| React + tüm lazy chunk'lar | 25.99 KB | 28 |
+| tek-script embed | 32.09 KB | 35 |
+| skin mode (bundler girişi) | 20.84 KB | 24 |
+| stylesheet | 3.64 KB | 4 |
+
+Cast'in derinleşmesi (kuyruk, receiver, iz aktarımı, hata UI'ı) ilk yüklemeyi
+büyütmedi: `CastOverlay` de Cast chunk'ına taşındı, yani `enableCast={false}` olan bir
+oynatıcı Cast'e dair tek bayt indirmiyor.

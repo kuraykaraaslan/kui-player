@@ -5,18 +5,6 @@ import { SUBTITLE_SIZES } from '../../modules/videoplayer/videoplayer.constants.
 import type { GestureFeedback } from '../hooks/useTouchGestures.js';
 import type { PlayerError, SubtitleFontSize } from '../../modules/videoplayer/videoplayer.types.js';
 
-export function CastOverlay({ castDeviceName, title }: { castDeviceName: string | null; title?: string }) {
-  return (
-    <div className="kui-overlay kui-overlay--cast">
-      <Icon name="cast" className="kui-cast-icon" />
-      <p className="kui-cast-name">
-        {castDeviceName ? `Casting to ${castDeviceName}` : 'Casting to device'}
-      </p>
-      {title && <p className="kui-cast-title">{title}</p>}
-    </div>
-  );
-}
-
 export function LoadingOverlay() {
   return (
     <div className="kui-overlay kui-overlay--loading">

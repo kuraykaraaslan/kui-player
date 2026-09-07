@@ -234,3 +234,32 @@ describe('styling contract', () => {
     expect(foreign).toEqual([]);
   });
 });
+
+describe('theming', () => {
+  // jsdom does not resolve `var()` in computed custom properties, so the
+  // *behaviour* is covered end-to-end. What is checked here is the structure
+  // that behaviour depends on, which is exactly what a refactor would break.
+  it('reads the public tokens instead of redeclaring them', () => {
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    const css = document.querySelector('[data-kui-player-styles]')?.textContent ?? '';
+
+    // A declaration of the public name on the player itself would beat any
+    // value inherited from an ancestor — the documented way to theme it.
+    expect(css).not.toMatch(/[{;]\s*--kui-[a-z-]+\s*:\s*[^v]/);
+    expect(css).toMatch(/--_kui-accent:\s*var\(--kui-accent,\s*#3b82f6\)/);
+    expect(css).toMatch(/background:\s*var\(--_kui-accent\)/);
+  });
+
+  it('exposes every documented token as an overridable input', () => {
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    const css = document.querySelector('[data-kui-player-styles]')?.textContent ?? '';
+    for (const token of [
+      'accent', 'bg', 'surface', 'surface-raised', 'border', 'text', 'text-muted',
+      'text-faint', 'focus', 'radius', 'radius-sm', 'control-size', 'icon-size',
+      'font', 'font-size', 'transition', 'scrim',
+    ]) {
+      expect(css, `--kui-${token} is not overridable`)
+        .toMatch(new RegExp(`--_kui-${token}:\\s*var\\(--kui-${token},`));
+    }
+  });
+});

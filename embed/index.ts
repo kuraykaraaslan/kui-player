@@ -1,11 +1,15 @@
 import { mountSkin, type SkinOptions } from './mountSkin.js';
+import { skinAll, type SkinAllHandle, type SkinAllOptions } from './skinAll.js';
 
 // Injected by Vite `define` at build time (see vite.config.embed.ts).
 declare const __KUI_EMBED_VERSION__: string;
 
-export interface TepegozVideoPlayerApi {
+export interface KuiPlayerApi {
   readonly version: string;
+  /** Dress one element. */
   mount(video: HTMLVideoElement, opts?: SkinOptions): void;
+  /** Dress everything matching a selector, and keep watching for more. */
+  skinAll(selector?: string, opts?: SkinAllOptions): SkinAllHandle;
   unmount(video: HTMLVideoElement): void;
   unmountAll(): void;
   isMounted(video: HTMLVideoElement): boolean;
@@ -13,20 +17,25 @@ export interface TepegozVideoPlayerApi {
 
 declare global {
   interface Window {
-    __tepegozVideoPlayer?: TepegozVideoPlayerApi;
+    kuiPlayer?: KuiPlayerApi;
+    /** @deprecated Renamed to `kuiPlayer`; kept so existing embeds keep working. */
+    __tepegozVideoPlayer?: KuiPlayerApi;
   }
 }
 
 const mounted = new WeakMap<HTMLVideoElement, () => void>();
 const active = new Set<HTMLVideoElement>();
 
-const api: TepegozVideoPlayerApi = {
+const api: KuiPlayerApi = {
   version: typeof __KUI_EMBED_VERSION__ === 'string' ? __KUI_EMBED_VERSION__ : '0.0.0',
   mount(video, opts) {
     if (mounted.has(video)) return;
     const unmount = mountSkin(video, opts);
     mounted.set(video, unmount);
     active.add(video);
+  },
+  skinAll(selector, opts) {
+    return skinAll(selector, opts);
   },
   unmount(video) {
     const unmount = mounted.get(video);
@@ -43,9 +52,54 @@ const api: TepegozVideoPlayerApi = {
   },
 };
 
+// ─── zero-config auto-start ──────────────────────────────────────────────────
+
+/**
+ * Read configuration off the `<script>` tag that loaded this bundle, so a page
+ * with no build step can do everything from one line of HTML:
+ *
+ * ```html
+ * <script src="https://cdn.jsdelivr.net/npm/@kuraykaraaslan/kui-player/dist/embed.js"
+ *         data-auto="video" data-accent="#f97316"></script>
+ * ```
+ */
+function autoStart(): void {
+  const script = document.currentScript as HTMLScriptElement | null
+    ?? document.querySelector<HTMLScriptElement>('script[data-auto]');
+  const selector = script?.dataset.auto;
+  if (!script || selector === undefined) return;
+
+  const flag = (name: string, fallback: boolean): boolean => {
+    const raw = script.dataset[name];
+    if (raw === undefined || raw === '') return fallback;
+    return raw !== 'false' && raw !== '0' && raw !== 'off';
+  };
+
+  const start = () => {
+    api.skinAll(selector || 'video', {
+      accent: script.dataset.accent,
+      title: script.dataset.title,
+      autoHideControls: flag('autohide', true),
+      enableKeyboard: flag('keyboard', true),
+      hideNativeControls: flag('nativeControls', false) ? false : true,
+      cast: flag('cast', false),
+      observe: flag('observe', true),
+      defaultSpeed: script.dataset.speed ? Number(script.dataset.speed) : undefined,
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
+}
+
 // Idempotent install — re-injecting the bundle must not replace a live instance.
-if (!window.__tepegozVideoPlayer) {
-  window.__tepegozVideoPlayer = api;
+if (!window.kuiPlayer) {
+  window.kuiPlayer = api;
+  window.__tepegozVideoPlayer = api;   // pre-0.1.0 name
+  autoStart();
 }
 
 export {};

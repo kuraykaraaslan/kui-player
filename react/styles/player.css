@@ -3,43 +3,46 @@
  *
  * Everything is scoped under `.kui-player` and every class carries the `kui-`
  * prefix, so this cannot collide with a host application's CSS and needs no
- * framework of its own. Theming happens through the custom properties below:
- * override any of them on `.kui-player` (or anywhere above it) and the whole
- * chrome follows.
+ * framework of its own.
+ *
+ * Theming: set any `--kui-*` property on the player or on any ancestor and the
+ * whole chrome follows. The block below reads those public properties and
+ * exposes private `--_kui-*` aliases that the rules actually use — a value
+ * declared on the element itself would otherwise always beat one inherited from
+ * above, which is exactly the case people reach for first.
  */
 
 .kui-player {
   /* ── theme surface ─────────────────────────────────────────────────────── */
-  --kui-accent: #3b82f6;
-  --kui-accent-contrast: #ffffff;
-  --kui-bg: #000000;
-  --kui-surface: rgba(0, 0, 0, 0.9);
-  --kui-surface-raised: #16181d;
-  --kui-surface-hover: rgba(255, 255, 255, 0.1);
-  --kui-border: rgba(255, 255, 255, 0.12);
-  --kui-text: #ffffff;
+  --_kui-accent: var(--kui-accent, #3b82f6);
+  --_kui-accent-contrast: var(--kui-accent-contrast, #ffffff);
+  --_kui-bg: var(--kui-bg, #000000);
+  --_kui-surface: var(--kui-surface, rgba(0, 0, 0, 0.9));
+  --_kui-surface-raised: var(--kui-surface-raised, #16181d);
+  --_kui-surface-hover: var(--kui-surface-hover, rgba(255, 255, 255, 0.1));
+  --_kui-border: var(--kui-border, rgba(255, 255, 255, 0.12));
+  --_kui-text: var(--kui-text, #ffffff);
   /* Both ramps clear WCAG AA (4.5:1) against the chrome's dark surfaces:
      white at 70% ≈ #b3b3b3 (9.0:1), at 55% ≈ #8c8c8c (5.6:1). */
-  --kui-text-muted: rgba(255, 255, 255, 0.7);
-  --kui-text-faint: rgba(255, 255, 255, 0.55);
-  --kui-focus: #ffffff;
-  --kui-radius: 12px;
-  --kui-radius-sm: 6px;
-  --kui-control-size: 2rem;
-  --kui-control-size-primary: 2.25rem;
-  --kui-icon-size: 0.875rem;
-  --kui-font: inherit;
-  --kui-font-size: 0.875rem;
-  --kui-transition: 200ms;
-  --kui-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 30%, transparent 60%);
-
+  --_kui-text-muted: var(--kui-text-muted, rgba(255, 255, 255, 0.7));
+  --_kui-text-faint: var(--kui-text-faint, rgba(255, 255, 255, 0.55));
+  --_kui-focus: var(--kui-focus, #ffffff);
+  --_kui-radius: var(--kui-radius, 12px);
+  --_kui-radius-sm: var(--kui-radius-sm, 6px);
+  --_kui-control-size: var(--kui-control-size, 2rem);
+  --_kui-control-size-primary: var(--kui-control-size-primary, 2.25rem);
+  --_kui-icon-size: var(--kui-icon-size, 0.875rem);
+  --_kui-font: var(--kui-font, inherit);
+  --_kui-font-size: var(--kui-font-size, 0.875rem);
+  --_kui-transition: var(--kui-transition, 200ms);
+  --_kui-scrim: var(--kui-scrim, linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 30%, transparent 60%));
   position: relative;
   overflow: hidden;
   outline: none;
-  font-family: var(--kui-font);
-  font-size: var(--kui-font-size);
+  font-family: var(--_kui-font);
+  font-size: var(--_kui-font-size);
   line-height: 1.4;
-  color: var(--kui-text);
+  color: var(--_kui-text);
   -webkit-user-select: none;
   user-select: none;
 }
@@ -49,15 +52,15 @@
 .kui-player *::after { box-sizing: border-box; }
 
 .kui-player--embedded {
-  background: var(--kui-bg);
-  border-radius: var(--kui-radius);
+  background: var(--_kui-bg);
+  border-radius: var(--_kui-radius);
   aspect-ratio: 16 / 9;
   min-height: 10rem;
 }
 
 .kui-player--skin { width: 100%; height: 100%; }
 
-.kui-player:focus-visible { box-shadow: 0 0 0 2px var(--kui-accent); }
+.kui-player:focus-visible { box-shadow: 0 0 0 2px var(--_kui-accent); }
 
 .kui-video {
   display: block;
@@ -118,19 +121,39 @@
   justify-content: center;
   font-size: 1.5rem;
   padding-left: 0.25rem;
-  transition: transform var(--kui-transition) ease-out, opacity 300ms ease-out;
+  transition: transform var(--_kui-transition) ease-out, opacity 300ms ease-out;
 }
 .kui-overlay--center { transition: opacity 300ms ease-out; }
 .kui-overlay--center.is-playing { opacity: 0; }
 .kui-overlay--center.is-playing .kui-center-play { transform: scale(1.25); }
 
 .kui-cast-icon { font-size: 3rem; }
-.kui-cast-name { font-size: 0.875rem; font-weight: 500; color: var(--kui-text); margin: 0; }
-.kui-cast-title { font-size: 0.75rem; color: var(--kui-text-muted); margin: 0; max-width: 90%; }
+.kui-cast-name { font-size: 0.875rem; font-weight: 500; color: var(--_kui-text); margin: 0; }
+.kui-cast-title { font-size: 0.75rem; color: var(--_kui-text-muted); margin: 0; max-width: 90%; }
+.kui-overlay--cast { pointer-events: none; }
+.kui-cast-queue {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  pointer-events: auto;   /* the overlay itself is inert; these are not */
+}
+.kui-cast-position { font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--_kui-text-muted); }
+.kui-cast-error {
+  position: absolute;
+  left: 50%;
+  bottom: 5rem;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--_kui-radius-sm);
+  background: rgba(0, 0, 0, 0.85);
+  font-size: 0.8125rem;
+}
 
-.kui-error-icon { font-size: 2.25rem; color: var(--kui-text); }
+.kui-error-icon { font-size: 2.25rem; color: var(--_kui-text); }
 .kui-error-message { margin: 0; font-size: 0.875rem; font-weight: 500; }
-.kui-error-code { margin: 0; font-size: 0.6875rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--kui-text-faint); }
+.kui-error-code { margin: 0; font-size: 0.6875rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--_kui-text-faint); }
 
 .kui-btn-outline {
   display: inline-flex;
@@ -139,22 +162,22 @@
   margin-top: 0.25rem;
   padding: 0.375rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: var(--kui-radius-sm);
+  border-radius: var(--_kui-radius-sm);
   background: transparent;
-  color: var(--kui-text);
+  color: var(--_kui-text);
   font: inherit;
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--kui-transition);
+  transition: background var(--_kui-transition);
 }
-.kui-btn-outline:hover:not(:disabled) { background: var(--kui-surface-hover); }
+.kui-btn-outline:hover:not(:disabled) { background: var(--_kui-surface-hover); }
 .kui-btn-outline:disabled { opacity: 0.6; cursor: default; }
 
 /* Keyboard focus must be visible on every interactive surface — a control that
    Tab reaches but cannot be seen is worse than one that is not reachable. */
 .kui-player :is(button, a, input, [role="slider"]):focus-visible {
-  outline: 2px solid var(--kui-focus);
+  outline: 2px solid var(--_kui-focus);
   outline-offset: 2px;
 }
 .kui-btn:focus-visible { outline-offset: -1px; }
@@ -191,7 +214,7 @@
 .kui-subtitle-text {
   background: rgba(0, 0, 0, 0.8);
   padding: 0.25rem 0.75rem;
-  border-radius: var(--kui-radius-sm);
+  border-radius: var(--_kui-radius-sm);
   text-align: center;
   max-width: 85%;
   white-space: pre-line;
@@ -240,15 +263,15 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  border-radius: var(--kui-radius-sm);
+  border-radius: var(--_kui-radius-sm);
   background: rgba(0, 0, 0, 0.6);
   font-size: 0.875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.kui-gesture-card .kui-muted { font-weight: 400; font-size: 0.75rem; color: var(--kui-text-muted); }
+.kui-gesture-card .kui-muted { font-weight: 400; font-size: 0.75rem; color: var(--_kui-text-muted); }
 .kui-meter { display: block; width: 6rem; height: 4px; border-radius: 9999px; background: rgba(255, 255, 255, 0.25); overflow: hidden; }
-.kui-meter-fill { display: block; height: 100%; border-radius: 9999px; background: var(--kui-text); }
+.kui-meter-fill { display: block; height: 100%; border-radius: 9999px; background: var(--_kui-text); }
 .kui-meter-value { width: 2.25rem; text-align: right; font-size: 0.75rem; }
 
 /* ── chrome ──────────────────────────────────────────────────────────────── */
@@ -264,7 +287,7 @@
   transition: opacity 300ms;
 }
 .kui-chrome.is-hidden { opacity: 0; pointer-events: none; }
-.kui-scrim { position: absolute; inset: 0; pointer-events: none; background: var(--kui-scrim); }
+.kui-scrim { position: absolute; inset: 0; pointer-events: none; background: var(--_kui-scrim); }
 
 .kui-controls {
   position: relative;
@@ -277,7 +300,7 @@
   margin: 0;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--kui-text);
+  color: var(--_kui-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -289,45 +312,45 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--kui-control-size);
-  height: var(--kui-control-size);
+  width: var(--_kui-control-size);
+  height: var(--_kui-control-size);
   padding: 0;
   border: 0;
-  border-radius: var(--kui-radius-sm);
+  border-radius: var(--_kui-radius-sm);
   background: transparent;
-  color: var(--kui-text-muted);
+  color: var(--_kui-text-muted);
   font: inherit;
-  font-size: var(--kui-icon-size);
+  font-size: var(--_kui-icon-size);
   cursor: pointer;
-  transition: color var(--kui-transition), opacity var(--kui-transition);
+  transition: color var(--_kui-transition), opacity var(--_kui-transition);
 }
-.kui-btn:hover { color: var(--kui-text); }
-.kui-btn.is-active { color: var(--kui-accent); }
+.kui-btn:hover { color: var(--_kui-text); }
+.kui-btn.is-active { color: var(--_kui-accent); }
 .kui-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .kui-btn--primary {
-  width: var(--kui-control-size-primary);
-  height: var(--kui-control-size-primary);
-  color: var(--kui-text);
+  width: var(--_kui-control-size-primary);
+  height: var(--_kui-control-size-primary);
+  color: var(--_kui-text);
   font-size: 1rem;
 }
-.kui-btn--primary:hover { color: var(--kui-accent); }
+.kui-btn--primary:hover { color: var(--_kui-accent); }
 .kui-btn--spin svg { transform: rotate(30deg); }
 .kui-btn--pulse { animation: kui-pulse 2s ease-in-out infinite; }
 @keyframes kui-pulse { 50% { opacity: 0.5; } }
 
 .kui-volume { display: flex; align-items: center; gap: 0.375rem; }
-.kui-volume-slider { width: 0; opacity: 0; overflow: hidden; transition: width var(--kui-transition) ease-out, opacity var(--kui-transition) ease-out; }
+.kui-volume-slider { width: 0; opacity: 0; overflow: hidden; transition: width var(--_kui-transition) ease-out, opacity var(--_kui-transition) ease-out; }
 .kui-volume-slider.is-open { width: 5rem; opacity: 1; }
-.kui-range { width: 100%; height: 4px; cursor: pointer; accent-color: var(--kui-accent); }
+.kui-range { width: 100%; height: 4px; cursor: pointer; accent-color: var(--_kui-accent); }
 
 .kui-time {
   flex: 1;
   padding-left: 0.25rem;
   font-size: 0.75rem;
-  color: var(--kui-text-muted);
+  color: var(--_kui-text-muted);
   font-variant-numeric: tabular-nums;
 }
-.kui-time-sep { margin: 0 0.125rem; color: var(--kui-text-faint); }
+.kui-time-sep { margin: 0 0.125rem; color: var(--_kui-text-faint); }
 
 /* ── seek bar ────────────────────────────────────────────────────────────── */
 
@@ -346,7 +369,7 @@
   height: 6px;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.2);
-  transition: height var(--kui-transition);
+  transition: height var(--_kui-transition);
 }
 .kui-seek:hover .kui-seek-track,
 .kui-seek:focus-visible .kui-seek-track { height: 8px; }
@@ -354,7 +377,7 @@
 .kui-seek-played,
 .kui-seek-hover { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 9999px; }
 .kui-seek-buffered { background: rgba(255, 255, 255, 0.25); }
-.kui-seek-played { background: var(--kui-accent); }
+.kui-seek-played { background: var(--_kui-accent); }
 .kui-seek-hover { background: rgba(255, 255, 255, 0.15); }
 .kui-seek-thumb {
   position: absolute;
@@ -363,10 +386,10 @@
   height: 14px;
   margin-top: -7px;
   border-radius: 9999px;
-  background: var(--kui-text);
+  background: var(--_kui-text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   opacity: 0;
-  transition: opacity var(--kui-transition);
+  transition: opacity var(--_kui-transition);
 }
 .kui-seek:hover .kui-seek-thumb,
 .kui-seek:focus-visible .kui-seek-thumb { opacity: 1; }
@@ -391,9 +414,9 @@
   width: 15rem;
   z-index: 20;
   overflow: hidden;
-  border: 1px solid var(--kui-border);
-  border-radius: var(--kui-radius);
-  background: var(--kui-surface);
+  border: 1px solid var(--_kui-border);
+  border-radius: var(--_kui-radius);
+  background: var(--_kui-surface);
   backdrop-filter: blur(12px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
@@ -402,8 +425,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--kui-border);
-  color: var(--kui-text-muted);
+  border-bottom: 1px solid var(--_kui-border);
+  color: var(--_kui-text-muted);
 }
 .kui-panel-head p { margin: 0; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
 .kui-panel-body { padding: 0.25rem 0; }
@@ -415,16 +438,16 @@
   width: 100%;
   padding: 0.625rem 0.75rem;
   border: 0;
-  border-bottom: 1px solid var(--kui-border);
+  border-bottom: 1px solid var(--_kui-border);
   background: transparent;
-  color: var(--kui-text);
+  color: var(--_kui-text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--kui-transition);
+  transition: background var(--_kui-transition);
 }
 .kui-back:hover { background: rgba(255, 255, 255, 0.05); }
-.kui-back svg { color: var(--kui-text-faint); font-size: 0.75rem; }
+.kui-back svg { color: var(--_kui-text-faint); font-size: 0.75rem; }
 
 .kui-menu-row {
   display: flex;
@@ -434,21 +457,21 @@
   padding: 0.625rem 1rem;
   border: 0;
   background: transparent;
-  color: var(--kui-text);
+  color: var(--_kui-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--kui-transition);
+  transition: background var(--_kui-transition);
 }
-.kui-menu-row:hover { background: var(--kui-surface-hover); }
+.kui-menu-row:hover { background: var(--_kui-surface-hover); }
 .kui-menu-row-value {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   font-size: 0.75rem;
-  color: var(--kui-text-faint);
+  color: var(--_kui-text-faint);
 }
-.kui-menu-row:hover .kui-menu-row-value { color: var(--kui-text-muted); }
+.kui-menu-row:hover .kui-menu-row-value { color: var(--_kui-text-muted); }
 .kui-menu-row-value svg { font-size: 0.625rem; }
 
 .kui-option {
@@ -459,17 +482,17 @@
   padding: 0.5rem 1rem;
   border: 0;
   background: transparent;
-  color: var(--kui-text);
+  color: var(--_kui-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--kui-transition);
+  transition: background var(--_kui-transition);
 }
-.kui-option:hover { background: var(--kui-surface-hover); }
-.kui-option.is-selected { color: var(--kui-accent); font-weight: 600; }
+.kui-option:hover { background: var(--_kui-surface-hover); }
+.kui-option.is-selected { color: var(--_kui-accent); font-weight: 600; }
 .kui-option-labels { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; }
-.kui-option-sub { font-size: 0.75rem; font-weight: 400; color: var(--kui-text-faint); }
-.kui-option svg { flex-shrink: 0; font-size: 0.75rem; color: var(--kui-accent); }
+.kui-option-sub { font-size: 0.75rem; font-weight: 400; color: var(--_kui-text-faint); }
+.kui-option svg { flex-shrink: 0; font-size: 0.75rem; color: var(--_kui-accent); }
 
 /* ── about modal ─────────────────────────────────────────────────────────── */
 
@@ -484,19 +507,19 @@
   max-width: 24rem;
   max-height: 100%;
   overflow: hidden;
-  border: 1px solid var(--kui-border);
-  border-radius: var(--kui-radius);
-  background: var(--kui-surface-raised);
+  border: 1px solid var(--_kui-border);
+  border-radius: var(--_kui-radius);
+  background: var(--_kui-surface-raised);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
 }
-.kui-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--kui-border); }
+.kui-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--_kui-border); }
 .kui-modal-head h2 { margin: 0; font-size: 1rem; font-weight: 600; }
-.kui-modal-sub { margin: 0.125rem 0 0; font-size: 0.75rem; color: var(--kui-text-muted); }
+.kui-modal-sub { margin: 0.125rem 0 0; font-size: 0.75rem; color: var(--_kui-text-muted); }
 .kui-modal-body { display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; padding: 1rem 1.25rem; }
-.kui-modal-foot { display: flex; justify-content: flex-end; padding: 0.75rem 1.25rem; border-top: 1px solid var(--kui-border); }
-.kui-modal-close { flex-shrink: 0; border: 0; background: transparent; padding: 0; color: var(--kui-text-faint); font-size: 1rem; cursor: pointer; transition: color var(--kui-transition); }
-.kui-modal-close:hover { color: var(--kui-text); }
-.kui-label { margin: 0; font-size: 0.75rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--kui-text-muted); }
+.kui-modal-foot { display: flex; justify-content: flex-end; padding: 0.75rem 1.25rem; border-top: 1px solid var(--_kui-border); }
+.kui-modal-close { flex-shrink: 0; border: 0; background: transparent; padding: 0; color: var(--_kui-text-faint); font-size: 1rem; cursor: pointer; transition: color var(--_kui-transition); }
+.kui-modal-close:hover { color: var(--_kui-text); }
+.kui-label { margin: 0; font-size: 0.75rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--_kui-text-muted); }
 .kui-value { margin: 0.125rem 0 0; font-size: 0.875rem; font-weight: 500; }
 .kui-links { display: flex; flex-direction: column; gap: 0.375rem; }
 .kui-link {
@@ -504,12 +527,12 @@
   align-items: center;
   gap: 0.625rem;
   padding: 0.375rem 0.5rem;
-  border-radius: var(--kui-radius-sm);
-  color: var(--kui-text);
+  border-radius: var(--_kui-radius-sm);
+  color: var(--_kui-text);
   text-decoration: none;
-  transition: background var(--kui-transition);
+  transition: background var(--_kui-transition);
 }
-.kui-link:hover { background: var(--kui-surface-hover); }
-.kui-link svg { flex-shrink: 0; color: var(--kui-text-muted); font-size: 1rem; }
+.kui-link:hover { background: var(--_kui-surface-hover); }
+.kui-link svg { flex-shrink: 0; color: var(--_kui-text-muted); font-size: 1rem; }
 .kui-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kui-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; }

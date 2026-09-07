@@ -22,6 +22,7 @@ export type {
   SubtitleFontSize,
   SettingsView,
   CastState,
+  CastQueueItem,
   PlayerError,
   CastSession,
   CastContextInstance,

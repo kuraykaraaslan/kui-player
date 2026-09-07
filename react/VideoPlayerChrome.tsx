@@ -9,7 +9,7 @@ import { useVideoPlayerStore } from './hooks/useVideoPlayerStore.js';
 import { ControlRow } from './parts/ControlRow.js';
 import { ProgressBar } from './parts/ProgressBar.js';
 import {
-  CastOverlay, ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
+  ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
 } from './parts/Overlays.js';
 import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
@@ -44,7 +44,8 @@ function subscribeCoarsePointer(onChange: () => void): () => void {
 const hasCoarsePointer = () => coarseQuery()?.matches ?? false;
 const hasCoarsePointerOnServer = () => false;
 import type {
-  AudioTrackOption, CastState, GestureOptions, QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
+  AudioTrackOption, CastQueueItem, CastState, GestureOptions, QualityOption,
+  SubtitleFontSize, SubtitleTrack, VideoSource,
 } from '../modules/videoplayer/videoplayer.types.js';
 
 /**
@@ -75,6 +76,10 @@ export interface VideoPlayerChromeProps {
   onQualityChange?: (value: string) => void;
   onAudioTrackChange?: (index: number) => void;
   enableCast?: boolean;
+  /** Cast a playlist rather than the current source. */
+  castQueue?: CastQueueItem[];
+  /** A custom receiver application id. */
+  castReceiverAppId?: string;
   /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
   enablePictureInPicture?: boolean;
   /** Touch gestures; `false` turns them all off. Default `true`. */
@@ -89,7 +94,8 @@ export interface VideoPlayerChromeProps {
 export function VideoPlayerChrome({
   videoRef, children, skin = false, onToggleFullscreen,
   src = '', poster, title, qualities, subtitles, audioTracks,
-  onQualityChange, onAudioTrackChange, enableCast = true, enablePictureInPicture = true,
+  onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
+  enablePictureInPicture = true,
   gestures = true, autoFullscreenOnLandscape = false, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
@@ -125,7 +131,8 @@ export function VideoPlayerChrome({
   const selectedAudioTrack= useVideoPlayerStore(s => s.selectedAudioTrack);
   const subtitleFontSize  = useVideoPlayerStore(s => s.subtitleFontSize);
   const castState         = useVideoPlayerStore(s => s.castState);
-  const castDeviceName    = useVideoPlayerStore(s => s.castDeviceName);
+  // Everything else about a Cast session — the overlay, the queue, the error
+  // banner — lives in the Cast chunk, which only loads when Cast is enabled.
   const setShowSettings   = useVideoPlayerStore(s => s.setShowSettings);
   const setSettingsView   = useVideoPlayerStore(s => s.setSettingsView);
   const setSelectedQuality   = useVideoPlayerStore(s => s.setSelectedQuality);
@@ -317,7 +324,6 @@ export function VideoPlayerChrome({
         {announcement}
       </div>
 
-      {isCasting && <CastOverlay castDeviceName={castDeviceName} title={title} />}
       {error && <ErrorOverlay error={error} retrying={retrying} onRetry={() => engine.retry()} />}
       {!error && loading && <LoadingOverlay />}
       {!error && !loading && <CenterPlayOverlay playing={playing} />}
@@ -343,6 +349,9 @@ export function VideoPlayerChrome({
             src={src}
             title={title}
             poster={poster}
+            subtitles={subtitles}
+            queue={castQueue}
+            receiverAppId={castReceiverAppId}
             onCastStateChange={onCastStateChange}
             onApi={onCastApi}
           />

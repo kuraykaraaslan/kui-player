@@ -42,6 +42,11 @@ export type VideoPlayerState = {
   subtitleFontSize: SubtitleFontSize;
   castState: CastState;
   castDeviceName: string | null;
+  /** Human-readable reason the last Cast attempt failed. */
+  castError: string | null;
+  /** Position in the Cast queue, and its length; both `0` when not queued. */
+  castQueueIndex: number;
+  castQueueLength: number;
 };
 
 export type VideoPlayerActions = {
@@ -74,6 +79,8 @@ export type VideoPlayerActions = {
   setSubtitleFontSize:   (v: SubtitleFontSize) => void;
   setCastState:          (v: CastState) => void;
   setCastDeviceName:     (v: string | null) => void;
+  setCastError:          (v: string | null) => void;
+  setCastQueue:          (index: number, length: number) => void;
 };
 
 export type VideoPlayerStore = VideoPlayerState & VideoPlayerActions;
@@ -115,6 +122,9 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     subtitleFontSize: 'md',
     castState: 'unavailable',
     castDeviceName: null,
+    castError: null,
+    castQueueIndex: 0,
+    castQueueLength: 0,
 
     setPlaying:            (v) => set({ playing: v }),
     setCurrentTime:        (v) => set({ currentTime: v }),
@@ -145,5 +155,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setSubtitleFontSize:   (v) => set({ subtitleFontSize: v }),
     setCastState:          (v) => set({ castState: v }),
     setCastDeviceName:     (v) => set({ castDeviceName: v }),
+    setCastError:          (v) => set({ castError: v }),
+    setCastQueue:          (index, length) => set({ castQueueIndex: index, castQueueLength: length }),
   }));
 }

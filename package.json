@@ -1,7 +1,7 @@
 {
   "name": "@kuraykaraaslan/kui-player",
   "version": "0.0.2",
-  "description": "Standalone video player — vanilla TS core + React subpath. Native <video> playback with optional hls.js/dash.js adapters, custom subtitle overlay, speed control, Picture-in-Picture, touch gestures, Google Cast, fullscreen, keyboard shortcuts.",
+  "description": "Standalone video player \u2014 vanilla TS core + React subpath. Native <video> playback with optional hls.js/dash.js adapters, custom subtitle overlay, speed control, Picture-in-Picture, touch gestures, Google Cast, fullscreen, keyboard shortcuts.",
   "keywords": [
     "video",
     "player",
@@ -29,7 +29,12 @@
   "types": "./dist/modules/index.d.ts",
   "typesVersions": {
     "*": {
-      "react": ["./dist/react/index.d.ts"]
+      "react": [
+        "./dist/react/index.d.ts"
+      ],
+      "skin": [
+        "./dist/embed/skin.d.ts"
+      ]
     }
   },
   "exports": {
@@ -40,6 +45,10 @@
     "./react": {
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js"
+    },
+    "./skin": {
+      "types": "./dist/embed/skin.d.ts",
+      "import": "./dist/skin/index.js"
     },
     "./styles.css": "./dist/styles.css"
   },
@@ -66,7 +75,7 @@
       "limit": "20 kB"
     },
     {
-      "name": "react subpath + lazy chunks",
+      "name": "react subpath + every lazy chunk",
       "path": [
         "dist/react/index.js",
         "dist/react/player.js",
@@ -75,7 +84,7 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "26 kB"
+      "limit": "28 kB"
     },
     {
       "name": "embed (single script)",
@@ -86,6 +95,14 @@
       "name": "stylesheet",
       "path": "dist/styles.css",
       "limit": "4 kB"
+    },
+    {
+      "name": "skin mode (bundler entry)",
+      "path": [
+        "dist/skin/index.js",
+        "dist/skin/skin.js"
+      ],
+      "limit": "24 kB"
     }
   ],
   "peerDependencies": {

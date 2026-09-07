@@ -1,0 +1,207 @@
+# kui-player — complete reference
+
+Version 0.1.0 · Apache-2.0 · ESM only · https://github.com/kuraykaraaslan/kui-player
+
+A video player chrome for any `<video>` element, including one a page already owns.
+Vanilla TypeScript core (8.5 kB gzip) plus a React subpath (19.8 kB gzip first load).
+One runtime dependency (`zustand`), no CSS framework, no icon font, and no network
+request other than the media you point it at.
+
+## Install
+
+    pnpm add @kuraykaraaslan/kui-player
+    # react + react-dom are optional peers, needed only for the /react subpath
+
+## Entry points
+
+| Specifier | Contents |
+|---|---|
+| `@kuraykaraaslan/kui-player` | `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, `SPEEDS`, `SUBTITLE_SIZES`, `SUBTITLE_SIZE_LABELS`, `AUTO_QUALITY`, `AUTO_QUALITY_VALUE`, all types |
+| `@kuraykaraaslan/kui-player/react` | `VideoPlayer`, `VideoPlayerChrome`, `VideoPlayerEngineContext`, `useVideoPlayerEngine`, `useVideoPlayerStore`, `useVideoPlayerStoreApi`, `Icon`, `IconProvider`, `PLAYER_CSS`, `injectPlayerStyles`, `usePlayerStyles` |
+| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `SKINNED_ATTR` |
+| `@kuraykaraaslan/kui-player/styles.css` | the stylesheet, if you would rather link it than let the component inject it |
+| `dist/embed.js` (script tag) | installs `window.kuiPlayer`, auto-starts from `data-*` attributes |
+
+## React: <VideoPlayer>
+
+    import { VideoPlayer } from "@kuraykaraaslan/kui-player/react";
+
+    <VideoPlayer src="https://example.com/video.mp4" title="Big Buck Bunny" />
+
+### Props
+
+| Prop | Type | Default | Notes |
+|---|---|---|---|
+| `src` | `string \| VideoSource \| (string \| VideoSource)[]` | required | array = codec fallback via `<source>` children |
+| `poster` | `string` | — | |
+| `title` | `string` | — | shown above the controls, used as the Cast metadata title |
+| `autoPlay` | `boolean` | `false` | |
+| `loop` | `boolean` | `false` | |
+| `startMuted` | `boolean` | `false` | |
+| `playsInline` | `boolean` | `true` | `false` hands iOS Safari its native fullscreen player |
+| `adapters` | `MediaAdapter[]` | — | HLS/DASH adapters; build the array outside render |
+| `qualities` | `QualityOption[]` | — | ignored once an adapter reports renditions |
+| `defaultQuality` | `string` | first quality | |
+| `subtitles` | `SubtitleTrack[]` | — | rendered as a styled overlay, not by the browser |
+| `audioTracks` | `AudioTrackOption[]` | — | fallback only; tracks are discovered from the element or adapter |
+| `onQualityChange` | `(value: string) => void` | — | |
+| `onAudioTrackChange` | `(index: number) => void` | — | |
+| `enableCast` | `boolean` | `false` | **on = one external request** (Google's sender SDK) |
+| `castQueue` | `CastQueueItem[]` | — | cast a playlist; the receiver owns the queue |
+| `castReceiverAppId` | `string` | default receiver | brand the TV side |
+| `onCastStateChange` | `(state: CastState) => void` | — | |
+| `enablePictureInPicture` | `boolean` | `true` | button hides itself where unsupported |
+| `gestures` | `boolean \| GestureOptions` | `true` | touch only; loaded lazily on coarse pointers |
+| `autoFullscreenOnLandscape` | `boolean` | `false` | phones only |
+| `preferNativeIosFullscreen` | `boolean` | `false` | use the OS player instead of emulated fullscreen |
+| `controlsVisible` | `boolean` | — | controlled visibility |
+| `autoHideControls` | `boolean` | `true` | hide after 3s while playing |
+| `onControlsVisibilityChange` | `(visible: boolean) => void` | — | |
+| `icons` | `IconOverrides` | — | `{ play: <MyIcon/> }` |
+| `injectStyles` | `boolean` | `true` | `false` if you link `styles.css` yourself |
+| `className` | `string` | — | on the root element |
+
+### GestureOptions
+
+`doubleTapSeek` (true), `seekStep` (10), `longPressSpeed` (true), `longPressRate` (2),
+`verticalVolume` (true), `verticalBrightness` (false), `horizontalScrub` (true).
+
+## Vanilla: VideoPlayerEngine
+
+    import { VideoPlayerEngine } from "@kuraykaraaslan/kui-player";
+
+    const engine = new VideoPlayerEngine({ startMuted: true });
+    engine.attach(document.querySelector("video"));
+
+### Constructor options
+
+`defaultQuality`, `startMuted`, `autoHideControls` (true), `controlsVisible`,
+`maxAutoRetries` (3), `adapters`, `preferNativeIosFullscreen` (false).
+
+### Methods
+
+    attach(video)            mirror an element into the store; replaces any previous one
+    detach() / dispose()     remove every listener, release the adapter, leave fullscreen
+    play() / pause() / togglePlay()
+    seek(seconds)            clamped to [0, duration]
+    seekBy(delta)            relative, clamped
+    seekByRatio(0..1)        proportional
+    setVolume(0..1)          clamped; 0 mutes
+    toggleMute()
+    setSpeed(rate)
+    switchSource(url, type?) swap media, keeping time/rate/volume/play state
+    captureRestorePoint()    snapshot before a consumer-driven src change
+    retry()                  clear the error and reload at the same position
+    use(adapter)             register a MediaAdapter; returns an unregister function
+    setAdapters(list)        replace the list
+    hasAdapterFor(src)       pure, DOM-free — safe to call while rendering
+    loadSource(src)          → Promise<boolean>; false when no adapter claims it
+    selectQuality(value)     "auto" or a level index as a string
+    setAudioTrack(index)     adapter first, then the element's own track list
+    togglePictureInPicture()
+    toggleFullscreen(el) / enterFullscreen(el) / exitFullscreen(el?)
+    isFullscreenActive()
+    setKeyboardFocus(inside) pin the chrome open while the keyboard is inside
+    toggleControls() / forceShow() / hideIfPlaying() / resetHideTimer()
+    attachCast(player, controller) / detachCast()
+
+### Store
+
+`engine.store` is a zustand vanilla store: `getState()`, `setState()`, `subscribe()`.
+
+State: `playing`, `currentTime`, `duration`, `buffered` (0–100), `volume`, `muted`,
+`speed`, `loading`, `seeking`, `error` (`PlayerError | null`), `retrying`,
+`isFullscreen`, `fakeFullscreen`, `isPip`, `pipSupported`, `showControls`,
+`seekHoverRatio`, `showSettings`, `settingsView`, `selectedQuality`,
+`adaptiveQualities`, `qualityAuto`, `activeQualityLabel`, `selectedSubtitle`,
+`selectedAudioTrack`, `adaptiveAudioTracks`, `subtitleFontSize`, `castState`,
+`castDeviceName`, `castError`, `castQueueIndex`, `castQueueLength`.
+
+Every field has a `setX` action. The element is the source of truth: state is written
+from element events, so mutating `video.volume` or `video.playbackRate` directly stays
+in sync.
+
+    const unsub = engine.store.subscribe((s) => console.log(s.currentTime));
+
+## Adapters
+
+    interface MediaAdapter {
+      readonly name: string;
+      canPlay(src: string): boolean;              // pure, no DOM access
+      attach(video, src, host): Promise<void>;
+      getQualities(): QualityOption[];
+      setQuality(index: number): void;            // -1 = auto
+      getAudioTracks?(): AudioTrackOption[];
+      setAudioTrack?(index: number): void;
+      detach(): void;
+    }
+
+    interface MediaAdapterHost {
+      updateQualities(qualities, activeIndex, auto): void;
+      updateAudioTracks(tracks, activeIndex): void;
+      reportError(error: PlayerError): void;
+    }
+
+Built in: `createHlsAdapter({ Hls?, config?, preferNative? })` and
+`createDashAdapter({ dashjs?, settings? })`. Omit `Hls`/`dashjs` to pick up a global.
+Neither library is bundled.
+
+## Skin mode
+
+    import { mountSkin, skinAll } from "@kuraykaraaslan/kui-player/skin";
+
+    const unmount = mountSkin(video, { accent: "#f97316" });
+    const skins = skinAll("video", { observe: true });   // .refresh() .count .stop()
+
+SkinOptions: `defaultSpeed`, `autoHideControls` (true), `enableKeyboard` (true),
+`accent`, `hideNativeControls` (true), `title`, `cast` (false).
+SkinAllOptions adds `observe` (true), `root`, `filter`.
+
+Script tag equivalent — `data-auto`, `data-accent`, `data-autohide`, `data-keyboard`,
+`data-observe`, `data-cast`, `data-speed` — installs `window.kuiPlayer` with
+`mount`, `unmount`, `unmountAll`, `isMounted`, `skinAll`, `version`.
+
+## Theming
+
+Every rule is scoped under `.kui-player`, every class prefixed `kui-`. Override custom
+properties on any ancestor:
+
+`--kui-accent`, `--kui-accent-contrast`, `--kui-bg`, `--kui-surface`,
+`--kui-surface-raised`, `--kui-surface-hover`, `--kui-border`, `--kui-text`,
+`--kui-text-muted`, `--kui-text-faint`, `--kui-focus`, `--kui-radius`,
+`--kui-radius-sm`, `--kui-control-size`, `--kui-control-size-primary`,
+`--kui-icon-size`, `--kui-font`, `--kui-font-size`, `--kui-transition`, `--kui-scrim`.
+
+## Keyboard
+
+`Space`/`k` play-pause · `←`/`→` ∓10s · `↑`/`↓` volume · `m` mute · `f` fullscreen ·
+`i` Picture-in-Picture · `Esc` close the menu or leave emulated fullscreen.
+On the focused seek bar: `←`/`→` ∓5s, `PageUp`/`PageDown` ∓10%, `Home`/`End`.
+
+## Touch
+
+Single tap toggles the controls (never pauses). Double tap a side seeks. Press and hold
+plays at 2×. Horizontal drag scrubs, vertical drag on the right changes volume.
+
+## Accessibility
+
+Everything is reachable by Tab with a visible focus ring; the chrome does not auto-hide
+while a control holds keyboard focus. The seek bar is a real slider with
+`aria-valuetext` ("2:14 of 4:20"). Menus and dialogs trap focus, close on `Esc` and
+restore it. A polite live region announces play state, quality, subtitle and audio
+changes, fullscreen, PiP, Cast and errors. Contrast meets WCAG AA;
+`prefers-reduced-motion` is honoured. CI runs axe-core over four player states.
+
+## Privacy
+
+The player makes no request other than the media you give it, writes nothing to
+`localStorage`, `sessionStorage` or cookies, and loads no fonts, icons or analytics.
+Enabling Cast loads Google's sender SDK from gstatic.com — the single exception, opt-in,
+and the only allowance in the CI test that enforces all of the above.
+
+## Errors
+
+`store.error` is a `PlayerError { code, name, message, recoverable }` mapped from
+`MediaError`, plus the `<source>`-only failure browsers report on the source element.
+Network errors retry automatically with backoff (500 ms / 1 s / 2 s, three attempts);
+`engine.retry()` is the manual path and both restore the previous position.

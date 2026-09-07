@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>skin mode harness</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #0b0d10; color: #eee; font: 14px system-ui; }
+      video { width: 480px; display: block; background: #000; }
+      /* A stand-in for a third-party player: the element is smaller than the box. */
+      .wrapper { width: 640px; padding: 24px; background: #16181d; }
+      .wrapper video { width: 400px; margin: 0 auto; }
+    </style>
+  </head>
+  <body>
+    <video id="one" src="/media/clip.wav" poster="/media/poster.svg" controls preload="metadata"></video>
+    <div class="wrapper"><video id="two" src="/media/clip.wav" preload="metadata"></video></div>
+    <div id="late"></div>
+    <script type="module" src="./skin-main.ts"></script>
+  </body>
+</html>

@@ -150,6 +150,7 @@ export default function App() {
             qualities={active.id === "hls" ? undefined : QUALITIES}
             defaultQuality="720"
             autoFullscreenOnLandscape
+            enableCast
             onQualityChange={(v) => console.log("quality:", v)}
           />
         </div>

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { minifiedCssRaw } from './vite.plugin.css-raw';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 
@@ -16,7 +17,7 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
 // published React subpath is unaffected — this alias applies to the embed only,
 // and Preact is a devDependency.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), minifiedCssRaw()],
   resolve: {
     alias: [
       { find: /^react-dom\/client$/, replacement: 'preact/compat/client' },
@@ -30,6 +31,8 @@ export default defineConfig({
     'process.env.NODE_ENV': '"production"',
     __KUI_EMBED_VERSION__: JSON.stringify(pkg.version),
   },
+  // `public/` belongs to the demo site, not to the published package.
+  publicDir: false,
   build: {
     lib: {
       entry: resolve(__dirname, 'embed/index.ts'),

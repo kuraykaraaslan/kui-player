@@ -52,7 +52,8 @@ export function VideoPlayer(props: VideoPlayerComponentProps) {
 function VideoPlayerInner({
   src, poster, title, autoPlay = false, loop = false, startMuted = false,
   playsInline = true, qualities, subtitles, audioTracks, onQualityChange, onAudioTrackChange,
-  adapters, enableCast = true, enablePictureInPicture = true, gestures = true,
+  adapters, enableCast = false, castQueue, castReceiverAppId,
+  enablePictureInPicture = true, gestures = true,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerProps) {
   const engine = useVideoPlayerEngine();
@@ -113,6 +114,8 @@ function VideoPlayerInner({
       onQualityChange={onQualityChange}
       onAudioTrackChange={onAudioTrackChange}
       enableCast={enableCast}
+      castQueue={castQueue}
+      castReceiverAppId={castReceiverAppId}
       enablePictureInPicture={enablePictureInPicture}
       gestures={gestures}
       autoFullscreenOnLandscape={autoFullscreenOnLandscape}

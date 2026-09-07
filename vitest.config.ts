@@ -1,9 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { minifiedCssRaw } from './vite.plugin.css-raw';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  // Same stylesheet transform the shipped bundles get, so tests see what users do.
+  plugins: [react(), minifiedCssRaw()],
   resolve: { alias: { '@': resolve(__dirname, '.') } },
   test: {
     environment: 'jsdom',
