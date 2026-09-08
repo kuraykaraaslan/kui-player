@@ -16,7 +16,7 @@ export type IconName =
   | 'expand' | 'compress' | 'settings' | 'pip' | 'cast'
   | 'chevronLeft' | 'chevronRight' | 'check' | 'close'
   | 'spinner' | 'alert' | 'retry'
-  | 'skipBack' | 'skipForward' | 'brightness';
+  | 'skipBack' | 'skipForward' | 'brightness' | 'airplay';
 
 /** Replace any icon with your own node: `icons={{ play: <MyPlay /> }}`. */
 export type IconOverrides = Partial<Record<IconName, ReactNode>>;
@@ -69,6 +69,7 @@ const PATHS: Record<Exclude<IconName, 'spinner' | 'brightness'>, string> = {
   retry: 'M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h8V3l-3.35 3.35z',
   skipBack: 'M11 18V6l-8.5 6zm9 0V6l-8.5 6z',
   skipForward: 'M4 18l8.5-6L4 6zm9 0 8.5-6L13 6z',
+  airplay: 'M6 22h12l-6-6-6 6zM21 3H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3v-2H3V5h18v12h-3v2h3a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z',
 };
 
 /** The one animated glyph — rotation comes from the `kui-spin` class. */

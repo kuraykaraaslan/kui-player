@@ -1,4 +1,7 @@
 import { useEffect, useState, type RefObject } from 'react';
+import { detectFormat } from '../../modules/videoplayer/videoplayer.subtitles.js';
+import { findAt } from '../../modules/videoplayer/videoplayer.timeline.js';
+import type { VttCue } from '../../modules/videoplayer/videoplayer.vtt.js';
 import type { SubtitleTrack } from '../../modules/videoplayer/videoplayer.types.js';
 
 type Options = {
@@ -7,43 +10,107 @@ type Options = {
   subtitles?: SubtitleTrack[];
 };
 
+/**
+ * The text of the cue that should be on screen right now.
+ *
+ * WebVTT rides on the element's own text tracks — the browser has already
+ * parsed and timed them, and `mode: 'hidden'` gets the cues without letting it
+ * draw them. SRT and ASS the browser will not touch, so those are fetched and
+ * timed here; either way the same styled overlay renders the result.
+ */
 export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Options) {
-  const [cueText, setCueText] = useState<string | null>(null);
+  // Both are keyed by what produced them, so switching track or source shows
+  // nothing rather than the previous track's line.
+  const [cueState, setCueState] = useState<{ key: string; text: string | null }>({ key: '', text: null });
+  const [loaded, setLoaded] = useState<{ src: string; cues: VttCue[] } | null>(null);
 
+  const track = selectedSubtitle === null ? undefined : subtitles?.[selectedSubtitle];
+  const src = track?.src;
+  const format = src ? detectFormat(src) : 'vtt';
+  const isSidecar = format !== 'vtt';
+  const cueKey = src ?? '';
+  const sidecar = src && loaded?.src === src ? loaded.cues : null;
+
+  // ── formats the element cannot load ──
+  useEffect(() => {
+    if (!src || !isSidecar) return;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    // The parser arrives with the file: a player showing WebVTT never loads it.
+    Promise.all([
+      fetch(src, { signal: controller.signal })
+        .then((response) => (response.ok ? response.text() : Promise.reject(new Error(String(response.status))))),
+      import('../../modules/videoplayer/videoplayer.subtitles.parse.js'),
+    ])
+      .then(([text, { parseSubtitles }]) => {
+        if (!cancelled) setLoaded({ src, cues: parseSubtitles(text, src) });
+      })
+      .catch(() => { if (!cancelled) setLoaded({ src, cues: [] }); });
+
+    return () => { cancelled = true; controller.abort(); };
+  }, [src, isSidecar]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !sidecar) return;
+
+    const onTimeUpdate = () => {
+      const cue = findAt(sidecar, video.currentTime);
+      // `findAt` returns the last cue once playback is past it; only show a cue
+      // that actually covers now.
+      const active = cue && video.currentTime >= cue.start && video.currentTime < cue.end ? cue : null;
+      setCueState({ key: cueKey, text: active?.text ?? null });
+    };
+
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('seeked', onTimeUpdate);
+    onTimeUpdate();
+    return () => {
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('seeked', onTimeUpdate);
+    };
+  }, [videoRef, sidecar, cueKey]);
+
+  // ── WebVTT through the element's own text tracks ──
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     Array.from(video.textTracks).forEach((t) => { t.mode = 'disabled'; });
-    setCueText(null);
 
-    if (selectedSubtitle === null || !subtitles?.[selectedSubtitle]) return;
+    if (selectedSubtitle === null || !subtitles?.[selectedSubtitle] || isSidecar) return;
 
-    const track = video.textTracks[selectedSubtitle];
-    if (!track) return;
+    // Only VTT tracks are rendered as <track> children, so the element's track
+    // index is not the subtitle index whenever an SRT/ASS track precedes it.
+    const vttIndex = subtitles
+      .slice(0, selectedSubtitle)
+      .filter((sub) => detectFormat(sub.src) === 'vtt').length;
+    const textTrack = video.textTracks[vttIndex];
+    if (!textTrack) return;
 
-    track.mode = 'hidden';
+    textTrack.mode = 'hidden';
 
     // A source swap (quality change / retry) resets every track back to
     // 'disabled' — re-arm the selected one once the new media is ready.
-    const reapply = () => { track.mode = 'hidden'; };
+    const reapply = () => { textTrack.mode = 'hidden'; };
     video.addEventListener('loadedmetadata', reapply);
 
     const onCueChange = () => {
-      const active = track.activeCues;
-      if (!active || active.length === 0) { setCueText(null); return; }
+      const active = textTrack.activeCues;
+      if (!active || active.length === 0) { setCueState({ key: cueKey, text: null }); return; }
       const text = Array.from(active)
         .map((c) => (c as VTTCue).text.replace(/<[^>]+>/g, ''))
         .join('\n');
-      setCueText(text || null);
+      setCueState({ key: cueKey, text: text || null });
     };
 
-    track.addEventListener('cuechange', onCueChange);
+    textTrack.addEventListener('cuechange', onCueChange);
     return () => {
-      track.removeEventListener('cuechange', onCueChange);
+      textTrack.removeEventListener('cuechange', onCueChange);
       video.removeEventListener('loadedmetadata', reapply);
     };
-  }, [videoRef, selectedSubtitle, subtitles]);
+  }, [videoRef, selectedSubtitle, subtitles, isSidecar, cueKey]);
 
-  return cueText;
+  return cueState.key === cueKey ? cueState.text : null;
 }

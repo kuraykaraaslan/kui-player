@@ -1,5 +1,9 @@
 import { createVideoPlayerStore, type VideoPlayerStoreApi } from './videoplayer.store.js';
 import { AUTO_QUALITY, AUTO_QUALITY_VALUE, type MediaAdapter, type MediaAdapterHost } from './adapters/adapter.types.js';
+import {
+  PlayerEmitter, QuartileTracker,
+  type PlayerEventHandler, type PlayerEventName,
+} from './videoplayer.events.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
 } from './videoplayer.types.js';
@@ -16,6 +20,8 @@ type NativeAudioTrackList = {
 };
 
 type VendorVideo = HTMLVideoElement & {
+  webkitShowPlaybackTargetPicker?: () => void;
+  webkitCurrentPlaybackTargetIsWireless?: boolean;
   audioTracks?: NativeAudioTrackList;
   requestPictureInPicture?: () => Promise<unknown>;
   disablePictureInPicture?: boolean;
@@ -40,6 +46,8 @@ type VendorDocument = Document & {
 };
 
 const FAKE_FS_Z = 2147483646;
+/** How close to the edge of a live stream still counts as "live". */
+const LIVE_EDGE_TOLERANCE_S = 10;
 
 export type VideoPlayerEngineOptions = {
   defaultQuality?: string;
@@ -110,6 +118,16 @@ export class VideoPlayerEngine {
   private retryAttempt = 0;
   private restorePoint: RestorePoint | null = null;
 
+  private readonly emitter = new PlayerEmitter();
+  private readonly quartiles = new QuartileTracker();
+  private loadStartedAt = 0;
+  private metadataAt = 0;
+  private stallStartedAt = 0;
+  private stallCount = 0;
+  private stallTotalMs = 0;
+  private firstFrameReported = false;
+  private seekFrom = 0;
+
   private adapters: MediaAdapter[] = [];
   private activeAdapter: MediaAdapter | null = null;
   private currentSrc: string | null = null;
@@ -164,11 +182,21 @@ export class VideoPlayerEngine {
       }
     };
 
-    const onTimeUpdate     = () => s().setCurrentTime(video.currentTime);
+    const onTimeUpdate = () => {
+      s().setCurrentTime(video.currentTime);
+      this.syncLive(video);
+      for (const percent of this.quartiles.update(video.currentTime, video.duration)) {
+        this.emitter.emit('quartile', { percent });
+      }
+    };
     const onDurationChange = () => s().setDuration(Number.isFinite(video.duration) ? video.duration : 0);
     const onProgress       = () => syncBuffered();
-    const onWaiting        = () => s().setLoading(true);
-    const onStalled        = () => s().setLoading(true);
+    const onWaiting = () => {
+      s().setLoading(true);
+      // A rebuffer starts here and is only measurable once playback resumes.
+      if (this.stallStartedAt === 0) this.stallStartedAt = Date.now();
+    };
+    const onStalled = () => onWaiting();
 
     const onCanPlay = () => {
       s().setLoading(false);
@@ -177,10 +205,32 @@ export class VideoPlayerEngine {
     const onPlaying = () => {
       s().setLoading(false);
       this.clearError();
+      if (this.stallStartedAt > 0) {
+        const durationMs = Date.now() - this.stallStartedAt;
+        this.stallStartedAt = 0;
+        this.stallCount += 1;
+        this.stallTotalMs += durationMs;
+        this.emitter.emit('stall', { count: this.stallCount, durationMs, totalMs: this.stallTotalMs });
+      }
+      if (!this.firstFrameReported && this.loadStartedAt > 0) {
+        this.firstFrameReported = true;
+        this.emitter.emit('ready', {
+          startupMs: (this.metadataAt || Date.now()) - this.loadStartedAt,
+          timeToFirstFrameMs: Date.now() - this.loadStartedAt,
+        });
+      }
     };
 
     const onLoadStart = () => {
       s().setLoading(true);
+      this.loadStartedAt = Date.now();
+      this.metadataAt = 0;
+      this.firstFrameReported = false;
+      this.stallCount = 0;
+      this.stallTotalMs = 0;
+      this.stallStartedAt = 0;
+      this.quartiles.reset();
+      this.emitter.emit('sourcechange', { src: video.currentSrc || video.src });
       // A retry re-runs load(); keep the error banner up until it actually recovers.
       if (!s().retrying) this.clearError();
     };
@@ -196,31 +246,56 @@ export class VideoPlayerEngine {
 
     const onLoadedMetadata = () => {
       const st = s();
+      this.metadataAt = Date.now();
       st.setDuration(Number.isFinite(video.duration) ? video.duration : 0);
       st.setVolume(video.volume);
       st.setMuted(video.muted);
       st.setSpeed(video.playbackRate);
       syncBuffered();
+      this.syncLive(video);
       this.syncNativeAudioTracks();
       this.applyRestorePoint(video);
     };
 
-    const onVolumeChange = () => { s().setVolume(video.volume); s().setMuted(video.muted); };
-    const onRateChange   = () => s().setSpeed(video.playbackRate);
+    const onVolumeChange = () => {
+      s().setVolume(video.volume);
+      s().setMuted(video.muted);
+      this.emitter.emit('volumechange', { volume: video.volume, muted: video.muted });
+    };
+    const onRateChange = () => {
+      s().setSpeed(video.playbackRate);
+      this.emitter.emit('ratechange', { rate: video.playbackRate });
+    };
 
     const onSeeking = () => {
       s().setSeeking(true);
       if (video.readyState < 3) s().setLoading(true);
+      this.emitter.emit('seeking', { from: this.seekFrom, to: video.currentTime });
     };
     const onSeeked = () => {
       s().setSeeking(false);
       s().setCurrentTime(video.currentTime);
+      this.seekFrom = video.currentTime;
       if (video.readyState >= 3) s().setLoading(false);
+      this.emitter.emit('seeked', { currentTime: video.currentTime });
     };
 
-    const onPlay     = () => { s().setPlaying(true);  this.scheduleHide(true); };
-    const onPause    = () => { s().setPlaying(false); this.forceShow(); };
-    const onEnded    = () => { s().setPlaying(false); this.forceShow(); };
+    const onPlay  = () => {
+      s().setPlaying(true);
+      this.scheduleHide(true);
+      this.emitter.emit('play', { currentTime: video.currentTime });
+    };
+    const onPause = () => {
+      s().setPlaying(false);
+      this.forceShow();
+      this.emitter.emit('pause', { currentTime: video.currentTime });
+    };
+    const onEnded = () => {
+      s().setPlaying(false);
+      this.forceShow();
+      for (const percent of this.quartiles.finish()) this.emitter.emit('quartile', { percent });
+      this.emitter.emit('complete', { duration: video.duration || 0 });
+    };
     const onFSChange = () => this.syncFullscreenState();
     const onError    = () => this.handleError(video);
 
@@ -243,6 +318,13 @@ export class VideoPlayerEngine {
       }, 0);
     };
     video.addEventListener('error', onSourceError, true);
+    const onAirPlayAvailability = (e: Event) => {
+      const availability = (e as Event & { availability?: string }).availability;
+      s().setAirPlayAvailable(availability === 'available');
+    };
+    const onAirPlayTarget = () => {
+      s().setAirPlaying(!!(video as VendorVideo).webkitCurrentPlaybackTargetIsWireless);
+    };
     const onEnterPip = () => s().setIsPip(true);
     const onLeavePip = () => s().setIsPip(false);
     const onPresentationModeChange = () => {
@@ -275,6 +357,10 @@ export class VideoPlayerEngine {
       ['webkitpresentationmodechanged', onPresentationModeChange],
       ['webkitbeginfullscreen', onFSChange],
       ['webkitendfullscreen',   onFSChange],
+      ['webkitplaybacktargetavailabilitychanged', onAirPlayAvailability],
+      ['webkitcurrentplaybacktargetiswirelesschanged', onAirPlayTarget],
+      ['durationchange', () => this.syncLive(video)],
+      ['progress',       () => this.syncLive(video)],
     ];
     for (const [type, handler] of bindings) video.addEventListener(type, handler);
     document.addEventListener('fullscreenchange', onFSChange);
@@ -299,6 +385,11 @@ export class VideoPlayerEngine {
     };
 
     this.store.getState().setPipSupported(this.isPipSupported());
+    // Ask Safari whether any AirPlay target exists; the answer arrives as an event.
+    const vendor = video as VendorVideo;
+    if (typeof vendor.webkitShowPlaybackTargetPicker === 'function') {
+      this.store.getState().setAirPlaySupported(true);
+    }
 
     // The element may already be past `loadedmetadata` when we attach (skin mode
     // adopts live elements) — seed from it rather than waiting for an event.
@@ -325,6 +416,7 @@ export class VideoPlayerEngine {
     s.setLoading(false);
     s.setPlaying(false);
     s.setError(err);
+    this.emitter.emit('error', err);
 
     // Network failures are the ones worth retrying on our own; a 404 or an
     // unsupported codec will not fix itself.
@@ -555,11 +647,13 @@ export class VideoPlayerEngine {
     adapter.setQuality(Number.isFinite(index) ? index : AUTO_QUALITY);
     s.setQualityAuto(auto);
     if (!auto) s.setActiveQualityLabel(s.adaptiveQualities[index]?.label ?? null);
+    this.emitter.emit('qualitychange', { value, auto });
   }
 
   /** Switch audio rendition — through the adapter, or the element's own list. */
   setAudioTrack(index: number): void {
     this.store.getState().setSelectedAudioTrack(index);
+    this.emitter.emit('audiotrackchange', { index });
 
     if (this.activeAdapter?.setAudioTrack) { this.activeAdapter.setAudioTrack(index); return; }
 
@@ -596,6 +690,69 @@ export class VideoPlayerEngine {
     }
     s.setAdaptiveAudioTracks(tracks);
     s.setSelectedAudioTrack(active);
+  }
+
+  // ── Events ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Subscribe to a playback event. Returns an unsubscribe function.
+   *
+   * This is a local API — the player sends nothing anywhere. Everything a QoE
+   * pipeline needs (startup time, time to first frame, rebuffer count and
+   * duration, quartiles) is measured here and handed to you.
+   */
+  on<K extends PlayerEventName>(event: K, handler: PlayerEventHandler<K>): () => void {
+    return this.emitter.on(event, handler);
+  }
+
+  off<K extends PlayerEventName>(event: K, handler: PlayerEventHandler<K>): void {
+    this.emitter.off(event, handler);
+  }
+
+  // ── Live and DVR ───────────────────────────────────────────────────────────
+
+  /**
+   * A stream is live when its duration is unbounded. The seekable range is the
+   * DVR window: how far back the viewer may scrub, and where "live" is.
+   */
+  private syncLive(video: HTMLVideoElement): void {
+    const s = this.store.getState();
+    const live = video.duration === Infinity
+      || (video.seekable.length > 0 && !Number.isFinite(video.duration));
+    if (live !== s.isLive) s.setIsLive(live);
+    if (!live) {
+      if (s.dvrWindow !== 0) s.setDvrWindow(0, 0);
+      if (s.atLiveEdge) s.setAtLiveEdge(false);
+      return;
+    }
+
+    const ranges = video.seekable;
+    if (ranges.length === 0) return;
+    const start = ranges.start(0);
+    const end = ranges.end(ranges.length - 1);
+    if (start !== s.dvrStart || end - start !== s.dvrWindow) s.setDvrWindow(start, end - start);
+    // Within ten seconds of the edge counts as live; below that a viewer is
+    // watching the DVR window and the badge should say so.
+    s.setAtLiveEdge(end - video.currentTime <= LIVE_EDGE_TOLERANCE_S);
+  }
+
+  /** Jump to the live edge of a stream. No-op for on-demand media. */
+  seekToLive(): void {
+    const v = this.video;
+    if (!v || v.seekable.length === 0) return;
+    v.currentTime = v.seekable.end(v.seekable.length - 1);
+    if (v.paused) this.play();
+  }
+
+  // ── AirPlay ────────────────────────────────────────────────────────────────
+
+  /**
+   * Open Safari's AirPlay target picker. Availability is reported by the
+   * element, so the button only appears once a target actually exists.
+   */
+  showAirPlayPicker(): void {
+    const v = this.video as VendorVideo | null;
+    try { v?.webkitShowPlaybackTargetPicker?.(); } catch { /* no target */ }
   }
 
   // ── Picture-in-Picture ─────────────────────────────────────────────────────
@@ -664,7 +821,14 @@ export class VideoPlayerEngine {
       this.remoteController.seek();
       return;
     }
-    if (this.video?.duration) this.video.currentTime = r * this.video.duration;
+    const v = this.video;
+    if (!v) return;
+    const s = this.store.getState();
+    if (s.isLive && s.dvrWindow > 0) {
+      v.currentTime = s.dvrStart + r * s.dvrWindow;
+      return;
+    }
+    if (v.duration) v.currentTime = r * v.duration;
   }
 
   setVolume(level: number): void {
@@ -861,5 +1025,8 @@ export class VideoPlayerEngine {
 
   // ── Dispose ────────────────────────────────────────────────────────────────
 
-  dispose(): void { this.detach(); }
+  dispose(): void {
+    this.detach();
+    this.emitter.clear();
+  }
 }

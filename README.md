@@ -40,10 +40,14 @@ It is not another general-purpose player framework. It is the controls layer: ac
 - **Position-preserving source switching** — quality changes keep time, play state, rate and volume
 - **`playsInline`** by default, so iOS Safari plays in the page instead of its own fullscreen player
 - **19.6 kB gzipped** React subpath, **28 kB** single-file embed — budgets enforced in the build
-- **One runtime dependency** (`zustand`), no CSS framework, no icon font
+- **No runtime dependencies at all**, no CSS framework, no icon font
 - **Themed with CSS custom properties** — `--kui-accent` and friends, scoped to `.kui-player`
 - **Bring your own icons** — `icons={{ play: <MyIcon /> }}`
 - **Accessible by default** — full keyboard operation, focus trapping, a live region, AA contrast, axe-clean
+- **Chapters, storyboards, playlists, live/DVR** and OS media controls
+- **Six locales with RTL**, and localised durations
+- **A local analytics API** — quartiles, rebuffers, startup time; measured here, sent nowhere
+- **Zero runtime dependencies**
 - Framework-agnostic core: Zustand vanilla store, no React imports below `react/`
 - Strict TypeScript throughout, tested with Vitest + Playwright
 
@@ -433,6 +437,14 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `controlsVisible` | `boolean` | controlled visibility |
 | `autoHideControls` | `boolean` | hide after 3s while playing |
 | `onControlsVisibilityChange` | `(visible) => void` | visibility callback |
+| `chapters` | `string \| Chapter[]` | WebVTT chapters file, or the chapters themselves |
+| `thumbnails` | `string` | WebVTT storyboard for seek previews |
+| `playlist` / `playlistIndex` / `onPlaylistIndexChange` / `playlistCountdown` | — | play through a list |
+| `persist` | `boolean \| PersistOptions` | remember position and preferences; **off by default** |
+| `mediaSession` | `boolean` | OS media controls, default `true` |
+| `locale` | `PartialDictionary` | see [Languages](#languages) |
+| `theme` | `'minimal' \| 'broadcast' \| 'cinema'` | token presets |
+| `slots` | `PlayerSlots` | your nodes inside the chrome |
 | `enableCast` | `boolean` | defaults to **`false`** — enabling it loads Google's Cast SDK from gstatic.com |
 | `castQueue` | `CastQueueItem[]` | cast a playlist; the receiver owns the queue |
 | `castReceiverAppId` | `string` | custom receiver application id |
@@ -469,9 +481,71 @@ engine.store.subscribe((s) => {
 |---|---|
 | `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
 | `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />`, hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`, `useTouchGestures`), `Icon`/`IconProvider`, `PLAYER_CSS` |
-| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll` — skin mode for bundler users |
+| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `defineKuiPlayer` — skin mode and the custom element |
+| `@kuraykaraaslan/kui-player/locales` | `tr`, `de`, `es`, `fr`, `ar` |
+| `@kuraykaraaslan/kui-player/wrappers/vue` | `<KuiPlayer>` for Vue 3 |
+| `@kuraykaraaslan/kui-player/wrappers/svelte` | the `kuiPlayer` action for Svelte 5 |
 | `@kuraykaraaslan/kui-player/styles.css` | The player stylesheet, if you would rather link it than let the component inject it |
 | `dist/embed.js` | The single-script build: installs `window.kuiPlayer` and auto-starts from `data-*` attributes |
+
+---
+
+## Beyond playback
+
+| Feature | Prop | Notes |
+|---|---|---|
+| **Chapters** | `chapters` | A WebVTT `chapters` file or an array. Segments the seek bar, names the section under the cursor, and adds a jump list to the menu |
+| **Seek previews** | `thumbnails` | A WebVTT storyboard, sprite sheets (`#xywh=`) included |
+| **Playlists** | `playlist` | Advances at the end with an "up next" card the viewer can cancel; `playlistCountdown={0}` skips the wait |
+| **Live and DVR** | — | Detected from the source. The clock becomes a LIVE badge — red at the edge, grey behind it, click to catch up — and the bar spans the DVR window |
+| **Resume and preferences** | `persist` | **Off by default.** Volume, speed, subtitle language and size are remembered across sources; position is offered, never forced |
+| **OS media controls** | `mediaSession` | Lock screen, media keys, notification shade. On by default; no network involved |
+| **AirPlay** | — | The button appears only once Safari reports a target |
+| **SRT and ASS subtitles** | `subtitles` | Fetched and timed by the player, since browsers load neither. Parsers arrive with the file |
+| **Caption styling** | — | Colour, background opacity, edge style and font, per CVAA expectations |
+| **Themes** | `theme` | `minimal`, `broadcast`, `cinema`, or your own tokens |
+| **Slots** | `slots` | Your nodes at `top`, `aboveControls`, `controlsStart`, `controlsEnd` |
+
+---
+
+## Analytics without telemetry
+
+Everything a QoE pipeline wants is measured locally and handed to you. Nothing
+leaves the page unless you send it.
+
+```ts
+engine.on('ready', ({ startupMs, timeToFirstFrameMs }) => report(…));
+engine.on('stall', ({ count, durationMs, totalMs }) => report(…));
+engine.on('quartile', ({ percent }) => report(…));   // 25 / 50 / 75 / 100
+engine.on('error', (error) => report(error.name));
+```
+
+Also emitted: `play`, `pause`, `seeking`, `seeked`, `ratechange`, `volumechange`,
+`qualitychange`, `audiotrackchange`, `sourcechange` and `complete`. Every
+subscription returns an unsubscribe function, and a listener that throws cannot
+break playback.
+
+---
+
+## Languages
+
+```tsx
+import { tr } from "@kuraykaraaslan/kui-player/locales";
+
+<VideoPlayer src={src} locale={tr} />;
+```
+
+Bundled: **English, Turkish, German, Spanish, French and Arabic** — the whole set
+is 3.9 kB gzipped and lives in its own entry point, so a player left in English
+carries none of it. A partial dictionary is fine; anything it omits falls back to
+English:
+
+```tsx
+<VideoPlayer src={src} locale={{ play: "Spielen", dir: "ltr" }} />
+```
+
+`dir: 'rtl'` mirrors the control row, the menus and the seek bar, and durations
+are rendered in the locale's numbering system.
 
 ---
 
@@ -505,11 +579,13 @@ Budgets are enforced by `pnpm size` (and in CI); a build that busts one fails.
 
 | Bundle | gzip | budget |
 |---|---|---|
-| `dist/index.js` — vanilla core | 8.2 kB | 9 kB |
-| `dist/react/*` — React subpath, first load | 19.6 kB | 20 kB |
-| …plus every lazy chunk | 24.2 kB | 26 kB |
-| `dist/embed.js` — single-file embed | 29.8 kB | 35 kB |
-| `dist/styles.css` | 3.5 kB | 4 kB |
+| `dist/index.js` — vanilla core | 11.9 kB | 12.5 kB |
+| `dist/react/*` — React subpath, first load | 25.9 kB | 27 kB |
+| …plus every lazy chunk | 32.5 kB | 34 kB |
+| `dist/embed.js` — single-file embed | 36.9 kB | 39 kB |
+| `dist/skin/*` — skin mode for bundlers | 27.0 kB | 28.5 kB |
+| `dist/locales/index.js` — all six languages | 3.9 kB | 6 kB |
+| `dist/styles.css` | 5.0 kB | 5.5 kB |
 
 Four things are deliberately **not** in the first load, each a separate chunk:
 
@@ -531,16 +607,14 @@ applies to `dist/embed.js` only; the React subpath uses your React.
 
 ## Stack
 
-- [React](https://react.dev/) 18 / 19 (optional peer)
-- [Zustand](https://github.com/pmndrs/zustand) v5 (vanilla store) — the **only** runtime dependency
-- [Google Cast Web SDK](https://developers.google.com/cast/docs/web_sender) (Chromecast, loaded lazily by the page)
-- Everything else — icons, styles, class-name helper — is in-tree
+- [React](https://react.dev/) 18 / 19 (optional peer, only for the `/react` subpath)
+- [Google Cast Web SDK](https://developers.google.com/cast/docs/web_sender) (Chromecast, loaded by the page only when you enable Cast)
+- Everything else — the store, icons, styles, parsers, class-name helper — is in-tree
 
-> **On `zustand`:** the published bundles include it, so there is no version negotiation
-> at runtime; it stays a dependency because the emitted types reference `StoreApi`. If
-> your app also uses zustand you will ship two small copies — they never interact, since
-> the player's store is internal. Removing the dependency entirely is
-> [Phase 4.12](./phases/phase-4-expected-features.md).
+> **No runtime dependencies.** The store is about sixty lines of `getState` /
+> `setState` / `subscribe`, bound to React with `useSyncExternalStore`. It keeps the
+> shape zustand had, so `engine.store` still works the way it always did — there is
+> simply nothing left in `dependencies` to install, audit or deduplicate.
 
 ---
 

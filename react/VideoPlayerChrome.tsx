@@ -3,7 +3,6 @@ import {
   type ReactNode, type RefObject,
 } from 'react';
 import { cn } from '../libs/utils/cn.js';
-import { formatTime } from '../modules/videoplayer/videoplayer.format.js';
 import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine.js';
 import { useVideoPlayerStore } from './hooks/useVideoPlayerStore.js';
 import { ControlRow } from './parts/ControlRow.js';
@@ -12,6 +11,8 @@ import {
   ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
 } from './parts/Overlays.js';
 import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types.js';
+import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
+import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { useFocusTrap } from './hooks/useFocusTrap.js';
@@ -25,6 +26,11 @@ const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => 
 const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
 const CastController = lazy(() => import('./parts/CastController.js'));
 const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
+const VttLoader = lazy(() => import('./parts/VttLoader.js'));
+
+/** Stable empties, so the fetch hook's identity checks hold. */
+const NO_CHAPTERS: Chapter[] = [];
+const NO_TILES: StoryboardTile[] = [];
 
 /*
  * Touch gestures are pointless — and not worth downloading — without a coarse
@@ -44,8 +50,8 @@ function subscribeCoarsePointer(onChange: () => void): () => void {
 const hasCoarsePointer = () => coarseQuery()?.matches ?? false;
 const hasCoarsePointerOnServer = () => false;
 import type {
-  AudioTrackOption, CastQueueItem, CastState, GestureOptions, QualityOption,
-  SubtitleFontSize, SubtitleTrack, VideoSource,
+  AudioTrackOption, CastQueueItem, CastState, GestureOptions, PlayerSlots, PlayerTheme,
+  QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
 } from '../modules/videoplayer/videoplayer.types.js';
 
 /**
@@ -64,6 +70,10 @@ export interface VideoPlayerChromeProps {
   children?: ReactNode;
   /** Skin mode: transparent container that fills its host and overlays a page video. */
   skin?: boolean;
+  /** A preset token set. Presets are overridable per player like anything else. */
+  theme?: PlayerTheme;
+  /** Custom nodes placed into named positions in the chrome. */
+  slots?: PlayerSlots<ReactNode>;
   /** Overrides the fullscreen button/handler (skin mode supplies a video-aware toggle). */
   onToggleFullscreen?: () => void;
 
@@ -73,6 +83,8 @@ export interface VideoPlayerChromeProps {
   qualities?: QualityOption[];
   subtitles?: SubtitleTrack[];
   audioTracks?: AudioTrackOption[];
+  chapters?: string | Chapter[];
+  thumbnails?: string;
   onQualityChange?: (value: string) => void;
   onAudioTrackChange?: (index: number) => void;
   enableCast?: boolean;
@@ -92,14 +104,17 @@ export interface VideoPlayerChromeProps {
 }
 
 export function VideoPlayerChrome({
-  videoRef, children, skin = false, onToggleFullscreen,
-  src = '', poster, title, qualities, subtitles, audioTracks,
+  videoRef, children, skin = false, theme, slots, onToggleFullscreen,
+  src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
   gestures = true, autoFullscreenOnLandscape = false, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
+  const t = useTranslate();
+  const dictionary = useDictionary();
+  const formatTime = useFormatTime();
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
@@ -119,6 +134,13 @@ export function VideoPlayerChrome({
   const isFullscreen      = useVideoPlayerStore(s => s.isFullscreen);
   const isPip             = useVideoPlayerStore(s => s.isPip);
   const pipSupported      = useVideoPlayerStore(s => s.pipSupported);
+  const isLive            = useVideoPlayerStore(s => s.isLive);
+  const atLiveEdge        = useVideoPlayerStore(s => s.atLiveEdge);
+  const dvrStart          = useVideoPlayerStore(s => s.dvrStart);
+  const dvrWindow         = useVideoPlayerStore(s => s.dvrWindow);
+  const airPlaySupported  = useVideoPlayerStore(s => s.airPlaySupported);
+  const airPlayAvailable  = useVideoPlayerStore(s => s.airPlayAvailable);
+  const airPlaying        = useVideoPlayerStore(s => s.airPlaying);
   const showControls      = useVideoPlayerStore(s => s.showControls);
   const seekHoverRatio    = useVideoPlayerStore(s => s.seekHoverRatio);
   const showSettings      = useVideoPlayerStore(s => s.showSettings);
@@ -130,6 +152,10 @@ export function VideoPlayerChrome({
   const selectedSubtitle  = useVideoPlayerStore(s => s.selectedSubtitle);
   const selectedAudioTrack= useVideoPlayerStore(s => s.selectedAudioTrack);
   const subtitleFontSize  = useVideoPlayerStore(s => s.subtitleFontSize);
+  const subtitleColor     = useVideoPlayerStore(s => s.subtitleColor);
+  const subtitleBackground= useVideoPlayerStore(s => s.subtitleBackground);
+  const subtitleEdge      = useVideoPlayerStore(s => s.subtitleEdge);
+  const subtitleFont      = useVideoPlayerStore(s => s.subtitleFont);
   const castState         = useVideoPlayerStore(s => s.castState);
   // Everything else about a Cast session — the overlay, the queue, the error
   // banner — lives in the Cast chunk, which only loads when Cast is enabled.
@@ -138,9 +164,20 @@ export function VideoPlayerChrome({
   const setSelectedQuality   = useVideoPlayerStore(s => s.setSelectedQuality);
   const setSelectedSubtitle  = useVideoPlayerStore(s => s.setSelectedSubtitle);
   const setSubtitleFontSize  = useVideoPlayerStore(s => s.setSubtitleFontSize);
+  const setSubtitleColor     = useVideoPlayerStore(s => s.setSubtitleColor);
+  const setSubtitleBackground= useVideoPlayerStore(s => s.setSubtitleBackground);
+  const setSubtitleEdge      = useVideoPlayerStore(s => s.setSubtitleEdge);
+  const setSubtitleFont      = useVideoPlayerStore(s => s.setSubtitleFont);
   const setSeekHoverRatio    = useVideoPlayerStore(s => s.setSeekHoverRatio);
 
   const isCasting = castState === 'connected';
+
+  // Chapters may be handed over directly or fetched from a WebVTT sidecar; the
+  // fetching and parsing live in a chunk that only loads for the latter.
+  const chapterUrl = typeof chapters === 'string' ? chapters : undefined;
+  const [fetchedChapters, setFetchedChapters] = useState<Chapter[]>(NO_CHAPTERS);
+  const [tiles, setTiles] = useState<StoryboardTile[]>(NO_TILES);
+  const chapterList = Array.isArray(chapters) ? chapters : fetchedChapters;
 
   const effectiveControls = isCasting
     ? true
@@ -164,7 +201,7 @@ export function VideoPlayerChrome({
   // replace the consumer's static `qualities` list and gain an "Auto" entry.
   const adaptive = adaptiveQualities.length > 0;
   const qualityOptions = adaptive
-    ? [{ label: 'Auto', value: AUTO_QUALITY_VALUE }, ...adaptiveQualities]
+    ? [{ label: t('auto'), value: AUTO_QUALITY_VALUE }, ...adaptiveQualities]
     : qualities;
   const effectiveAudioTracks = adaptiveAudioTracks.length > 1 ? adaptiveAudioTracks : audioTracks;
 
@@ -299,15 +336,20 @@ export function VideoPlayerChrome({
 
   const handleTogglePip = useCallback(() => { void engine.togglePictureInPicture(); }, [engine]);
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  // For a live stream the bar spans the DVR window, not 0…duration.
+  const progress = isLive && dvrWindow > 0
+    ? Math.max(0, Math.min(100, ((currentTime - dvrStart) / dvrWindow) * 100))
+    : duration > 0 ? (currentTime / duration) * 100 : 0;
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   return (
     <div
       ref={containerRef}
       tabIndex={0}
-      aria-label={title ? `Video: ${title}` : 'Video player'}
+      aria-label={title ? t('videoTitled', { title }) : t('videoPlayer')}
+      dir={dictionary.dir ?? 'ltr'}
       className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', className)}
+      data-kui-theme={theme}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
       onFocus={handleFocusIn}
@@ -339,7 +381,26 @@ export function VideoPlayerChrome({
         </Suspense>
       )}
       {cueText && (
-        <SubtitleOverlay cueText={cueText} effectiveControls={effectiveControls} subtitleFontSize={subtitleFontSize} />
+        <SubtitleOverlay
+          cueText={cueText}
+          effectiveControls={effectiveControls}
+          subtitleFontSize={subtitleFontSize}
+          color={subtitleColor}
+          background={subtitleBackground}
+          edge={subtitleEdge}
+          font={subtitleFont}
+        />
+      )}
+
+      {(chapterUrl || thumbnails) && (
+        <Suspense fallback={null}>
+          <VttLoader
+            chaptersUrl={chapterUrl}
+            thumbnailsUrl={thumbnails}
+            onChapters={setFetchedChapters}
+            onTiles={setTiles}
+          />
+        </Suspense>
       )}
 
       {enableCast && (
@@ -363,6 +424,7 @@ export function VideoPlayerChrome({
         onClick={(e) => { if (e.target === e.currentTarget && !isCasting && !suppressClick()) engine.togglePlay(); }}
       >
         <div className="kui-scrim" />
+        {slots?.top && <div className="kui-slot kui-slot--top">{slots.top}</div>}
         {showSettings && (
           <Suspense fallback={null}>
             <SettingsPanel
@@ -371,6 +433,8 @@ export function VideoPlayerChrome({
               onChangeView={setSettingsView}
               onAbout={() => { setShowAbout(true); closeSettings(); }}
               qualities={qualityOptions}
+              chapters={chapterList}
+              onSeekTo={(time) => { engine.seek(time); closeSettings(); }}
               subtitles={subtitles}
               audioTracks={effectiveAudioTracks}
               selectedQuality={selectedQuality}
@@ -379,15 +443,24 @@ export function VideoPlayerChrome({
               selectedAudioTrack={selectedAudioTrack}
               speed={speed}
               subtitleFontSize={subtitleFontSize}
+              subtitleColor={subtitleColor}
+              subtitleBackground={subtitleBackground}
+              subtitleEdge={subtitleEdge}
+              subtitleFont={subtitleFont}
               applyQuality={applyQuality}
               applySpeed={applySpeed}
               applySubtitle={applySubtitle}
               applySubtitleSize={applySubtitleSize}
               applyAudioTrack={applyAudioTrack}
+              applySubtitleColor={setSubtitleColor}
+              applySubtitleBackground={setSubtitleBackground}
+              applySubtitleEdge={setSubtitleEdge}
+              applySubtitleFont={setSubtitleFont}
             />
           </Suspense>
         )}
         <div className="kui-controls">
+          {slots?.aboveControls}
           {title && <p className="kui-title">{title}</p>}
           <ProgressBar
             ref={progressRef}
@@ -403,9 +476,21 @@ export function VideoPlayerChrome({
             onScrubEnd={handleScrubEnd}
             onSeekBy={(d) => engine.seekBy(d)}
             onSeekToRatio={(r) => engine.seekByRatio(r)}
-            valueText={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+            duration={duration}
+            hoverSeconds={seekHoverRatio === null
+              ? null
+              : (isLive && dvrWindow > 0 ? dvrStart + seekHoverRatio * dvrWindow : seekHoverRatio * duration)}
+            chapters={chapterList}
+            tiles={tiles}
+            valueText={isLive
+              ? (atLiveEdge
+                ? t('live')
+                : t('behindLive', { time: formatTime(Math.max(0, dvrWindow - (currentTime - dvrStart))) }))
+              : t('timeOf', { current: formatTime(currentTime), total: formatTime(duration) })}
           />
           <ControlRow
+            slotStart={slots?.controlsStart}
+            slotEnd={slots?.controlsEnd}
             playing={playing}
             muted={muted}
             volume={volume}
@@ -418,6 +503,12 @@ export function VideoPlayerChrome({
             showPip={enablePictureInPicture && pipSupported}
             isPip={isPip}
             onTogglePip={handleTogglePip}
+            showAirPlay={airPlaySupported && airPlayAvailable}
+            isAirPlaying={airPlaying}
+            onAirPlay={() => engine.showAirPlayPicker()}
+            isLive={isLive}
+            atLiveEdge={atLiveEdge}
+            onGoLive={() => engine.seekToLive()}
             onPlay={() => engine.togglePlay()}
             onSeekBy={(d) => engine.seekBy(d)}
             onToggleMute={() => engine.toggleMute()}

@@ -6,6 +6,6 @@
     "emitDeclarationOnly": true,
     "outDir": "./dist"
   },
-  "include": ["modules/**/*", "react/**/*", "libs/**/*", "embed/**/*"],
+  "include": ["modules/**/*", "react/**/*", "libs/**/*", "embed/**/*", "wrappers/**/*"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "node_modules", "dist", "coverage", "src"]
 }

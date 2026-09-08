@@ -3,6 +3,7 @@ import { useGoogleCast } from '../hooks/useGoogleCast.js';
 import { useVideoPlayerEngine } from '../hooks/useVideoPlayerEngine.js';
 import { useVideoPlayerStore } from '../hooks/useVideoPlayerStore.js';
 import { Icon } from '../icons/index.js';
+import { useTranslate } from '../i18n/index.js';
 import type {
   CastQueueItem, CastState, SubtitleTrack, VideoSource,
 } from '../../modules/videoplayer/videoplayer.types.js';
@@ -39,12 +40,13 @@ function CastOverlay({
   onNext: () => void;
   onPrevious: () => void;
 }) {
+  const t = useTranslate();
   const queued = queueLength > 1;
   return (
     <div className="kui-overlay kui-overlay--cast">
       <Icon name="cast" className="kui-cast-icon" />
       <p className="kui-cast-name">
-        {castDeviceName ? `Casting to ${castDeviceName}` : 'Casting to device'}
+        {castDeviceName ? t('castingTo', { device: castDeviceName }) : t('castingToDevice')}
       </p>
       {title && <p className="kui-cast-title">{title}</p>}
       {queued && (
@@ -52,7 +54,7 @@ function CastOverlay({
         // can move it — the local element is not playing anything.
         <div className="kui-cast-queue">
           <button type="button" className="kui-btn-outline" onClick={onPrevious} disabled={queueIndex === 0}>
-            <Icon name="skipBack" /> Previous
+            <Icon name="skipBack" /> {t('previous')}
           </button>
           <span className="kui-cast-position">{queueIndex + 1} / {queueLength}</span>
           <button
@@ -61,7 +63,7 @@ function CastOverlay({
             onClick={onNext}
             disabled={queueIndex >= queueLength - 1}
           >
-            Next <Icon name="skipForward" />
+            {t('next')} <Icon name="skipForward" />
           </button>
         </div>
       )}

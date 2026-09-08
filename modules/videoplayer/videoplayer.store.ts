@@ -1,6 +1,7 @@
-import { createStore, type StoreApi } from 'zustand/vanilla';
+import { createStore, type StoreApi } from './store.js';
 import type {
-  AudioTrackOption, CastState, PlayerError, QualityOption, SettingsView, SubtitleFontSize,
+  AudioTrackOption, CastState, PlayerError, QualityOption, SettingsView,
+  SubtitleEdge, SubtitleFont, SubtitleFontSize,
 } from './videoplayer.types.js';
 
 export type VideoPlayerState = {
@@ -21,6 +22,18 @@ export type VideoPlayerState = {
   /** True while fullscreen is emulated (iOS Safari has no element fullscreen). */
   fakeFullscreen: boolean;
   isPip: boolean;
+  /** True while the source has no fixed duration. */
+  isLive: boolean;
+  /** Playing at (or within seconds of) the live edge. */
+  atLiveEdge: boolean;
+  /** Start of the seekable window, and its length — the DVR buffer. */
+  dvrStart: number;
+  dvrWindow: number;
+  /** Whether the element can offer AirPlay at all, and whether a target exists. */
+  airPlaySupported: boolean;
+  airPlayAvailable: boolean;
+  /** True while playback has been handed to an AirPlay target. */
+  airPlaying: boolean;
   /** Whether the attached element can enter Picture-in-Picture at all. */
   pipSupported: boolean;
   showControls: boolean;
@@ -40,6 +53,11 @@ export type VideoPlayerState = {
   /** Audio renditions discovered from the element or an adapter. */
   adaptiveAudioTracks: AudioTrackOption[];
   subtitleFontSize: SubtitleFontSize;
+  subtitleColor: string;
+  /** Backdrop opacity behind the cue text, 0–1. */
+  subtitleBackground: number;
+  subtitleEdge: SubtitleEdge;
+  subtitleFont: SubtitleFont;
   castState: CastState;
   castDeviceName: string | null;
   /** Human-readable reason the last Cast attempt failed. */
@@ -64,6 +82,12 @@ export type VideoPlayerActions = {
   setIsFullscreen:       (v: boolean) => void;
   setFakeFullscreen:     (v: boolean) => void;
   setIsPip:              (v: boolean) => void;
+  setIsLive:             (v: boolean) => void;
+  setAtLiveEdge:         (v: boolean) => void;
+  setDvrWindow:          (start: number, window: number) => void;
+  setAirPlaySupported:   (v: boolean) => void;
+  setAirPlayAvailable:   (v: boolean) => void;
+  setAirPlaying:         (v: boolean) => void;
   setPipSupported:       (v: boolean) => void;
   setShowControls:       (v: boolean) => void;
   setSeekHoverRatio:     (v: number | null) => void;
@@ -77,6 +101,10 @@ export type VideoPlayerActions = {
   setSelectedAudioTrack: (v: number) => void;
   setAdaptiveAudioTracks:(v: AudioTrackOption[]) => void;
   setSubtitleFontSize:   (v: SubtitleFontSize) => void;
+  setSubtitleColor:      (v: string) => void;
+  setSubtitleBackground: (v: number) => void;
+  setSubtitleEdge:       (v: SubtitleEdge) => void;
+  setSubtitleFont:       (v: SubtitleFont) => void;
   setCastState:          (v: CastState) => void;
   setCastDeviceName:     (v: string | null) => void;
   setCastError:          (v: string | null) => void;
@@ -107,6 +135,13 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     isFullscreen: false,
     fakeFullscreen: false,
     isPip: false,
+    isLive: false,
+    atLiveEdge: false,
+    dvrStart: 0,
+    dvrWindow: 0,
+    airPlaySupported: false,
+    airPlayAvailable: false,
+    airPlaying: false,
     pipSupported: false,
     showControls: true,
     seekHoverRatio: null,
@@ -120,6 +155,10 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     selectedAudioTrack: 0,
     adaptiveAudioTracks: [],
     subtitleFontSize: 'md',
+    subtitleColor: '#ffffff',
+    subtitleBackground: 0.8,
+    subtitleEdge: 'none',
+    subtitleFont: 'sans',
     castState: 'unavailable',
     castDeviceName: null,
     castError: null,
@@ -140,6 +179,12 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setIsFullscreen:       (v) => set({ isFullscreen: v }),
     setFakeFullscreen:     (v) => set({ fakeFullscreen: v }),
     setIsPip:              (v) => set({ isPip: v }),
+    setIsLive:             (v) => set({ isLive: v }),
+    setAtLiveEdge:         (v) => set({ atLiveEdge: v }),
+    setDvrWindow:          (start, window) => set({ dvrStart: start, dvrWindow: window }),
+    setAirPlaySupported:   (v) => set({ airPlaySupported: v }),
+    setAirPlayAvailable:   (v) => set({ airPlayAvailable: v }),
+    setAirPlaying:         (v) => set({ airPlaying: v }),
     setPipSupported:       (v) => set({ pipSupported: v }),
     setShowControls:       (v) => set({ showControls: v }),
     setSeekHoverRatio:     (v) => set({ seekHoverRatio: v }),
@@ -153,6 +198,10 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setSelectedAudioTrack: (v) => set({ selectedAudioTrack: v }),
     setAdaptiveAudioTracks:(v) => set({ adaptiveAudioTracks: v }),
     setSubtitleFontSize:   (v) => set({ subtitleFontSize: v }),
+    setSubtitleColor:      (v) => set({ subtitleColor: v }),
+    setSubtitleBackground: (v) => set({ subtitleBackground: v }),
+    setSubtitleEdge:       (v) => set({ subtitleEdge: v }),
+    setSubtitleFont:       (v) => set({ subtitleFont: v }),
     setCastState:          (v) => set({ castState: v }),
     setCastDeviceName:     (v) => set({ castDeviceName: v }),
     setCastError:          (v) => set({ castError: v }),

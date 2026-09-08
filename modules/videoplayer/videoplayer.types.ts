@@ -1,4 +1,5 @@
 import type { MediaAdapter } from './adapters/adapter.types.js';
+import type { Chapter } from './videoplayer.vtt.js';
 
 export type QualityOption = { label: string; value: string };
 export type SubtitleTrack = { label: string; srclang?: string; src: string };
@@ -6,12 +7,17 @@ export type AudioTrackOption = { label: string; language?: string };
 
 export type VideoSource = { src: string; type?: string };
 export type SubtitleFontSize = 'sm' | 'md' | 'lg' | 'xl';
+/** How cue text is separated from the picture behind it. */
+export type SubtitleEdge = 'none' | 'shadow' | 'outline';
+export type SubtitleFont = 'sans' | 'serif' | 'mono';
 export type SettingsView =
   | 'main'
   | 'quality'
   | 'speed'
   | 'subtitles'
   | 'subtitle-size'
+  | 'subtitle-style'
+  | 'chapters'
   | 'language';
 
 export type CastState = 'unavailable' | 'available' | 'connecting' | 'connected' | 'error';
@@ -62,8 +68,53 @@ export type GestureOptions = {
   horizontalScrub?: boolean;
 };
 
+/** One entry in a playlist. Everything but `src` falls back to the player's props. */
+export type PlaylistItem = {
+  /** Required unless `playlist` is given, in which case the list provides it. */
+  src?: string | VideoSource | (string | VideoSource)[];
+  /** Play through a list, advancing when each item ends. */
+  playlist?: PlaylistItem[];
+  /** Controlled playlist position; omit to let the player own it. */
+  playlistIndex?: number;
+  onPlaylistIndexChange?: (index: number) => void;
+  /** Seconds of "up next" countdown before advancing. `0` advances at once. */
+  playlistCountdown?: number;
+  title?: string;
+  poster?: string;
+  subtitles?: SubtitleTrack[];
+  chapters?: string | Chapter[];
+  thumbnails?: string;
+};
+
+/** Built-in token presets. Anything else is a custom `--kui-*` set. */
+export type PlayerTheme = 'default' | 'minimal' | 'broadcast' | 'cinema';
+
+/**
+ * Places a consumer can put their own nodes without forking the chrome. Typed
+ * as `unknown` here because this module stays framework-agnostic; the React
+ * layer narrows it to `ReactNode`.
+ */
+export type PlayerSlots<Node = unknown> = {
+  /** Across the top of the player, above the scrim. */
+  top?: Node;
+  /** Between the title and the seek bar. */
+  aboveControls?: Node;
+  /** Start of the control row, before the skip-back button. */
+  controlsStart?: Node;
+  /** End of the control row, after fullscreen. */
+  controlsEnd?: Node;
+};
+
 export type VideoPlayerProps = {
-  src: string | VideoSource | (string | VideoSource)[];
+  /** Required unless `playlist` is given, in which case the list provides it. */
+  src?: string | VideoSource | (string | VideoSource)[];
+  /** Play through a list, advancing when each item ends. */
+  playlist?: PlaylistItem[];
+  /** Controlled playlist position; omit to let the player own it. */
+  playlistIndex?: number;
+  onPlaylistIndexChange?: (index: number) => void;
+  /** Seconds of "up next" countdown before advancing. `0` advances at once. */
+  playlistCountdown?: number;
   poster?: string;
   title?: string;
   autoPlay?: boolean;
@@ -73,6 +124,10 @@ export type VideoPlayerProps = {
   defaultQuality?: string;
   subtitles?: SubtitleTrack[];
   audioTracks?: AudioTrackOption[];
+  /** A WebVTT chapters file, or the chapters themselves. */
+  chapters?: string | Chapter[];
+  /** A WebVTT storyboard for seek-bar previews (`#xywh=` sprites supported). */
+  thumbnails?: string;
   onQualityChange?: (value: string) => void;
   onAudioTrackChange?: (index: number) => void;
   /**
@@ -81,6 +136,8 @@ export type VideoPlayerProps = {
    * on iPhone.
    */
   playsInline?: boolean;
+  /** A preset token set: `minimal`, `broadcast`, `cinema`, or the default. */
+  theme?: PlayerTheme;
   /** Streaming adapters to consult for `src` — see `createHlsAdapter`. */
   adapters?: MediaAdapter[];
   /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */

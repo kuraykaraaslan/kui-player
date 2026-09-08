@@ -1,5 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { VideoPlayer } from '../../../react';
+import { tr } from '../../../react/i18n/locales/tr';
+import { ar } from '../../../react/i18n/locales/ar';
 import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter.types';
 
 /*
@@ -11,6 +13,12 @@ import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter
  *   ?adapter=1    register a stub streaming adapter for an ".stream" source
  *   ?autohide=0   keep the controls pinned
  *   ?cast=1       enable the Cast button
+ *   ?chapters=1   load the chapters and storyboard sidecars
+ *   ?srt=1        use an SRT subtitle track instead of WebVTT
+ *   ?locale=tr    switch language (tr, ar)
+ *   ?persist=1    remember position and preferences
+ *   ?playlist=1   play through a two-item playlist
+ *   ?theme=cinema apply a theme preset
  */
 const params = new URLSearchParams(location.search);
 
@@ -42,18 +50,37 @@ const src = params.get('broken')
     ? 'https://example.com/live.stream'
     : params.get('src') ?? '/media/clip.wav';
 
+const locales = { tr, ar } as const;
+const locale = params.get('locale');
+
+const playlist = params.get('playlist')
+  ? [
+      { src: '/media/clip.wav', title: 'First item', poster: '/media/poster.svg' },
+      { src: '/media/clip.wav', title: 'Second item', poster: '/media/poster.svg' },
+    ]
+  : undefined;
+
 createRoot(document.getElementById('stage')!).render(
   <VideoPlayer
-    src={src}
+    src={playlist ? undefined : src}
+    playlist={playlist}
+    playlistCountdown={params.get('countdown') ? Number(params.get('countdown')) : 3}
     title="Test clip"
     poster="/media/poster.svg"
     enableCast={params.get('cast') === '1'}
     autoHideControls={params.get('autohide') !== '0'}
     adapters={params.get('adapter') ? [stubAdapter] : undefined}
+    theme={(params.get('theme') as 'cinema' | undefined) ?? undefined}
+    chapters={params.get('chapters') ? '/media/chapters.vtt' : undefined}
+    thumbnails={params.get('chapters') ? '/media/storyboard.vtt' : undefined}
+    persist={params.get('persist') === '1'}
+    locale={locale && locale in locales ? locales[locale as keyof typeof locales] : undefined}
     qualities={params.get('adapter') ? undefined : [
       { label: '1080p', value: '1080' },
       { label: '720p', value: '720' },
     ]}
-    subtitles={[{ label: 'English', srclang: 'en', src: '/media/en.vtt' }]}
+    subtitles={params.get('srt')
+      ? [{ label: 'English', srclang: 'en', src: '/media/en.srt' }]
+      : [{ label: 'English', srclang: 'en', src: '/media/en.vtt' }]}
   />,
 );

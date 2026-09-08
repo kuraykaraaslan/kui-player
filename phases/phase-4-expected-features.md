@@ -1,6 +1,6 @@
 # Faz 4 — Beklenen Özellikler
 
-**Öncelik:** 🟡 Olsa iyi olur · **Efor:** ~4 hafta · **Önkoşul:** Faz 3 · **Durum:** ⬜
+**Öncelik:** 🟡 Olsa iyi olur · **Efor:** ~4 hafta · **Önkoşul:** Faz 3 · **Durum:** ✅ Tamamlandı
 
 > Bunlar rakiplerde var olan ve karşılaştırma tablolarında sorulan özellikler.
 > Hiçbiri tek başına kütüphaneyi kazandırmaz ama yokluğu eleme sebebi olur.
@@ -158,7 +158,54 @@ Rakiplerin çoğu sıfır runtime bağımlılığa sahip. Store'un kullandığı
 
 ## Faz 4 çıkış kriterleri
 
-- [ ] Rakip karşılaştırma tablosunda "yok" kutusu kalmadı (DRM ve reklam hariç)
-- [ ] i18n + RTL çalışıyor
-- [ ] Analytics event API'si belgelenmiş
-- [ ] Sıfır runtime bağımlılık
+- [x] **Karşılaştırma tablosunda "yok" kutusu kalmadı** (DRM ve reklam hariç):
+      4.1 Media Session, 4.2 AirPlay, 4.3 devam + tercih kalıcılığı, 4.4 chapters,
+      4.5 storyboard önizleme, 4.6 event API, 4.7 tema + slot, 4.8 i18n + RTL,
+      4.9 SRT/ASS + altyazı stil paneli, 4.10 canlı + DVR, 4.11 playlist,
+      4.12 sıfır bağımlılık, 4.13 Web Component + Vue + Svelte.
+- [x] **i18n + RTL çalışıyor** — 6 dil (en/tr/de/es/fr/ar), kısmi sözlük İngilizceye
+      düşüyor, `dir="rtl"` kontrol satırını/menüleri/progress'i aynalıyor, süreler
+      `Intl` ile yerelleşiyor. Sözlükler ayrı entry point: İngilizce kalan bir oynatıcı
+      hiçbirini indirmiyor (hepsi birlikte 3.93 KB).
+- [x] **Analytics event API'si belgelenmiş** — `engine.on()`; `ready`
+      (startup / time-to-first-frame), `stall` (sayı + süre), `quartile`, `complete`,
+      `error` ve tüm transport olayları. Hiçbir yere veri gitmiyor; CMCD adaptör
+      konfigürasyonuna bırakıldı ([recipes/analytics.md](../recipes/analytics.md)).
+- [x] **Sıfır runtime bağımlılık** — `zustand` yerine ~60 satırlık kendi store'umuz
+      (`getState`/`setState`/`subscribe`/`getInitialState`), React'e
+      `useSyncExternalStore` ile bağlı. `dependencies` alanı `package.json`'dan
+      tamamen kalktı.
+
+## Boyut: bütçeler bilinçli olarak yükseltildi
+
+Faz 2'de konan bütçeler, o günün özellik seti içindi. Faz 4 özellik yüzeyini kabaca
+ikiye katladı; bütçeler bir kez, gerekçesiyle yükseltildi:
+
+| Bundle | Faz 3 sonu | Faz 4 sonu | Yeni bütçe |
+|---|---|---|---|
+| çekirdek | 8.5 KB | 11.9 KB | 12.5 |
+| React (ilk yükleme) | 19.6 KB | 25.9 KB | 27 |
+| React + tüm chunk'lar | 24.2 KB | 32.5 KB | 34 |
+| embed | 29.8 KB | 36.9 KB | 39 |
+| skin (bundler) | 20.0 KB | 27.0 KB | 28.5 |
+| stylesheet | 3.5 KB | 5.0 KB | 5.5 |
+| locales (6 dil) | — | 3.9 KB | 6 |
+
+Bütçe *yapısı* korundu: yeni özelliklerin çoğu ilk yüklemeye girmiyor. Ayrı chunk'a
+taşınanlar — Media Session, kalıcılık, playlist, WebVTT parser (chapters/storyboard),
+SRT/ASS parser, sözlükler — üstüne Faz 2–5'ten gelen ayarlar paneli, About, Cast ve
+jestler. Varsayılan bir masaüstü oynatıcı bunların hiçbirini indirmiyor.
+
+Referans: Video.js v10'un React build'i 18 KB ve **ayarlar menüsü yok**.
+
+## Notlar
+
+**`en` sözlüğü ana chunk'ta.** Varsayılan dil olduğu için kaçınılmaz; diğer beşi
+ayrı entry point'te.
+
+**Web Component her framework'ün cevabı.** `<kui-player>` Angular, Solid, Qwik ve düz
+HTML için yeterli; Vue ve Svelte'e ayrıca ince sarmalayıcı yazıldı (ikisi de kendi
+`<video>`'sunu render edip skin mode'a veriyor, yani React sızmıyor).
+
+**CMCD adaptörde.** İstekleri adaptör yapıyor; hls.js/dash.js ikisi de kendi CMCD
+konfigürasyonunu sunuyor, oynatıcının araya girmesi yanlış olurdu.

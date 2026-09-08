@@ -3,9 +3,9 @@
 Version 0.1.0 · Apache-2.0 · ESM only · https://github.com/kuraykaraaslan/kui-player
 
 A video player chrome for any `<video>` element, including one a page already owns.
-Vanilla TypeScript core (8.5 kB gzip) plus a React subpath (19.8 kB gzip first load).
-One runtime dependency (`zustand`), no CSS framework, no icon font, and no network
-request other than the media you point it at.
+Vanilla TypeScript core (11.9 kB gzip) plus a React subpath (25.9 kB gzip first load).
+**No runtime dependencies**, no CSS framework, no icon font, and no network request
+other than the media you point it at.
 
 ## Install
 
@@ -18,7 +18,10 @@ request other than the media you point it at.
 |---|---|
 | `@kuraykaraaslan/kui-player` | `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, `SPEEDS`, `SUBTITLE_SIZES`, `SUBTITLE_SIZE_LABELS`, `AUTO_QUALITY`, `AUTO_QUALITY_VALUE`, all types |
 | `@kuraykaraaslan/kui-player/react` | `VideoPlayer`, `VideoPlayerChrome`, `VideoPlayerEngineContext`, `useVideoPlayerEngine`, `useVideoPlayerStore`, `useVideoPlayerStoreApi`, `Icon`, `IconProvider`, `PLAYER_CSS`, `injectPlayerStyles`, `usePlayerStyles` |
-| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `SKINNED_ATTR` |
+| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `SKINNED_ATTR`, `defineKuiPlayer`, `KuiPlayerElement` |
+| `@kuraykaraaslan/kui-player/locales` | `tr`, `de`, `es`, `fr`, `ar` (English is built in) |
+| `@kuraykaraaslan/kui-player/wrappers/vue` | `KuiPlayer` component for Vue 3 |
+| `@kuraykaraaslan/kui-player/wrappers/svelte` | `kuiPlayer` action for Svelte 5 |
 | `@kuraykaraaslan/kui-player/styles.css` | the stylesheet, if you would rather link it than let the component inject it |
 | `dist/embed.js` (script tag) | installs `window.kuiPlayer`, auto-starts from `data-*` attributes |
 
@@ -58,6 +61,16 @@ request other than the media you point it at.
 | `autoHideControls` | `boolean` | `true` | hide after 3s while playing |
 | `onControlsVisibilityChange` | `(visible: boolean) => void` | — | |
 | `icons` | `IconOverrides` | — | `{ play: <MyIcon/> }` |
+| `chapters` | `string \| Chapter[]` | — | WebVTT chapters file, or the chapters |
+| `thumbnails` | `string` | — | WebVTT storyboard for seek previews |
+| `playlist` | `PlaylistItem[]` | — | play through a list |
+| `playlistIndex` / `onPlaylistIndexChange` | — | — | controlled position |
+| `playlistCountdown` | `number` | `8` | seconds before advancing; `0` advances at once |
+| `persist` | `boolean \| PersistOptions` | `false` | remember position and preferences |
+| `mediaSession` | `boolean` | `true` | OS media controls |
+| `locale` | `PartialDictionary` | English | anything omitted falls back to English |
+| `theme` | `'minimal' \| 'broadcast' \| 'cinema'` | — | token presets |
+| `slots` | `PlayerSlots` | — | `top`, `aboveControls`, `controlsStart`, `controlsEnd` |
 | `injectStyles` | `boolean` | `true` | `false` if you link `styles.css` yourself |
 | `className` | `string` | — | on the root element |
 
@@ -104,6 +117,10 @@ request other than the media you point it at.
     setKeyboardFocus(inside) pin the chrome open while the keyboard is inside
     toggleControls() / forceShow() / hideIfPlaying() / resetHideTimer()
     attachCast(player, controller) / detachCast()
+    on(event, handler)       subscribe; returns an unsubscribe function
+    off(event, handler)
+    seekToLive()             jump to the live edge of a stream
+    showAirPlayPicker()      Safari's AirPlay target picker
 
 ### Store
 
@@ -115,7 +132,9 @@ State: `playing`, `currentTime`, `duration`, `buffered` (0–100), `volume`, `mu
 `seekHoverRatio`, `showSettings`, `settingsView`, `selectedQuality`,
 `adaptiveQualities`, `qualityAuto`, `activeQualityLabel`, `selectedSubtitle`,
 `selectedAudioTrack`, `adaptiveAudioTracks`, `subtitleFontSize`, `castState`,
-`castDeviceName`, `castError`, `castQueueIndex`, `castQueueLength`.
+`castDeviceName`, `castError`, `castQueueIndex`, `castQueueLength`, `isLive`,
+`atLiveEdge`, `dvrStart`, `dvrWindow`, `airPlaySupported`, `airPlayAvailable`,
+`airPlaying`, `subtitleColor`, `subtitleBackground`, `subtitleEdge`, `subtitleFont`.
 
 Every field has a `setX` action. The element is the source of truth: state is written
 from element events, so mutating `video.volume` or `video.playbackRate` directly stays
@@ -198,6 +217,44 @@ The player makes no request other than the media you give it, writes nothing to
 `localStorage`, `sessionStorage` or cookies, and loads no fonts, icons or analytics.
 Enabling Cast loads Google's sender SDK from gstatic.com — the single exception, opt-in,
 and the only allowance in the CI test that enforces all of the above.
+
+## Events
+
+    engine.on('ready', ({ startupMs, timeToFirstFrameMs }) => …)
+    engine.on('stall', ({ count, durationMs, totalMs }) => …)
+    engine.on('quartile', ({ percent }) => …)          // 25 | 50 | 75 | 100
+    engine.on('complete' | 'error' | 'sourcechange' | 'play' | 'pause'
+             | 'seeking' | 'seeked' | 'ratechange' | 'volumechange'
+             | 'qualitychange' | 'audiotrackchange', handler)
+
+Measured locally and sent nowhere. Every subscription returns an unsubscribe
+function, and a listener that throws cannot break playback.
+
+## Chapters, storyboards, playlists, live
+
+    <VideoPlayer chapters="/chapters.vtt" thumbnails="/storyboard.vtt" />
+    <VideoPlayer playlist={[{ src, title, poster }, …]} playlistCountdown={5} />
+
+Chapters segment the seek bar and appear in the settings menu. Storyboards
+support sprite sheets through the `#xywh=` media fragment. Live streams are
+detected from the source: the clock becomes a LIVE badge and the bar spans the
+seekable DVR window.
+
+## Subtitles
+
+WebVTT rides on the element's own text tracks. SRT and ASS are fetched and timed
+by the player, with the parser loaded alongside the file. Caption appearance —
+colour, background opacity, edge style, font — is in the settings menu and in the
+store.
+
+## Persistence
+
+    <VideoPlayer persist />
+    <VideoPlayer persist={{ key: 'app', storage: sessionStorage, resume: false }} />
+
+Off by default. Preferences (volume, speed, subtitle language and size) are
+source-independent; position is per source, expires after 30 days, and is
+*offered* rather than applied.
 
 ## Errors
 

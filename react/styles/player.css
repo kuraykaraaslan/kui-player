@@ -70,6 +70,54 @@
   cursor: pointer;
 }
 
+/* ── themes ──────────────────────────────────────────────────────────────────
+ * Presets are just token sets: nothing here is a separate stylesheet, and any
+ * of it can still be overridden per player. `default` needs no rules at all.
+ */
+.kui-player[data-kui-theme="minimal"] {
+  --_kui-accent: var(--kui-accent, #ffffff);
+  --_kui-radius: var(--kui-radius, 0px);
+  --_kui-radius-sm: var(--kui-radius-sm, 2px);
+  --_kui-scrim: var(--kui-scrim, linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 45%));
+  --_kui-surface: var(--kui-surface, rgba(0, 0, 0, 0.94));
+}
+.kui-player[data-kui-theme="minimal"] .kui-center-play { display: none; }
+.kui-player[data-kui-theme="minimal"] .kui-seek-track { height: 3px; }
+.kui-player[data-kui-theme="minimal"] .kui-seek:hover .kui-seek-track { height: 5px; }
+
+.kui-player[data-kui-theme="broadcast"] {
+  --_kui-accent: var(--kui-accent, #ff0000);
+  --_kui-radius: var(--kui-radius, 0px);
+  --_kui-control-size: var(--kui-control-size, 2.25rem);
+  --_kui-control-size-primary: var(--kui-control-size-primary, 2.75rem);
+  --_kui-scrim: var(--kui-scrim, linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.35) 40%, transparent 75%));
+}
+.kui-player[data-kui-theme="broadcast"] .kui-seek-track { height: 4px; }
+.kui-player[data-kui-theme="broadcast"] .kui-seek-thumb { width: 12px; height: 12px; margin-top: -6px; }
+
+.kui-player[data-kui-theme="cinema"] {
+  --_kui-accent: var(--kui-accent, #e50914);
+  --_kui-radius: var(--kui-radius, 4px);
+  --_kui-surface: var(--kui-surface, rgba(20, 20, 20, 0.96));
+  --_kui-surface-raised: var(--kui-surface-raised, #141414);
+  --_kui-font-size: var(--kui-font-size, 0.9375rem);
+  --_kui-control-size: var(--kui-control-size, 2.25rem);
+  --_kui-scrim: var(--kui-scrim, linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.4) 35%, transparent 70%));
+}
+.kui-player[data-kui-theme="cinema"] .kui-controls { padding: 2rem 1.5rem 1rem; }
+
+/* ── slots ── */
+.kui-slot { display: flex; align-items: center; gap: 0.25rem; }
+.kui-slot--controls-start,
+.kui-slot--controls-end { flex-shrink: 0; }
+.kui-slot--top {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 21;
+  padding: 0.75rem 1rem;
+}
+
 /* ── overlays ────────────────────────────────────────────────────────────── */
 
 .kui-overlay {
@@ -274,6 +322,18 @@
 .kui-meter-fill { display: block; height: 100%; border-radius: 9999px; background: var(--_kui-text); }
 .kui-meter-value { width: 2.25rem; text-align: right; font-size: 0.75rem; }
 
+/* Right-to-left. The control row mirrors itself: a flex row already follows the
+   writing direction, so these rules only fix what direction alone cannot —
+   the panel's edge, text alignment, and the chevrons that point somewhere. */
+.kui-player[dir="rtl"] .kui-panel { right: auto; left: 1rem; }
+.kui-player[dir="rtl"] .kui-menu-row,
+.kui-player[dir="rtl"] .kui-option,
+.kui-player[dir="rtl"] .kui-back { text-align: right; }
+.kui-player[dir="rtl"] .kui-option-labels { align-items: flex-end; }
+.kui-player[dir="rtl"] .kui-back svg,
+.kui-player[dir="rtl"] .kui-menu-row-value svg { transform: scaleX(-1); }
+.kui-player[dir="rtl"] .kui-time { padding-left: 0; padding-right: 0.25rem; }
+
 /* ── chrome ──────────────────────────────────────────────────────────────── */
 
 .kui-chrome {
@@ -351,6 +411,35 @@
   font-variant-numeric: tabular-nums;
 }
 .kui-time-sep { margin: 0 0.125rem; color: var(--_kui-text-faint); }
+.kui-time--live { flex: 0 0 auto; padding-left: 0.5rem; }
+
+.kui-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  margin-left: 0.25rem;
+  border: 0;
+  border-radius: var(--_kui-radius-sm);
+  background: transparent;
+  color: var(--_kui-text-muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.kui-live:hover:not(:disabled) { color: var(--_kui-text); }
+.kui-live:disabled { cursor: default; color: var(--_kui-text); }
+.kui-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.5;
+}
+/* Red only at the edge: grey means "you are behind, click to catch up". */
+.kui-live.is-edge .kui-live-dot { background: #ef4444; opacity: 1; }
 
 /* ── seek bar ────────────────────────────────────────────────────────────── */
 
@@ -375,13 +464,21 @@
 .kui-seek:focus-visible .kui-seek-track { height: 8px; }
 .kui-seek-buffered,
 .kui-seek-played,
-.kui-seek-hover { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 9999px; }
+.kui-seek-hover {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Logical, so the fill grows from the start of the track in either direction. */
+  inset-inline-start: 0;
+  border-radius: 9999px;
+}
 .kui-seek-buffered { background: rgba(255, 255, 255, 0.25); }
 .kui-seek-played { background: var(--_kui-accent); }
 .kui-seek-hover { background: rgba(255, 255, 255, 0.15); }
 .kui-seek-thumb {
   position: absolute;
   top: 50%;
+  margin-inline-start: -7px;
   width: 14px;
   height: 14px;
   margin-top: -7px;
@@ -393,10 +490,44 @@
 }
 .kui-seek:hover .kui-seek-thumb,
 .kui-seek:focus-visible .kui-seek-thumb { opacity: 1; }
+.kui-chapters { position: absolute; inset: 0; pointer-events: none; }
+.kui-chapter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* A hairline gap at the end of each segment is the whole effect. */
+  border-inline-end: 2px solid var(--_kui-bg);
+  opacity: 0.65;
+}
+.kui-chapter:last-child { border-inline-end: 0; }
+
+.kui-preview {
+  position: absolute;
+  bottom: 1.25rem;
+  translate: -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem;
+  border-radius: var(--_kui-radius-sm);
+  background: rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.kui-preview-frame {
+  display: block;
+  border-radius: 4px;
+  background-repeat: no-repeat;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.kui-preview-chapter { font-size: 0.75rem; font-weight: 500; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; }
+.kui-preview-time { font-size: 0.6875rem; color: var(--_kui-text-muted); font-variant-numeric: tabular-nums; }
+
 .kui-seek-tip {
   position: absolute;
   top: -2rem;
-  transform: translateX(-50%);
+  translate: -50%;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.8);
@@ -419,7 +550,14 @@
   background: var(--_kui-surface);
   backdrop-filter: blur(12px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  /* Long lists — caption styling, chapters, a dozen renditions — scroll here
+     instead of growing past the player, where nothing can be clicked. */
+  max-height: min(20rem, calc(100% - 5rem));
+  display: flex;
+  flex-direction: column;
 }
+.kui-panel > div { overflow-y: auto; }
+.kui-panel-head, .kui-back { flex-shrink: 0; }
 .kui-panel-head {
   display: flex;
   align-items: center;
@@ -474,6 +612,16 @@
 .kui-menu-row:hover .kui-menu-row-value { color: var(--_kui-text-muted); }
 .kui-menu-row-value svg { font-size: 0.625rem; }
 
+.kui-settings-group {
+  margin: 0.5rem 1rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--_kui-text-faint);
+}
+.kui-settings-group:first-child { margin-top: 0.25rem; }
+
 .kui-option {
   display: flex;
   align-items: center;
@@ -495,6 +643,44 @@
 .kui-option svg { flex-shrink: 0; font-size: 0.75rem; color: var(--_kui-accent); }
 
 /* ── about modal ─────────────────────────────────────────────────────────── */
+
+.kui-resume,
+.kui-up-next {
+  position: absolute;
+  inset-inline-end: 1rem;
+  bottom: 5rem;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  max-width: min(24rem, calc(100% - 2rem));
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--_kui-border);
+  border-radius: var(--_kui-radius-sm);
+  background: var(--_kui-surface);
+  font-size: 0.8125rem;
+}
+.kui-up-next-art {
+  width: 3.5rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+}
+.kui-up-next-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kui-resume-dismiss {
+  flex-shrink: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--_kui-text-faint);
+  font: inherit;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.kui-resume-dismiss:hover { color: var(--_kui-text); }
 
 .kui-modal { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .kui-modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); }

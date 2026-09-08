@@ -34,6 +34,15 @@
       ],
       "skin": [
         "./dist/embed/skin.d.ts"
+      ],
+      "locales": [
+        "./dist/react/i18n/locales/index.d.ts"
+      ],
+      "wrappers/vue": [
+        "./dist/wrappers/vue/KuiPlayer.d.ts"
+      ],
+      "wrappers/svelte": [
+        "./dist/wrappers/svelte/kuiPlayer.d.ts"
       ]
     }
   },
@@ -50,7 +59,19 @@
       "types": "./dist/embed/skin.d.ts",
       "import": "./dist/skin/index.js"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./locales": {
+      "types": "./dist/react/i18n/locales/index.d.ts",
+      "import": "./dist/locales/index.js"
+    },
+    "./wrappers/vue": {
+      "types": "./dist/wrappers/vue/KuiPlayer.d.ts",
+      "import": "./dist/wrappers/vue.js"
+    },
+    "./wrappers/svelte": {
+      "types": "./dist/wrappers/svelte/kuiPlayer.d.ts",
+      "import": "./dist/wrappers/svelte.js"
+    }
   },
   "files": [
     "dist",
@@ -64,7 +85,7 @@
     {
       "name": "core (vanilla engine)",
       "path": "dist/index.js",
-      "limit": "9 kB"
+      "limit": "12.5 kB"
     },
     {
       "name": "react subpath",
@@ -72,7 +93,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "20 kB"
+      "limit": "27 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -84,17 +105,17 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "28 kB"
+      "limit": "34 kB"
     },
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "35 kB"
+      "limit": "39 kB"
     },
     {
       "name": "stylesheet",
       "path": "dist/styles.css",
-      "limit": "4 kB"
+      "limit": "5.5 kB"
     },
     {
       "name": "skin mode (bundler entry)",
@@ -102,7 +123,14 @@
         "dist/skin/index.js",
         "dist/skin/skin.js"
       ],
-      "limit": "24 kB"
+      "limit": "28.5 kB"
+    },
+    {
+      "name": "locales (all six)",
+      "path": [
+        "dist/locales/index.js"
+      ],
+      "limit": "6 kB"
     }
   ],
   "peerDependencies": {
@@ -116,9 +144,6 @@
     "react-dom": {
       "optional": true
     }
-  },
-  "dependencies": {
-    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
@@ -143,15 +168,17 @@
     "publint": "^0.3.24",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "svelte": "^5.57.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.70.0",
     "vite": "^5.0.0",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "vue": "^3.5.42"
   },
   "scripts": {
     "dev": "vite --config vite.config.demo.ts",
-    "build:js": "vite build && vite build --config vite.config.react.ts",
+    "build:js": "vite build && vite build --config vite.config.react.ts && vite build --config vite.config.skin.ts && vite build --config vite.config.locales.ts && vite build --config vite.config.wrappers.ts",
     "build:types": "tsc -p tsconfig.lib.json",
     "build:css": "node scripts/build-css.mjs",
     "build:embed": "vite build --config vite.config.embed.ts",

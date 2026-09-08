@@ -1,5 +1,6 @@
 import { mountSkin, type SkinOptions } from './mountSkin.js';
 import { skinAll, type SkinAllHandle, type SkinAllOptions } from './skinAll.js';
+import { defineKuiPlayer } from './webComponent.js';
 
 // Injected by Vite `define` at build time (see vite.config.embed.ts).
 declare const __KUI_EMBED_VERSION__: string;
@@ -13,6 +14,8 @@ export interface KuiPlayerApi {
   unmount(video: HTMLVideoElement): void;
   unmountAll(): void;
   isMounted(video: HTMLVideoElement): boolean;
+  /** Register `<kui-player>` as a custom element. */
+  define(tagName?: string): void;
 }
 
 declare global {
@@ -50,6 +53,9 @@ const api: KuiPlayerApi = {
   isMounted(video) {
     return mounted.has(video);
   },
+  define(tagName) {
+    defineKuiPlayer(tagName);
+  },
 };
 
 // ─── zero-config auto-start ──────────────────────────────────────────────────
@@ -67,7 +73,12 @@ function autoStart(): void {
   const script = document.currentScript as HTMLScriptElement | null
     ?? document.querySelector<HTMLScriptElement>('script[data-auto]');
   const selector = script?.dataset.auto;
-  if (!script || selector === undefined) return;
+  if (!script) return;
+  if (selector === undefined && script.dataset.define === undefined) {
+    // Still register the element if the page uses the tag.
+    if (document.querySelector('kui-player')) defineKuiPlayer();
+    return;
+  }
 
   const flag = (name: string, fallback: boolean): boolean => {
     const raw = script.dataset[name];
@@ -76,6 +87,7 @@ function autoStart(): void {
   };
 
   const start = () => {
+    if (selector === undefined) return;
     api.skinAll(selector || 'video', {
       accent: script.dataset.accent,
       title: script.dataset.title,
@@ -87,6 +99,12 @@ function autoStart(): void {
       defaultSpeed: script.dataset.speed ? Number(script.dataset.speed) : undefined,
     });
   };
+
+  // `<kui-player>` is registered whenever the tag appears on the page, so the
+  // custom-element route needs no configuration either.
+  if (document.querySelector('kui-player') || script.dataset.define !== undefined) {
+    defineKuiPlayer(script.dataset.define || 'kui-player');
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, { once: true });

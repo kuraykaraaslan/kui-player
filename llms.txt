@@ -1,8 +1,8 @@
 # kui-player
 
 > A video player chrome you can put on any `<video>` element — including one a page
-> already owns. Vanilla TypeScript core plus a React subpath, ~19.7 kB gzipped, one
-> runtime dependency, no CSS framework, no icon font, and no network request other
+> already owns. Vanilla TypeScript core plus a React subpath, ~26 kB gzipped, **zero
+> runtime dependencies**, no CSS framework, no icon font, and no network request other
 > than the media you point it at.
 
 kui-player is not trying to be a general-purpose player framework. It is the controls
@@ -10,14 +10,16 @@ layer: accessible, themeable through CSS custom properties, and mountable over a
 `<video>` that some other pipeline (progressive, hls.js, MSE, blob) is already feeding.
 
 - Package: `@kuraykaraaslan/kui-player` (npm, Apache-2.0, ESM only)
-- Entry points: `.` (vanilla core), `./react`, `./styles.css`
+- Entry points: `.` (vanilla core), `./react`, `./skin`, `./locales`, `./wrappers/vue`, `./wrappers/svelte`, `./styles.css`
 - Requires React 18/19 only for the `./react` subpath; the core has no framework
+- Vue, Svelte, Angular and plain HTML are served by wrappers or `<kui-player>`
 
 ## Documentation
 
 - [README](https://github.com/kuraykaraaslan/kui-player/blob/main/README.md): install, props, theming, streaming, accessibility, bundle budgets
 - [llms-full.txt](https://github.com/kuraykaraaslan/kui-player/blob/main/llms-full.txt): the complete API surface, types and recipes in one file
-- [Recipes](https://github.com/kuraykaraaslan/kui-player/tree/main/recipes): copy-pasteable integrations (Next.js, Vite, WordPress, skin mode, hls.js)
+- [Recipes](https://github.com/kuraykaraaslan/kui-player/tree/main/recipes): copy-pasteable integrations (Next.js, Vite, WordPress, skin mode, hls.js, analytics)
+- [Wrappers](https://github.com/kuraykaraaslan/kui-player/tree/main/wrappers): Vue, Svelte and the custom element
 - [CONTRIBUTING](https://github.com/kuraykaraaslan/kui-player/blob/main/CONTRIBUTING.md): the rules a change has to satisfy
 - [Roadmap](https://github.com/kuraykaraaslan/kui-player/tree/main/phases): what is built, what is next, and why
 
@@ -27,8 +29,19 @@ layer: accessible, themeable through CSS custom properties, and mountable over a
 - **Vanilla engine** — `new VideoPlayerEngine()` then `engine.attach(videoElement)`; drives a Zustand vanilla store you can subscribe to.
 - **Skin mode** — one `<script>` tag dresses videos the page already has: `<script src="…/dist/embed.js" data-auto="video"></script>`. No build step, no markup change.
 
+## What else it does
+
+- Chapters and seek-preview storyboards from WebVTT sidecars
+- Playlists with a cancellable "up next" card
+- Live streams with a DVR window and a LIVE badge
+- SRT and ASS subtitles, plus caption colour/background/edge/font controls
+- OS media controls (Media Session), AirPlay, Picture-in-Picture, Google Cast with queues
+- Six languages with RTL layout, and localised durations
+- A local analytics API: quartiles, rebuffers, startup time, time to first frame
+- Resume-where-you-left-off, off by default
+
 ## What it deliberately does not do
 
 - Ship an HLS or DASH engine. Bring `hls.js` or `dash.js` and pass an adapter; nothing is bundled for apps that do not stream.
-- Send telemetry, load fonts, or fetch icons. Google Cast is the one external request, it is opt-in, and a CI test enforces the rest.
+- Send telemetry, load fonts, or fetch icons. It has no runtime dependencies at all. Google Cast is the one external request, it is opt-in, and a CI test enforces the rest.
 - Impose styling. One scoped stylesheet, every class prefixed `kui-`, themed with `--kui-*` custom properties.

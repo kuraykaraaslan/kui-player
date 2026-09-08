@@ -1,4 +1,4 @@
-import { useStore } from 'zustand/react';
+import { useStore } from './useStore.js';
 import type { VideoPlayerStore, VideoPlayerStoreApi } from '../../modules/videoplayer/videoplayer.store.js';
 import { useVideoPlayerEngine } from './useVideoPlayerEngine.js';
 

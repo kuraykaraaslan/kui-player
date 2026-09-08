@@ -42,6 +42,9 @@ function mediaFixtures(): Plugin {
     '<text x="320" y="190" fill="#7f9cf5" font-family="sans-serif" font-size="28" text-anchor="middle">kui-player</text></svg>',
   );
   const vtt = 'WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nFirst caption\n\n00:00:04.000 --> 00:00:07.000\nSecond caption\n';
+  const srt = '1\n00:00:01,000 --> 00:00:04,000\nSubRip caption\n\n2\n00:00:04,000 --> 00:00:07,000\nSecond SubRip line\n';
+  const chapters = 'WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nOpening\n\n00:00:10.000 --> 00:00:20.000\nThe middle\n\n00:00:20.000 --> 00:00:30.000\nThe end\n';
+  const storyboard = 'WEBVTT\n\n00:00:00.000 --> 00:00:15.000\n/media/poster.svg#xywh=0,0,160,90\n\n00:00:15.000 --> 00:00:30.000\n/media/poster.svg#xywh=160,0,160,90\n';
 
   return {
     name: 'kui-e2e-media',
@@ -74,6 +77,21 @@ function mediaFixtures(): Plugin {
         if (url === '/media/en.vtt') {
           res.setHeader('Content-Type', 'text/vtt');
           res.end(vtt);
+          return;
+        }
+        if (url === '/media/en.srt') {
+          res.setHeader('Content-Type', 'text/plain');
+          res.end(srt);
+          return;
+        }
+        if (url === '/media/chapters.vtt') {
+          res.setHeader('Content-Type', 'text/vtt');
+          res.end(chapters);
+          return;
+        }
+        if (url === '/media/storyboard.vtt') {
+          res.setHeader('Content-Type', 'text/vtt');
+          res.end(storyboard);
           return;
         }
         if (url === '/media/missing.wav') {

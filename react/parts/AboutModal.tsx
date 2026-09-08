@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import { cn } from '../../libs/utils/cn.js';
 import { Icon } from '../icons/index.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useTranslate } from '../i18n/index.js';
 
 /*
  * The three link marks live here rather than in the shared icon set: this
@@ -28,6 +29,7 @@ import { PLAYER_META } from '../../modules/videoplayer/videoplayer.meta.js';
  * shadow-root overlay when the player skins a page video.
  */
 export function AboutModal({ open, onClose }: Readonly<{ open: boolean; onClose: () => void }>) {
+  const t = useTranslate();
   const cardRef = useRef<HTMLDivElement>(null);
   // Modal semantics for real: focus enters the dialog, cannot leave it while it
   // is open, `Esc` closes it, and focus returns to the settings row behind it.
@@ -50,7 +52,7 @@ export function AboutModal({ open, onClose }: Readonly<{ open: boolean; onClose:
             <h2 id="kui-about-title">{PLAYER_META.name}</h2>
             <p className="kui-modal-sub">{PLAYER_META.tagline} · v{PLAYER_META.version}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="kui-modal-close">
+          <button type="button" onClick={onClose} aria-label={t('close')} className="kui-modal-close">
             <Icon name="close" />
           </button>
         </div>
@@ -68,7 +70,7 @@ export function AboutModal({ open, onClose }: Readonly<{ open: boolean; onClose:
         </div>
 
         <div className="kui-modal-foot">
-          <button type="button" onClick={onClose} className="kui-btn-outline">Close</button>
+          <button type="button" onClick={onClose} className="kui-btn-outline">{t('close')}</button>
         </div>
       </div>
     </div>

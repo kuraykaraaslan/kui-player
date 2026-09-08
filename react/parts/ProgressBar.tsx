@@ -1,4 +1,8 @@
 import { forwardRef } from 'react';
+import { useTranslate } from '../i18n/index.js';
+import { ChapterTrack } from './ChapterTrack.js';
+import { SeekPreview } from './SeekPreview.js';
+import type { Chapter, StoryboardTile } from '../../modules/videoplayer/videoplayer.vtt.js';
 
 type ProgressBarProps = {
   progress: number;
@@ -17,6 +21,11 @@ type ProgressBarProps = {
   onSeekToRatio: (ratio: number) => void;
   /** Spoken position, e.g. "1:12 of 4:20" — a bare percentage is meaningless here. */
   valueText: string;
+  duration: number;
+  /** Seconds the pointer is hovering, for the preview. */
+  hoverSeconds: number | null;
+  chapters: Chapter[];
+  tiles: StoryboardTile[];
 };
 
 const ARROW_STEP_S = 5;
@@ -29,12 +38,14 @@ const PAGE_STEP_RATIO = 0.1;
  */
 export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function ProgressBar(
   {
-    progress, buffered, seekHoverRatio, hoverTime, valueText,
+    progress, buffered, seekHoverRatio, hoverTime, valueText, duration,
+    hoverSeconds, chapters, tiles,
     onSeek, onSeekMouseMove, onSeekLeave, onScrubStart, onScrubMove, onScrubEnd,
     onSeekBy, onSeekToRatio,
   },
   ref,
 ) {
+  const t = useTranslate();
   // The bar is a real slider, so it handles its own keys and stops them from
   // reaching the player-wide shortcuts, which would seek twice.
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -53,7 +64,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
   return (
     <div
       role="slider"
-      aria-label="Seek"
+      aria-label={t('seek')}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(progress)}
@@ -71,13 +82,25 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
     >
       <div ref={ref} className="kui-seek-track">
         <div className="kui-seek-buffered" style={{ width: `${buffered}%` }} />
+        <ChapterTrack chapters={chapters} duration={duration} progress={progress} />
         <div className="kui-seek-played" style={{ width: `${progress}%` }} />
         {seekHoverRatio !== null && (
           <div className="kui-seek-hover" style={{ width: `${seekHoverRatio * 100}%` }} />
         )}
-        <div className="kui-seek-thumb" style={{ left: `calc(${progress}% - 7px)` }} />
+        <div className="kui-seek-thumb" style={{ insetInlineStart: `${progress}%` }} />
         {hoverTime && seekHoverRatio !== null && (
-          <div className="kui-seek-tip" style={{ left: `${seekHoverRatio * 100}%` }}>{hoverTime}</div>
+          (tiles.length > 0 || chapters.length > 0)
+            ? (
+              <SeekPreview
+                ratio={seekHoverRatio}
+                time={hoverSeconds ?? 0}
+                label={hoverTime}
+                tiles={tiles}
+                chapters={chapters}
+                duration={duration}
+              />
+            )
+            : <div className="kui-seek-tip" style={{ insetInlineStart: `${seekHoverRatio * 100}%` }}>{hoverTime}</div>
         )}
       </div>
     </div>

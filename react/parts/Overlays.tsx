@@ -1,9 +1,13 @@
 import { cn } from '../../libs/utils/cn.js';
 import { Icon } from '../icons/index.js';
-import { formatTime } from '../../modules/videoplayer/videoplayer.format.js';
-import { SUBTITLE_SIZES } from '../../modules/videoplayer/videoplayer.constants.js';
+import { useFormatTime, useTranslate, type Dictionary } from '../i18n/index.js';
+import {
+  SUBTITLE_EDGE_STYLES, SUBTITLE_FONTS, SUBTITLE_SIZES,
+} from '../../modules/videoplayer/videoplayer.constants.js';
 import type { GestureFeedback } from '../hooks/useTouchGestures.js';
-import type { PlayerError, SubtitleFontSize } from '../../modules/videoplayer/videoplayer.types.js';
+import type {
+  PlayerError, SubtitleEdge, SubtitleFont, SubtitleFontSize,
+} from '../../modules/videoplayer/videoplayer.types.js';
 
 export function LoadingOverlay() {
   return (
@@ -24,14 +28,20 @@ export function ErrorOverlay({
   retrying: boolean;
   onRetry: () => void;
 }) {
+  const t = useTranslate();
+  // Engine messages are English by construction; the dictionary translates them
+  // by error name, and falls back to the engine's wording for anything new.
+  const key = `error.${error.name}` as keyof Dictionary;
+  const message = t(key) === key ? error.message : t(key);
+
   return (
     <div className="kui-overlay kui-overlay--error" role="alert" aria-live="assertive">
       <Icon name="alert" className="kui-error-icon" />
-      <p className="kui-error-message">{error.message}</p>
+      <p className="kui-error-message">{message}</p>
       <p className="kui-error-code">{error.name}</p>
       <button type="button" onClick={onRetry} disabled={retrying} className="kui-btn-outline">
         <Icon name="retry" className={cn(retrying && 'kui-spin')} />
-        {retrying ? 'Retrying…' : 'Try again'}
+        {retrying ? t('retrying') : t('tryAgain')}
       </button>
     </div>
   );
@@ -53,6 +63,7 @@ export function CenterPlayOverlay({ playing }: { playing: boolean }) {
  * so it never takes pointer events.
  */
 export function GestureOverlay({ feedback }: { feedback: GestureFeedback }) {
+  const formatTime = useFormatTime();
   if (!feedback) return null;
 
   if (feedback.kind === 'seek') {
@@ -96,15 +107,32 @@ export function GestureOverlay({ feedback }: { feedback: GestureFeedback }) {
 }
 
 export function SubtitleOverlay({
-  cueText, effectiveControls, subtitleFontSize,
+  cueText, effectiveControls, subtitleFontSize, color, background, edge, font,
 }: {
   cueText: string;
   effectiveControls: boolean;
   subtitleFontSize: SubtitleFontSize;
+  color: string;
+  background: number;
+  edge: SubtitleEdge;
+  font: SubtitleFont;
 }) {
+  const shadow = SUBTITLE_EDGE_STYLES[edge];
   return (
     <div className={cn('kui-subtitles', effectiveControls && 'is-raised')}>
-      <span className="kui-subtitle-text" style={{ fontSize: SUBTITLE_SIZES[subtitleFontSize] }}>
+      <span
+        className="kui-subtitle-text"
+        style={{
+          fontSize: SUBTITLE_SIZES[subtitleFontSize],
+          color,
+          // Zero opacity means no box at all, not a transparent one — the text
+          // still has to separate from the picture, which is what edge is for.
+          background: background > 0 ? `rgba(0, 0, 0, ${background})` : 'transparent',
+          padding: background > 0 ? undefined : '0',
+          textShadow: shadow === 'none' ? undefined : shadow,
+          fontFamily: SUBTITLE_FONTS.find((f) => f.value === font)?.stack,
+        }}
+      >
         {cueText}
       </span>
     </div>
