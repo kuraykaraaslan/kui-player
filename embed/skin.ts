@@ -7,4 +7,5 @@ export { mountSkin, SKINNED_ATTR } from './mountSkin.js';
 export type { SkinOptions } from './mountSkin.js';
 export { skinAll } from './skinAll.js';
 export type { SkinAllOptions, SkinAllHandle } from './skinAll.js';
-export { defineKuiPlayer, KuiPlayerElement } from './webComponent.js';
+export { defineKuiPlayer } from './webComponent.js';
+export type { KuiPlayerElement } from './webComponent.js';

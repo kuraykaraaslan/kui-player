@@ -29,6 +29,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
+      # The last gate before npm: load every built entry point, evaluate the
+      # embed in a document, and confirm each declared export resolves.
+      - run: pnpm check:artifacts
+      - run: pnpm check:package
+      - run: pnpm size
+
       # Opens (or updates) a "Version packages" PR while changesets are pending,
       # and publishes once that PR is merged.
       - uses: changesets/action@v1

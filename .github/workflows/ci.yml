@@ -66,6 +66,9 @@ jobs:
           head -1 dist/react/index.js | grep -q '"use client"' \
             || { echo '::error::dist/react/index.js lost its "use client" banner'; exit 1; }
 
+      - name: The published artefacts actually load
+        run: pnpm check:artifacts
+
       - name: Package exports and types map
         run: pnpm check:package
 

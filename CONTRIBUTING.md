@@ -22,6 +22,8 @@ pnpm dev            # the playground at http://localhost:5173
 | `pnpm build` | JS + `.d.ts` + `styles.css` + the embed bundle |
 | `pnpm size` | enforce the gzip budgets in `package.json` |
 | `pnpm check:package` | `publint` + `arethetypeswrong` on the packed tarball |
+| `pnpm check:artifacts` | load every built entry point and prove it works |
+| `pnpm check:release` | build + all three of the above, the pre-publish gate |
 
 Browsers for the end-to-end run install separately:
 

@@ -1,6 +1,6 @@
 {
   "name": "@kuraykaraaslan/kui-player",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Standalone video player \u2014 vanilla TS core + React subpath. Native <video> playback with optional hls.js/dash.js adapters, custom subtitle overlay, speed control, Picture-in-Picture, touch gestures, Google Cast, fullscreen, keyboard shortcuts.",
   "keywords": [
     "video",
@@ -186,6 +186,8 @@
     "size": "node scripts/check-size.mjs",
     "build:demo": "vite build --config vite.config.demo.ts",
     "prepublishOnly": "pnpm build",
-    "typecheck": "tsc --noEmit -p tsconfig.lib.json"
+    "typecheck": "tsc --noEmit -p tsconfig.lib.json",
+    "check:artifacts": "node scripts/check-artifacts.mjs",
+    "check:release": "pnpm build && pnpm check:artifacts && pnpm check:package && pnpm size"
   }
 }

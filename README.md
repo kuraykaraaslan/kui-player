@@ -13,8 +13,9 @@ It is not another general-purpose player framework. It is the controls layer: ac
         data-auto="video" data-accent="#f97316"></script>
 ```
 
-> **Status**: `0.0.x`, heading for `0.1.0`. The API is stable from here on — see
-> [Upgrading to 0.1.0](#upgrading-to-010) for what changed on the way.
+> **Status**: `0.1.0` — the first release with a stable API. Phases 0–5 of the
+> [roadmap](./phases) are done: it is tested, accessible, budgeted and dependency-free.
+> Coming from `0.0.x`? See [Upgrading to 0.1.0](#upgrading-to-010).
 
 ---
 
@@ -661,6 +662,7 @@ pnpm size           # enforce the gzip budgets in package.json
 pnpm lint           # ESLint
 pnpm typecheck      # tsc --noEmit against the library config
 pnpm check:package  # publint + arethetypeswrong on the packed tarball
+pnpm check:release  # build, then prove the built package loads and fits its budgets
 ```
 
 CI runs all of the above on every pull request, plus the end-to-end suite across

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { VideoPlayer } from "../react";
 import { createHlsAdapter } from "../modules/videoplayer/adapters";
 import { mountSkin } from "../embed/mountSkin";
+import { PLAYER_META } from "../modules/videoplayer/videoplayer.meta";
 import DemoShell from "./DemoShell";
 
 interface Clip {
@@ -126,7 +127,7 @@ export default function App() {
   return (
     <DemoShell
       brand="KUI Player"
-      version="v0.0.2"
+      version={`v${PLAYER_META.version}`}
       link={{ href: "https://kuray.dev", label: "kuray.dev" }}
       github="https://github.com/kuraykaraaslan/kui-player"
       npm="https://www.npmjs.com/package/@kuraykaraaslan/kui-player"
