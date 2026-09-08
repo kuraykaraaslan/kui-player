@@ -26,3 +26,14 @@ describe('formatTime', () => {
     expect(formatTime(-Infinity)).toBe('0:00');
   });
 });
+
+describe('PLAYER_META', () => {
+  it('carries the version that was actually built', async () => {
+    const { PLAYER_META } = await import('../../modules/videoplayer/videoplayer.meta');
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const pkg = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as { version: string };
+    // Injected at build time, so the About dialog cannot drift from the release.
+    expect(PLAYER_META.version).toBe(pkg.version);
+  });
+});

@@ -1,6 +1,6 @@
 # Faz 6 — Dikey Nişler
 
-**Öncelik:** 🟣 Keşif · **Efor:** opsiyonel · **Durum:** ⬜
+**Öncelik:** 🟣 Keşif · **Efor:** opsiyonel · **Durum:** ⏸️ Bilinçli olarak başlatılmadı
 
 > Bunlar **yol haritası değil, opsiyon havuzu.** Hiçbiri "eninde sonunda yapılacak"
 > değil. Faz 5'ten gelen kullanıcı geri bildirimi hangi dikeyin gerçekten talep
@@ -96,3 +96,33 @@ Bir madde ancak şu üçünü birden sağlıyorsa yapılmalı:
 1. Faz 5 sonrası kullanıcılardan **gerçek talep** geldi (issue, e-posta, kullanım verisi)
 2. Faz 5'teki konumlanmayla **çelişmiyor** (özellikle 6.1 gizlilik açısından şüpheli)
 3. **Opsiyonel paket** olarak paketlenebiliyor — çekirdek bundle'ı büyütmüyor
+
+---
+
+## Durum: neden hiçbiri yapılmadı
+
+**Birinci kriter bugün hiçbir madde için sağlanamıyor.** Faz 0–5 tamamlandı ama
+`0.1.0` henüz yayınlanmadı; ortada kullanıcı, issue veya kullanım verisi yok.
+Bu fazın kendi kuralı, hangi dikeyin seçileceğine **talebin** karar vermesi.
+Şimdi bir madde seçmek, bu belgenin var oluş sebebini — "tahmine göre değil,
+talebe göre" — ihlal etmek olurdu.
+
+İkinci ve üçüncü kriterlere göre bugünkü değerlendirme:
+
+| # | Konumlanmayla uyum | Opsiyonel paketlenebilir mi | Not |
+|---|---|---|---|
+| 6.3 Frame-by-frame + SMPTE | ✅ | ✅ ayrı chunk, birkaç yüz bayt | Efor/etki oranı en iyi aday |
+| 6.4 A-B loop | ✅ | ✅ | 6.3 ile aynı yerden besleniyor |
+| 6.2 Altyazı senkron/düzenleyici | ✅ | ✅ parser altyapısı Faz 4.9'da hazır | Talep gelirse ikinci aday |
+| 6.6 Dalga formu / audio-only | ✅ | ✅ Web Audio ayrı chunk | Ayrı bir skin gerektirir |
+| 6.5 Eğitim modu | ✅ | ⚠️ LMS entegrasyonu ürün kararı | Büyük ama ağır |
+| 6.1 Reklam (VAST/VMAP) | ❌ **çelişiyor** | ⚠️ ayrı paket şart | Gizlilik konumlanmasıyla doğrudan gerilimli |
+
+**Öneri:** Talep geldiğinde ilk bakılacak madde **6.3**; hem en ucuz, hem
+`requestVideoFrameCallback` dışında yeni bir yüzey gerektirmiyor, hem de Faz 5'in
+"gizlilik ve hafiflik" hikayesini hiç zorlamıyor. **6.1 varsayılan olarak reddedilmeli**:
+IMA SDK ~100 KB ve Google'a telemetri gönderiyor; ayrı bir paket olmadan Faz 5.4'teki
+"sıfır dış istek" testini kıracaktır.
+
+**Bir sonraki adım Kuray'ın:** `0.1.0` yayınlansın, geri bildirim toplansın, sonra
+buradan **en fazla bir** madde seçilsin.

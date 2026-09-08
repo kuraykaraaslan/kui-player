@@ -54,7 +54,10 @@ function docsPlugin(): Plugin {
  *
  * Output: `dist-demo/`
  */
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+
 export default defineConfig({
+  define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   plugins: [react(), docsPlugin(), minifiedCssRaw()],
   resolve: {

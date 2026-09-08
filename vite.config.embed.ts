@@ -30,6 +30,7 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': '"production"',
     __KUI_EMBED_VERSION__: JSON.stringify(pkg.version),
+    __KUI_VERSION__: JSON.stringify(pkg.version),
   },
   // `public/` belongs to the demo site, not to the published package.
   publicDir: false,

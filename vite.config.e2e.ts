@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
@@ -105,7 +106,10 @@ function mediaFixtures(): Plugin {
   };
 }
 
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+
 export default defineConfig({
+  define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   root: resolve(__dirname, 'tests/e2e/app'),
   plugins: [react(), mediaFixtures()],
   resolve: { alias: { '@': resolve(__dirname, '.') } },
