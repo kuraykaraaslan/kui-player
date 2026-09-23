@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { VideoPlayer } from '../../react';
+import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
 import { emit } from '../setup';
 
 const SRC = 'https://example.com/video.mp4';
@@ -81,6 +82,15 @@ describe('playlist', () => {
     { src: 'https://example.com/two.mp4', title: 'Two' },
   ];
 
+  // The playlist controller is a lazy chunk; nobody can finish a video before
+  // it resolves, but a test can. Wait until it has subscribed to `complete`
+  // rather than guessing how long the chunk takes to load and mount.
+  let on: MockInstance<VideoPlayerEngine['on']>;
+  beforeEach(() => { on = vi.spyOn(VideoPlayerEngine.prototype, 'on'); });
+  afterEach(() => { on.mockRestore(); });
+  const playlistControllerListening = () =>
+    waitFor(() => expect(on).toHaveBeenCalledWith('complete', expect.any(Function)));
+
   it('plays the first item and offers the next when it ends', async () => {
     const onIndex = vi.fn();
     const { container } = render(
@@ -90,10 +100,7 @@ describe('playlist', () => {
 
     const video = container.querySelector('video') as HTMLVideoElement;
     emit(video, 'loadedmetadata', { duration: 10 });
-    // The playlist controller is a lazy chunk; nobody can finish a video before
-    // it resolves, but a test can, so wait for it to be listening.
-    await waitFor(() => expect(container.querySelector('video')).toBeInTheDocument());
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await playlistControllerListening();
     emit(video, 'ended', { paused: true });
 
     // The card names what is coming and counts down before advancing.
@@ -111,7 +118,7 @@ describe('playlist', () => {
     );
     const video = container.querySelector('video') as HTMLVideoElement;
     emit(video, 'loadedmetadata', { duration: 10 });
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await playlistControllerListening();
     emit(video, 'ended', { paused: true });
     await waitFor(() => expect(onIndex).toHaveBeenCalledWith(1));
   });

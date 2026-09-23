@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
 import type { MediaAdapter } from '../../modules/videoplayer/adapters/adapter.types';
-import { emit, loadCount } from '../setup';
+import { emit, loadCount, mediaTasks } from '../setup';
 
 function setup(opts: ConstructorParameters<typeof VideoPlayerEngine>[0] = {}) {
   const video = document.createElement('video');
@@ -103,16 +103,19 @@ describe('seeking', () => {
 });
 
 describe('volume and rate', () => {
-  it('clamps volume and keeps mute in step', () => {
+  it('clamps volume and keeps mute in step', async () => {
     const { engine, video, state } = setup();
     engine.setVolume(2);
+    await mediaTasks();
     expect(video.volume).toBe(1);
     expect(state().volume).toBe(1);
     engine.setVolume(-1);
+    await mediaTasks();
     expect(video.volume).toBe(0);
     expect(video.muted).toBe(true);
     expect(state().muted).toBe(true);
     engine.setVolume(0.5);
+    await mediaTasks();
     expect(video.muted).toBe(false);
     expect(state().volume).toBe(0.5);
   });
@@ -127,12 +130,14 @@ describe('volume and rate', () => {
     expect(state().speed).toBe(2);
   });
 
-  it('toggleMute flips the element, which reports back', () => {
+  it('toggleMute flips the element, which reports back', async () => {
     const { engine, video, state } = setup();
     engine.toggleMute();
+    await mediaTasks();
     expect(video.muted).toBe(true);
     expect(state().muted).toBe(true);
     engine.toggleMute();
+    await mediaTasks();
     expect(state().muted).toBe(false);
   });
 });

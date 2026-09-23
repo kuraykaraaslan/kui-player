@@ -1,15 +1,15 @@
 import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
-import { minifiedCssRaw } from './vite.plugin.css-raw';
+import { minifiedCssRaw } from './vite.plugin.css-raw.ts';
 import { resolve } from 'path';
 
-const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   plugins: [react(), minifiedCssRaw()],
-  resolve: { alias: { '@': resolve(__dirname, '.') } },
+  resolve: { alias: { '@': resolve(import.meta.dirname, '.') } },
   // The bundled locales (`@kuraykaraaslan/kui-player/locales`). Their own entry,
 // so a player left in English carries none of them and importing one does not
 // drag in the other five.
@@ -17,14 +17,15 @@ export default defineConfig({
   publicDir: false,
   build: {
     lib: {
-      entry: resolve(__dirname, 'react/i18n/locales/index.ts'),
+      entry: resolve(import.meta.dirname, 'react/i18n/locales/index.ts'),
       formats: ['es'],
       fileName: () => 'locales/index.js',
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: [
         'react',
         'react-dom',
+        'react-dom/client',
         'react/jsx-runtime',
         '@kuraykaraaslan/kui-player',
       ],

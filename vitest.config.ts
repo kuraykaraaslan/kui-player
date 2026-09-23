@@ -1,16 +1,16 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { minifiedCssRaw } from './vite.plugin.css-raw';
+import { minifiedCssRaw } from './vite.plugin.css-raw.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'path';
 
-const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   // Same stylesheet transform the shipped bundles get, so tests see what users do.
   plugins: [react(), minifiedCssRaw()],
-  resolve: { alias: { '@': resolve(__dirname, '.') } },
+  resolve: { alias: { '@': resolve(import.meta.dirname, '.') } },
   test: {
     environment: 'jsdom',
     // Without this, Vitest stubs CSS imports — including the `?raw` import that

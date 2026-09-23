@@ -71,9 +71,14 @@ test.describe('playlist', () => {
     await page.goto('/?playlist=1&countdown=30&autohide=0');
     await expect(page.locator('.kui-time')).toContainText('0:30');
 
-    await page.locator('video').evaluate((v: HTMLVideoElement) => { v.currentTime = v.duration - 0.2; return v.play(); });
+    // The playlist controller is a lazy chunk, and React 19 reveals a resolved
+    // Suspense boundary a beat after the player itself. Finish the video until
+    // the controller is listening, rather than guessing how long that takes.
     const card = page.locator('.kui-up-next');
-    await expect(card).toBeVisible({ timeout: 10_000 });
+    await expect(async () => {
+      await page.locator('video').evaluate((v: HTMLVideoElement) => { v.currentTime = v.duration - 0.2; return v.play(); });
+      await expect(card).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
     await expect(card).toContainText('Second item');
 
     await page.getByRole('button', { name: 'Next' }).click();
@@ -111,12 +116,16 @@ test.describe('persistence', () => {
     // With persistence on, a position is stored and offered on the next visit.
     await page.goto('/?persist=1&autohide=0');
     await expect(page.locator('.kui-time')).toContainText('0:30');
-    await page.evaluate(() => {
+    // The persistence controller is a lazy chunk, and React 19 reveals a
+    // resolved Suspense boundary a beat after the player itself. Report a
+    // position until it has been stored, rather than guessing how long that takes.
+    let step = 0;
+    await expect.poll(() => page.evaluate((time) => {
       const video = document.querySelector('video')!;
-      video.currentTime = 20;
+      video.currentTime = time;
       video.dispatchEvent(new Event('timeupdate'));
-    });
-    await page.waitForTimeout(6000);
+      return localStorage.length;
+    }, 20 + (step++) * 0.1)).toBeGreaterThan(0);
 
     await page.goto('/?persist=1&autohide=0');
     await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible({ timeout: 5000 });

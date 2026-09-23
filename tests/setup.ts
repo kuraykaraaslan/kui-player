@@ -121,6 +121,15 @@ define('textTracks', {
 /** How many times `load()` was called on an element — used to assert reloads. */
 export function loadCount(el: HTMLMediaElement): number { return media(el).loadCount; }
 
+/**
+ * Let queued media element tasks run. As in a browser, jsdom fires
+ * `volumechange` and `ratechange` from a queued task (a `setImmediate`), not
+ * synchronously from the `volume` / `muted` / `playbackRate` setters.
+ */
+export function mediaTasks(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 /** Drive the element the way a browser would: set state, then fire the event. */
 export function emit(el: HTMLMediaElement, type: string, patch: Partial<MediaState> = {}): void {
   Object.assign(media(el), patch);

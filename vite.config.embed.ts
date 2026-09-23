@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { minifiedCssRaw } from './vite.plugin.css-raw';
+import { minifiedCssRaw } from './vite.plugin.css-raw.ts';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 
-const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
 // A single, fully self-contained IIFE for injection into arbitrary web pages:
 // the renderer + the engine + the controls chrome + the (shadow-root) CSS, with
@@ -24,7 +24,7 @@ export default defineConfig({
       { find: /^react-dom$/,         replacement: 'preact/compat' },
       { find: /^react\/jsx-runtime$/, replacement: 'preact/jsx-runtime' },
       { find: /^react$/,             replacement: 'preact/compat' },
-      { find: '@', replacement: resolve(__dirname, '.') },
+      { find: '@', replacement: resolve(import.meta.dirname, '.') },
     ],
   },
   define: {
@@ -36,19 +36,20 @@ export default defineConfig({
   publicDir: false,
   build: {
     lib: {
-      entry: resolve(__dirname, 'embed/index.ts'),
+      entry: resolve(import.meta.dirname, 'embed/index.ts'),
       formats: ['iife'],
       name: '__tepegozVideoPlayerBundle',
       fileName: () => 'embed.js',
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: [],
-      output: { inlineDynamicImports: true },
+      // A single file: every lazy part is inlined.
+      output: { codeSplitting: false },
     },
     outDir: 'dist',
     emptyOutDir: false,
     target: 'es2020',
     sourcemap: false,
-    minify: 'esbuild',
+    minify: 'oxc',
   },
 });

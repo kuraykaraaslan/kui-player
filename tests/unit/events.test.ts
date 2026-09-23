@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
 import { QuartileTracker } from '../../modules/videoplayer/videoplayer.events';
-import { emit } from '../setup';
+import { emit, mediaTasks } from '../setup';
 
 function setup() {
   const video = document.createElement('video');
@@ -41,7 +41,7 @@ describe('QuartileTracker', () => {
 });
 
 describe('engine events', () => {
-  it('reports transport changes', () => {
+  it('reports transport changes', async () => {
     const { engine, video } = setup();
     const seen: string[] = [];
     engine.on('play', () => seen.push('play'));
@@ -52,9 +52,10 @@ describe('engine events', () => {
     emit(video, 'play', { paused: false });
     emit(video, 'pause', { paused: true });
     // jsdom fires `ratechange` and `volumechange` from the setters, as a
-    // browser does — no manual dispatch needed.
+    // browser does — queued as media element tasks, no manual dispatch needed.
     video.playbackRate = 2;
     video.volume = 0.5;
+    await mediaTasks();
 
     expect(seen).toEqual(['play', 'pause', 'rate:2', 'volume:0.5']);
     engine.dispose();

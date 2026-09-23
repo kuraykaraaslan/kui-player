@@ -106,12 +106,12 @@ function mediaFixtures(): Plugin {
   };
 }
 
-const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
-  root: resolve(__dirname, 'tests/e2e/app'),
+  root: resolve(import.meta.dirname, 'tests/e2e/app'),
   plugins: [react(), mediaFixtures()],
-  resolve: { alias: { '@': resolve(__dirname, '.') } },
+  resolve: { alias: { '@': resolve(import.meta.dirname, '.') } },
   server: { port: 5174, strictPort: true },
 });

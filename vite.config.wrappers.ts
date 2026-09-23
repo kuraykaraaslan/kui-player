@@ -1,15 +1,15 @@
 import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
-import { minifiedCssRaw } from './vite.plugin.css-raw';
+import { minifiedCssRaw } from './vite.plugin.css-raw.ts';
 import { resolve } from 'path';
 
-const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   plugins: [react(), minifiedCssRaw()],
-  resolve: { alias: { '@': resolve(__dirname, '.') } },
+  resolve: { alias: { '@': resolve(import.meta.dirname, '.') } },
   // Vue and Svelte wrappers. Both are thin: they render a `<video>` their own
 // framework owns and hand it to skin mode, so neither framework is a
 // dependency of anything else here.
@@ -18,15 +18,16 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        'wrappers/vue': resolve(__dirname, 'wrappers/vue/KuiPlayer.ts'),
-        'wrappers/svelte': resolve(__dirname, 'wrappers/svelte/kuiPlayer.ts'),
+        'wrappers/vue': resolve(import.meta.dirname, 'wrappers/vue/KuiPlayer.ts'),
+        'wrappers/svelte': resolve(import.meta.dirname, 'wrappers/svelte/kuiPlayer.ts'),
       },
       formats: ['es'],
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: [
         'react',
         'react-dom',
+        'react-dom/client',
         'react/jsx-runtime',
         'vue',
         'svelte',
@@ -34,6 +35,8 @@ export default defineConfig({
       ],
       output: {
         preserveModules: false,
+        // Both wrappers share one `mountSkin.js` chunk (skin mode itself).
+        codeSplitting: { groups: [{ name: 'mountSkin', tags: ['$initial'] }] },
         entryFileNames: '[name].js',
         chunkFileNames: 'wrappers/[name].js',
         banner: '"use client";',
