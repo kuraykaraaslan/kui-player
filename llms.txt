@@ -21,7 +21,7 @@ layer: accessible, themeable through CSS custom properties, and mountable over a
 - [Recipes](https://github.com/kuraykaraaslan/kui-player/tree/main/recipes): copy-pasteable integrations (Next.js, Vite, WordPress, skin mode, hls.js, analytics)
 - [Wrappers](https://github.com/kuraykaraaslan/kui-player/tree/main/wrappers): Vue, Svelte and the custom element
 - [CONTRIBUTING](https://github.com/kuraykaraaslan/kui-player/blob/main/CONTRIBUTING.md): the rules a change has to satisfy
-- [Roadmap](https://github.com/kuraykaraaslan/kui-player/tree/main/phases): what is built, what is next, and why
+- [Roadmap](https://github.com/kuraykaraaslan/kui-player/tree/main/docs/phases): what is built, what is next, and why
 
 ## The three ways to use it
 

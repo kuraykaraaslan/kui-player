@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Roadmap and rationale
-    url: https://github.com/kuraykaraaslan/kui-player/tree/main/phases
+    url: https://github.com/kuraykaraaslan/kui-player/tree/main/docs/phases
     about: What is planned, in what order, and why.

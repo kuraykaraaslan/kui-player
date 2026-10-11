@@ -88,7 +88,7 @@ görünüyor. Tailwind kullanan bir projede host stilleriyle çakışma yok.
 
 **Yapılacak:**
 - `clsx` + `tailwind-merge`: `cn()` yalnızca 5 satırlık bir yardımcı
-  ([libs/utils/cn.ts](../libs/utils/cn.ts)) — Tailwind izolasyonu sonrası
+  ([libs/utils/cn.ts](../../libs/utils/cn.ts)) — Tailwind izolasyonu sonrası
   `tailwind-merge` gereksiz kalacak, ikisi de çıkarılabilir.
 - `zustand`: şu an hard dependency. Faz 4'te kendi ~40 satırlık store'umuzla
   değiştirilmesi planlanıyor (madde 26) — bu fazda en azından tekil sürüm

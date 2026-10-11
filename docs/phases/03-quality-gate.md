@@ -17,7 +17,7 @@ erişilebilir kontrastlar iddia ediyor. Video.js v10'un beta duyurusunda ilk sat
 **Yapılacak:**
 
 - **Klavye:** Kısayollar yalnızca konteyner odaklıyken çalışıyor
-  ([useKeyboardShortcuts.ts](../react/hooks/useKeyboardShortcuts.ts)). Ek olarak
+  ([useKeyboardShortcuts.ts](../../react/hooks/useKeyboardShortcuts.ts)). Ek olarak
   her kontrol Tab ile gezilebilir, görünür `:focus-visible` halkası olmalı.
 - **Focus trap:** Settings paneli ve About modalı açıkken odak içeride kalmalı,
   `Esc` ile kapanıp odağı tetikleyen butona döndürmeli.

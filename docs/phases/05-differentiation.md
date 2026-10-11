@@ -28,7 +28,7 @@ Elimizdeki iki koz **zaten kodda var, sadece anlatılmamış:**
 
 ## 5.1 — "Skin mode"un ürünleştirilmesi 🟣 M — **en yüksek öncelik**
 
-**Neden:** [embed/mountSkin.tsx](../embed/mountSkin.tsx) sayfadaki mevcut `<video>`
+**Neden:** [embed/mountSkin.tsx](../../embed/mountSkin.tsx) sayfadaki mevcut `<video>`
 elemanını benimseyip üstüne şeffaf bir chrome katmanı bindiriyor —
 "site'nin media pipeline'ına (progressive / hls.js / MSE / blob) dokunmadan".
 

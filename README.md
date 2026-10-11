@@ -14,7 +14,7 @@ It is not another general-purpose player framework. It is the controls layer: ac
 ```
 
 > **Status**: `0.1.0` — the first release with a stable API. Phases 0–5 of the
-> [roadmap](./phases) are done: it is tested, accessible, budgeted and dependency-free.
+> [roadmap](./docs/phases) are done: it is tested, accessible, budgeted and dependency-free.
 > Coming from `0.0.x`? See [Upgrading to 0.1.0](#upgrading-to-010).
 
 ---
@@ -684,7 +684,7 @@ Chromium, Firefox, WebKit and a mobile emulation. See
 - `recipes/` — copy-pasteable integrations, also served from the demo.
 - `wordpress/` — the WordPress plugin that applies skin mode site-wide.
 - `scripts/` — build helpers (`build-css.mjs`, `check-size.mjs`).
-- `phases/` — the roadmap: what is built, what is next, and why.
+- `docs/phases/` — the roadmap: what is built, what is next, and why.
 
 ---
 

@@ -75,5 +75,5 @@ adapter is in play, and — if you can — a reduced case in the playground.
 
 ## Roadmap
 
-`phases/` holds the plan and its rationale: what is built, what is next, and why
+`docs/phases/` holds the plan and its rationale: what is built, what is next, and why
 the order is what it is. Phases 0–3 are the release gate for `0.1.0`.

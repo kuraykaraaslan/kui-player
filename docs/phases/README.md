@@ -21,19 +21,19 @@ yarışına girerse kaybeder. Strateji:
 
 | Faz | Başlık | Öncelik | Efor | Durum |
 |---|---|---|---|---|
-| [0](./phase-0-stabilization.md) | Stabilizasyon | 🔴 Blocker | ~1 hafta | ✅ |
-| [1](./phase-1-playback-compat.md) | Oynatma uyumluluğu | 🔴 Zorunlu | ~2 hafta | ✅ |
-| [2](./phase-2-bundle-integration.md) | Bundle & entegrasyon | 🔴 Zorunlu | ~2 hafta | ✅ |
-| [3](./phase-3-quality-gate.md) | Kalite kapısı | 🔴 Zorunlu | ~2 hafta | ✅ |
-| [4](./phase-4-expected-features.md) | Beklenen özellikler | 🟡 Olsa iyi | ~4 hafta | ✅ |
-| [5](./phase-5-differentiation.md) | Niş farklılaşma | 🟣 Stratejik | ~3 hafta | ✅ |
-| [6](./phase-6-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | ⏸️ talep bekliyor |
+| [0](./00-stabilization.md) | Stabilizasyon | 🔴 Blocker | ~1 hafta | ✅ |
+| [1](./01-playback-compat.md) | Oynatma uyumluluğu | 🔴 Zorunlu | ~2 hafta | ✅ |
+| [2](./02-bundle-integration.md) | Bundle & entegrasyon | 🔴 Zorunlu | ~2 hafta | ✅ |
+| [3](./03-quality-gate.md) | Kalite kapısı | 🔴 Zorunlu | ~2 hafta | ✅ |
+| [4](./04-expected-features.md) | Beklenen özellikler | 🟡 Olsa iyi | ~4 hafta | ✅ |
+| [5](./05-differentiation.md) | Niş farklılaşma | 🟣 Stratejik | ~3 hafta | ✅ |
+| [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | ⏸️ talep bekliyor |
 
 **Faz 0–3 "gereken"dir** — bunlar bitmeden `0.1.0` etiketi atılmamalı.
 **Faz 0–5 tamamlandı: `0.1.0` yayınlanabilir.**
 Faz 4 rekabette kalmak, Faz 5 kazanmak içindi. Faz 6 bir yol haritası değil, opsiyon
 havuzu — ve kendi kuralı gereği **yayın sonrası gerçek talep** olmadan seçim yapılmaz.
-Bugünkü durum ve öneri: [Faz 6](./phase-6-verticals.md#durum-neden-hiçbiri-yapılmadı).
+Bugünkü durum ve öneri: [Faz 6](./06-verticals.md#durum-neden-hiçbiri-yapılmadı).
 
 **Sıra:** 0 → 1 → 2 → 3 kesin sıralı. Faz 3 bittikten sonra 4 ve 5 **paralel** yürütülebilir;
 5.1 ve 5.5 mümkünse önce, çünkü konumlandırma mesajını belirliyorlar.

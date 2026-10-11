@@ -3,7 +3,7 @@
 ## 0.1.0
 
 The first release with a stable API. Everything below happened between `0.0.2`
-and here; the [roadmap](./phases) records why in the order it was done.
+and here; the [roadmap](./docs/phases) records why in the order it was done.
 
 ### Before the changelog started
 

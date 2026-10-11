@@ -170,7 +170,7 @@ Rakiplerin çoğu sıfır runtime bağımlılığa sahip. Store'un kullandığı
 - [x] **Analytics event API'si belgelenmiş** — `engine.on()`; `ready`
       (startup / time-to-first-frame), `stall` (sayı + süre), `quartile`, `complete`,
       `error` ve tüm transport olayları. Hiçbir yere veri gitmiyor; CMCD adaptör
-      konfigürasyonuna bırakıldı ([recipes/analytics.md](../recipes/analytics.md)).
+      konfigürasyonuna bırakıldı ([recipes/analytics.md](../../recipes/analytics.md)).
 - [x] **Sıfır runtime bağımlılık** — `zustand` yerine ~60 satırlık kendi store'umuz
       (`getState`/`setState`/`subscribe`/`getInitialState`), React'e
       `useSyncExternalStore` ile bağlı. `dependencies` alanı `package.json`'dan

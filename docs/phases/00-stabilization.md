@@ -9,7 +9,7 @@
 
 ## 0.1 — `error` event'i ve hata UI'ı 🔴 XS
 
-**Sorun:** [videoplayer.engine.ts:44-52](../modules/videoplayer/videoplayer.engine.ts#L44-L52)
+**Sorun:** [videoplayer.engine.ts:44-52](../../modules/videoplayer/videoplayer.engine.ts#L44-L52)
 `attach()` içinde `error` event'i dinlenmiyor. Video kaynağı 404 dönerse, codec
 desteklenmiyorsa veya ağ koparsa `waiting` → `setLoading(true)` tetiklenir ama `canplay`
 hiç gelmez. Sonuç: **sonsuz spinner**, kullanıcıya hiçbir geri bildirim yok.
@@ -51,7 +51,7 @@ ses kaydırıcısı güncelleniyor.
 ## 0.3 — Kalite değişiminde pozisyon koruma 🔴 S
 
 **Sorun:** `applyQuality` yalnızca `setSelectedQuality` + `onQualityChange` callback'ini
-çağırıyor ([VideoPlayerChrome.tsx](../react/VideoPlayerChrome.tsx)). Tüketici `src`'yi
+çağırıyor ([VideoPlayerChrome.tsx](../../react/VideoPlayerChrome.tsx)). Tüketici `src`'yi
 değiştirince video **baştan başlıyor** ve oynatma duruyor.
 
 **Yapılacak:** Engine'e `switchSource(url)` metodu ekle:
@@ -68,7 +68,7 @@ değiştirince video **baştan başlıyor** ve oynatma duruyor.
 
 ## 0.4 — `playsInline` eksik 🔴 XS
 
-**Sorun:** [VideoPlayer.tsx](../react/VideoPlayer.tsx) içindeki `<video>` elemanında
+**Sorun:** [VideoPlayer.tsx](../../react/VideoPlayer.tsx) içindeki `<video>` elemanında
 `playsInline` yok. iOS Safari'de oynatma **zorla native tam ekran oynatıcıya** geçiyor —
 yani mobil Safari'de kui-player'ın kendi arayüzü hiç görünmüyor.
 

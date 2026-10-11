@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please check `phases/README.md` first — the roadmap may already cover
+        Please check `docs/phases/README.md` first — the roadmap may already cover
         this, in which case a comment there is more useful than a new issue.
   - type: textarea
     id: problem
