@@ -65,6 +65,9 @@ Kod fazı. Hizmetlerden bağımsız yazılır, mock'la test edilir.
 - [ ] `hls.adapter.ts`: `drm` → hls.js `emeEnabled` + `drmSystems` eşlemesi
 - [ ] Hata eşleme: "tarayıcı DRM desteklemiyor", "lisans reddedildi", "ağ hatası"
       ayrı `PlayerError` kodları (bugün hepsi jenerik)
+- [ ] **Safari/iOS'ta `drm` verilmişse net hata ver:** native yol (`video.src = src`) DRM'li
+      içerikte sessizce takılır. `drm` seçeneği varken native yola düşülecekse oynatma
+      denenmez, "bu tarayıcı desteklenmiyor" hatası (ayrı `PlayerError` kodu) gösterilir
 - [ ] `canPlay` / başlangıçta `requestMediaKeySystemAccess` ile desteği yokla,
       kullanıcıya anlaşılır mesaj göster
 - [ ] Unit test: doğru `drmSystems` kuruluyor, header callback'i her lisansta çağrılıyor
