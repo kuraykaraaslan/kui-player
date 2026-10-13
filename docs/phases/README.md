@@ -31,6 +31,7 @@ yarışına girerse kaybeder. Strateji:
 | [7](./07-drm-streaming.md) | DRM ve yayın altyapısı (Cloudflare + AWS) | 🟣 Keşif | ~3–4 hafta | 📋 planlandı |
 | [8](./08-streaming-ops.md) | Yayın kalitesi ve operasyon | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
 | [9](./09-ux-accessibility.md) | Kullanıcı deneyimi ve erişilebilirlik | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
+| [10](./10-polish-and-embed.md) | Cilalama, bölümler ve cihaz içi çeviri | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
 
 **Faz 0–3 "gereken"dir** — bunlar bitmeden `0.1.0` etiketi atılmamalı.
 **Faz 0–5 tamamlandı: `0.1.0` yayınlanabilir.**
@@ -109,7 +110,7 @@ Bugünkü durum ve öneri: [Faz 6](./06-verticals.md#durum-neden-hiçbiri-yapıl
 | 6.5 | Eğitim modu (transkript, zaman damgalı not) | L |
 | 6.6 | Ses dalga formu / audio-only mod | M |
 
-### 🟡 Yayın ve deneyim — Faz 8–9
+### 🟡 Yayın ve deneyim — Faz 8–10
 
 | Faz | # | Madde | Efor |
 |---|---|---|---|
@@ -123,6 +124,12 @@ Bugünkü durum ve öneri: [Faz 6](./06-verticals.md#durum-neden-hiçbiri-yapıl
 | 9 | 9.3 | Document Picture-in-Picture | M |
 | 9 | 9.4 | Sesli betimleme + işaret dili izi | M |
 | 9 | 9.5 | Çift dil altyazı | M |
+| 10 | 10.1 | Klavye kısayolları: eksik tuşlar, `?` yardımı, özelleştirme | S |
+| 10 | 10.2 | Bölümler: intro/özet/jenerik atla, bölüm gezinme | M |
+| 10 | 10.3 | Cihaz içi çeviri — *deneysel, API desteği doğrulanacak* | L |
+| 10 | 10.4 | Teknik bilgi paneli | S |
+| 10 | 10.5 | Tıklayınca yüklenen kapak (facade) | M |
+| 10 | 10.6 | Storyboard üretici (ffmpeg) | S |
 
 ---
 

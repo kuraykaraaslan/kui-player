@@ -85,6 +85,9 @@ yoktur; gerçek oynatma e2e'ye girmez, elle doğrulanır.
 - [ ] MediaConvert job'a **CMAF + `cbcs` + SPEKE** ekle (Widevine + PlayReady)
 - [ ] Backend: izleme hakkını doğrula → kısa ömürlü **lisans token'ı** üret
 - [ ] Oynatıcıya `drm.headers` ile token'ı geçir
+- [ ] **Örnek backend:** küçük bir Node ya da Cloudflare Worker örneği; izleme hakkını doğrulayıp
+      kısa ömürlü lisans token'ı üretir (ve 7.1/7.2 için Cloudflare imzalı token /
+      CloudFront signed cookie). `examples/` altında, kütüphane bundle'ına girmez
 - [ ] Chrome (Widevine) ve Edge (PlayReady) üzerinde elle test
 - [ ] Negatif testler: token yok / süresi dolmuş / başka içerik → lisans reddi UI'a doğru düşüyor
 - [ ] Şifreli dosyanın VLC / token'sız oynatmada açılmadığını doğrula
