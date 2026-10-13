@@ -25,6 +25,8 @@ export type { MiniOptions, MiniCorner } from './videoplayer/videoplayer.mini.js'
 export { extractAdBreaks, AdBreakTracker, adSpans, parseAttributes, parseCueOut } from './videoplayer/videoplayer.adbreaks.js';
 export type { AdBreak, AdSpan, TaggedFragment } from './videoplayer/videoplayer.adbreaks.js';
 export { audioKind, pickDescriptionTrack, pickMainTrack, hasDescription } from './videoplayer/videoplayer.audiokind.js';
+export { planSignSync } from './videoplayer/videoplayer.signsync.js';
+export type { SignSyncInput, SignSyncPlan } from './videoplayer/videoplayer.signsync.js';
 export { findAt } from './videoplayer/videoplayer.timeline.js';
 export type { VttCue, Chapter, StoryboardTile } from './videoplayer/videoplayer.vtt.js';
 export { detectFormat } from './videoplayer/videoplayer.subtitles.js';

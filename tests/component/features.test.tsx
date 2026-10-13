@@ -529,3 +529,34 @@ describe('audio description', () => {
     expect(screen.getByRole('menuitemcheckbox', { name: /Audio description/ })).toHaveAttribute('aria-checked', 'false');
   });
 });
+
+describe('sign language video', () => {
+  it('renders a muted, labelled second video and keeps it on the main timeline', async () => {
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} signLanguage={{ src: 'https://example.com/sign.mp4' }} />,
+    );
+    const main = container.querySelector('video:not(.kui-sign-video)') as HTMLVideoElement;
+    emit(main, 'loadedmetadata', { duration: 60 });
+    const sign = await waitFor(() => {
+      const el = container.querySelector('.kui-sign-video') as HTMLVideoElement | null;
+      expect(el).not.toBeNull();
+      return el!;
+    }, { timeout: 4000 });
+    expect(sign).toHaveAttribute('src', 'https://example.com/sign.mp4');
+    expect(sign.muted).toBe(true);
+    expect(sign).toHaveAttribute('aria-label', 'Sign language video');
+
+    emit(main, 'timeupdate', { currentTime: 42 });
+    await waitFor(() => expect(sign.currentTime).toBe(42));
+  });
+
+  it('can be dismissed', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} signLanguage={{ src: 'https://example.com/sign.mp4' }} />,
+    );
+    await waitFor(() => expect(container.querySelector('.kui-sign')).not.toBeNull(), { timeout: 4000 });
+    await user.click(container.querySelector('.kui-sign-close') as HTMLElement);
+    expect(container.querySelector('.kui-sign')).toBeNull();
+  });
+});

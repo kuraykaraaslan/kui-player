@@ -47,13 +47,13 @@ kontroller pencerede yok.
 
 Mevcut ses-izi seçimi ([1.2](./01-playback-compat.md)) bir liste sunuyor; tür ayrımı yok.
 
-- [ ] `AudioTrackOption`'a `kind` (`main` | `description` | `commentary`) ekle; HLS `CHARACTERISTICS="public.accessibility.describes-video"` ve DASH `Role=description` değerlerinden türet
-- [ ] Ayarlar menüsünde "Sesli betimleme" ayrı satır/anahtar; tercih kalıcı
-- [ ] Sistem tercihine saygı: betimleme açıksa varsayılan olarak seç
-- [ ] **İşaret dili:** ikinci bir video kaynağı (`signLanguage: { src }`), ana videonun
+- [x] `AudioTrackOption`'a `kind` (`main` | `description` | `commentary`) ekle; HLS `CHARACTERISTICS="public.accessibility.describes-video"` ve DASH `Role=description` değerlerinden türet
+- [x] Ayarlar menüsünde "Sesli betimleme" ayrı satır/anahtar; tercih kalıcı
+- [x] Tercihe saygı: `audioDescription` prop'u ve `persist` ile hatırlanan seçim, betimleme izi geldiğinde otomatik uygulanır. (Web'de betimleme için standart bir işletim sistemi tercihi yok; ondan okunmuyor)
+- [x] **İşaret dili:** ikinci bir video kaynağı (`signLanguage: { src }`), ana videonun
       köşesinde küçük pencere; ana video ile **zaman senkronu** (sürüklenme eşiğinde düzeltme)
-- [ ] Odak, `aria-label` ve duyurular; her iki ek parça için i18n metinleri
-- [ ] Test: tür çıkarımı için manifest örnekleri; senkron mantığı için sahte zaman çizelgesi
+- [x] `aria-label`, anahtar için `menuitemcheckbox` + `aria-checked`, ses izi değişimi mevcut canlı bölgeden duyurulur; 6 dilde metin. Ekran okuyucuyla elle denenmedi
+- [x] Test: tür çıkarımı (HLS/DASH/Safari biçimleri) ve senkron mantığı için sahte zaman çizelgesi. Gerçek bir betimleme/işaret dili içeriğiyle denenmedi
 
 **Not:** Betimleme içeriği üretmek bu kütüphanenin işi değil; bu madde yalnızca seçimi ve oynatmayı sağlar.
 

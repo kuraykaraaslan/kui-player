@@ -97,7 +97,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "30 kB"
+      "limit": "31 kB"
     },
     {
       "name": "react subpath + every lazy chunk",

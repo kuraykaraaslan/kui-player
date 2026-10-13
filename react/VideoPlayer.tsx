@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { SignLanguageOptions } from './parts/SignLanguageVideo.js';
 import type { MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import type { WatermarkOptions } from '../modules/videoplayer/videoplayer.watermark.js';
@@ -22,6 +23,7 @@ import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
 const MediaSessionController = lazy(() => import('./parts/MediaSessionController.js'));
+const SignLanguageVideo = lazy(() => import('./parts/SignLanguageVideo.js'));
 const Watermark = lazy(() => import('./parts/Watermark.js'));
 const ShareController = lazy(() => import('./parts/ShareController.js'));
 const PersistenceController = lazy(() => import('./parts/PersistenceController.js'));
@@ -71,6 +73,11 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
   seekLockInAds?: boolean;
   /** Start with audio description on, when the stream offers a description track. */
   audioDescription?: boolean;
+  /**
+   * A second video (an interpreter) docked in a corner and kept in step with the
+   * main one. Both must share a timeline; drift beyond `maxDrift` is corrected.
+   */
+  signLanguage?: SignLanguageOptions;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -126,7 +133,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, audioDescription, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -277,6 +284,12 @@ function VideoPlayerInner({
             subtitles={effectiveSubtitles}
             skipResume={urlTime !== null}
           />
+        </Suspense>
+      )}
+
+      {signLanguage?.src && (
+        <Suspense fallback={null}>
+          <SignLanguageVideo options={signLanguage} />
         </Suspense>
       )}
 
