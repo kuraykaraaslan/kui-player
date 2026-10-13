@@ -42,10 +42,10 @@ Kaynak yoksa yalnızca ayar geçişi ve test sahte stream ile yapılır.
 
 Reklam göstermek değil, **stream içindeki işaretleri olay olarak vermek**. Faz 6.1'den (VAST/VMAP) bağımsız ve çok daha hafif.
 
-- [ ] HLS `EXT-X-DATERANGE`, `EXT-X-CUE-OUT/IN` ve ID3 timed metadata okuma
-- [ ] Event: `adbreak:start` / `adbreak:end` (başlangıç, süre, kimlik)
-- [ ] Zaman çizelgesinde reklam aralıklarını işaretle, reklam sırasında atlamayı kapatma seçeneği
-- [ ] Unit test: örnek manifest + metadata ile doğru event'ler
+- [x] HLS `EXT-X-DATERANGE`, `EXT-X-CUE-OUT/IN` okuma (hls.js adapter'ı, parça `tagList`'inden). **ID3 timed metadata ve native HLS (Safari) yapılmadı**; DATERANGE için `PROGRAM-DATE-TIME` gerekir, yoksa o işaret atlanır
+- [x] Event: `adbreak:start` / `adbreak:end` (başlangıç, süre, kimlik)
+- [x] Zaman çizelgesinde reklam aralıklarını işaretle, reklam sırasında atlamayı kapatma seçeneği
+- [x] Unit test: örnek fragment/etiket listeleriyle doğru event'ler. Gerçek bir SSAI akışıyla denenmedi
 
 ## 8.4 — Görünür filigran 🟡 S
 

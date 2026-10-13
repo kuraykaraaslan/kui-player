@@ -1,4 +1,5 @@
 import type { PlayerError } from './videoplayer.types.js';
+import type { AdBreak } from './videoplayer.adbreaks.js';
 import type { QoeSummary } from './videoplayer.qoe.js';
 
 /**
@@ -22,6 +23,10 @@ export type PlayerEventMap = {
   'qoe:stall': { count: number; currentTime: number };
   /** Periodic QoE summary while playing, plus once on pause/end. Interval: `qoeIntervalMs`. */
   qoe: QoeSummary;
+  /** The playhead entered an ad break the stream marked (SSAI cue). */
+  'adbreak:start': AdBreak;
+  /** The playhead left it — by playing through or by seeking. */
+  'adbreak:end': AdBreak;
   /** The playhead entered a chapter (play-through or seek). */
   chapter: { index: number; title: string; kind: 'intro' | 'recap' | 'credits' | 'content' };
   /** Fired once each per source, at 25/50/75/100% watched. */

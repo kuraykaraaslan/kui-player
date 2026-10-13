@@ -1,3 +1,4 @@
+import type { AdSpan } from '../../modules/videoplayer/videoplayer.adbreaks.js';
 import { forwardRef } from 'react';
 import { useTranslate } from '../i18n/index.js';
 import { ChapterTrack } from './ChapterTrack.js';
@@ -25,6 +26,8 @@ type ProgressBarProps = {
   /** Seconds the pointer is hovering, for the preview. */
   hoverSeconds: number | null;
   chapters: Chapter[];
+  /** Ad-break spans as percentages of the bar. */
+  adSpans?: AdSpan[];
   tiles: StoryboardTile[];
 };
 
@@ -39,7 +42,7 @@ const PAGE_STEP_RATIO = 0.1;
 export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function ProgressBar(
   {
     progress, buffered, seekHoverRatio, hoverTime, valueText, duration,
-    hoverSeconds, chapters, tiles,
+    hoverSeconds, chapters, tiles, adSpans,
     onSeek, onSeekMouseMove, onSeekLeave, onScrubStart, onScrubMove, onScrubEnd,
     onSeekBy, onSeekToRatio,
   },
@@ -83,6 +86,9 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
       <div ref={ref} className="kui-seek-track">
         <div className="kui-seek-buffered" style={{ width: `${buffered}%` }} />
         <ChapterTrack chapters={chapters} duration={duration} progress={progress} />
+        {adSpans?.map((a) => (
+          <div key={a.id} className="kui-adbreak" style={{ insetInlineStart: `${a.left}%`, width: `${a.width}%` }} aria-hidden="true" />
+        ))}
         <div className="kui-seek-played" style={{ width: `${progress}%` }} />
         {seekHoverRatio !== null && (
           <div className="kui-seek-hover" style={{ width: `${seekHoverRatio * 100}%` }} />

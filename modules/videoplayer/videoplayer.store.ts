@@ -3,6 +3,7 @@ import type {
   AudioTrackOption, CastState, PlayerError, QualityOption, SettingsView,
   SubtitleEdge, SubtitleFont, SubtitleFontSize,
 } from './videoplayer.types.js';
+import type { AdBreak } from './videoplayer.adbreaks.js';
 
 export type VideoPlayerState = {
   playing: boolean;
@@ -44,6 +45,10 @@ export type VideoPlayerState = {
   selectedQuality: string;
   /** Renditions discovered by a media adapter — empty when playback is not adaptive. */
   adaptiveQualities: QualityOption[];
+  /** Ad breaks marked in the stream, in media time. */
+  adBreaks: AdBreak[];
+  /** True while the playhead is inside one. */
+  inAdBreak: boolean;
   /** True while the adapter's ABR logic is choosing the rendition. */
   qualityAuto: boolean;
   /** Label of the rendition actually playing, shown next to "Auto". */
@@ -99,6 +104,8 @@ export type VideoPlayerActions = {
   setAdaptiveQualities:  (v: QualityOption[]) => void;
   setQualityAuto:        (v: boolean) => void;
   setActiveQualityLabel: (v: string | null) => void;
+  setAdBreaks:           (v: AdBreak[]) => void;
+  setInAdBreak:          (v: boolean) => void;
   setSelectedSubtitle:   (v: number | null) => void;
   setSecondarySubtitle:  (v: number | null) => void;
   setSelectedAudioTrack: (v: number) => void;
@@ -152,6 +159,8 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     settingsView: 'main',
     selectedQuality: opts.defaultQuality ?? '',
     adaptiveQualities: [],
+    adBreaks: [],
+    inAdBreak: false,
     qualityAuto: false,
     activeQualityLabel: null,
     selectedSubtitle: null,
@@ -196,6 +205,8 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setSettingsView:       (v) => set({ settingsView: v }),
     setSelectedQuality:    (v) => set({ selectedQuality: v }),
     setAdaptiveQualities:  (v) => set({ adaptiveQualities: v }),
+    setAdBreaks:           (v) => set({ adBreaks: v }),
+    setInAdBreak:          (v) => set({ inAdBreak: v }),
     setQualityAuto:        (v) => set({ qualityAuto: v }),
     setActiveQualityLabel: (v) => set({ activeQualityLabel: v }),
     setSelectedSubtitle:   (v) => set((s) => ({ selectedSubtitle: v, secondarySubtitle: v !== null && v === s.secondarySubtitle ? null : s.secondarySubtitle })),

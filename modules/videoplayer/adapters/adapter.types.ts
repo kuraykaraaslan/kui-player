@@ -1,4 +1,5 @@
 import type { AudioTrackOption, PlayerError, QualityOption } from '../videoplayer.types.js';
+import type { AdBreak } from '../videoplayer.adbreaks.js';
 import type { Rendition } from '../videoplayer.qoe.js';
 
 /**
@@ -13,6 +14,8 @@ export interface MediaAdapterHost {
   updateQualities(qualities: QualityOption[], activeIndex: number, auto: boolean): void;
   /** Publish the rendition now playing (bitrate, size, codec) for QoE accounting. */
   updateRendition(rendition: Rendition | null): void;
+  /** Publish the ad breaks the stream marks (replaces the previous list). */
+  updateAdBreaks(breaks: AdBreak[]): void;
   /** Publish the selectable audio renditions and which one is live. */
   updateAudioTracks(tracks: AudioTrackOption[], activeIndex: number): void;
   /** Surface a fatal streaming error through the player's normal error UI. */

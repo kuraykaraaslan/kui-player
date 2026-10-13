@@ -834,3 +834,14 @@
 .kui-subtitles { flex-direction: column; align-items: center; }
 .kui-subtitle-text--secondary { color: var(--kui-subtitle-secondary, #fde68a); margin-bottom: 0.25rem; }
 .kui-option-heading { margin: 0.5rem 0 0.25rem; padding: 0 0.75rem; }
+
+/* ── ad-break markers on the seek bar ────────────────────────────────────── */
+
+.kui-adbreak {
+  position: absolute;
+  inset-block: 0;
+  min-width: 3px;
+  background: #facc15;
+  pointer-events: none;
+  z-index: 1;
+}

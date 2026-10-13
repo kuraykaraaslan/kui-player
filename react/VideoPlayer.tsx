@@ -63,6 +63,12 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * Deters leaks; it cannot stop screen recording.
    */
   watermark?: WatermarkOptions;
+  /**
+   * Ignore seeking while the playhead is inside an ad break the stream marks
+   * (SSAI cue). Off by default; ad breaks are always marked on the seek bar and
+   * reported as `adbreak:start` / `adbreak:end`.
+   */
+  seekLockInAds?: boolean;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -87,14 +93,16 @@ export function VideoPlayer(props: VideoPlayerComponentProps) {
     controlsVisible: props.controlsVisible,
     adapters: props.adapters,
     preferNativeIosFullscreen: props.preferNativeIosFullscreen,
+    seekLockInAds: props.seekLockInAds,
   }));
 
   useEffect(() => {
     engine.updateProps({
       controlsVisible: props.controlsVisible,
       autoHideControls: props.autoHideControls ?? true,
+      seekLockInAds: props.seekLockInAds,
     });
-  }, [engine, props.controlsVisible, props.autoHideControls]);
+  }, [engine, props.controlsVisible, props.autoHideControls, props.seekLockInAds]);
 
   const dictionary = useMemo(() => resolveDictionary(props.locale), [props.locale]);
 

@@ -7,6 +7,7 @@ import {
 import { QoeTracker, type QoeSummary } from './videoplayer.qoe.js';
 import { chapterIndexAt, chapterKind } from './videoplayer.chapters.js';
 import type { Chapter } from './videoplayer.vtt.js';
+import { AdBreakTracker, type AdBreak } from './videoplayer.adbreaks.js';
 import type { Diagnostics } from './videoplayer.diagnostics.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
@@ -54,6 +55,8 @@ const FAKE_FS_Z = 2147483646;
 const LIVE_EDGE_TOLERANCE_S = 10;
 
 export type VideoPlayerEngineOptions = {
+  /** Ignore seeks while inside a stream-marked ad break (default `false`). */
+  seekLockInAds?: boolean;
   defaultQuality?: string;
   startMuted?: boolean;
   autoHideControls?: boolean;
@@ -127,6 +130,7 @@ export class VideoPlayerEngine {
   private readonly emitter = new PlayerEmitter();
   private readonly quartiles = new QuartileTracker();
   private readonly qoe = new QoeTracker();
+  private readonly adTracker = new AdBreakTracker();
   private chapters: readonly Chapter[] = [];
   private chapterIndex = -1;
   private qoeTimer: ReturnType<typeof setInterval> | null = null;
@@ -152,6 +156,9 @@ export class VideoPlayerEngine {
    */
   keyboardFocus = false;
 
+  /** Ignore seeks while the playhead is inside a stream-marked ad break. */
+  seekLockInAds = false;
+
   readonly maxAutoRetries: number;
   /** How often the `qoe` event fires while playing, ms. `0` disables the periodic summary. */
   readonly qoeIntervalMs: number;
@@ -170,6 +177,7 @@ export class VideoPlayerEngine {
     this.controlsVisible = opts.controlsVisible;
     this.maxAutoRetries = opts.maxAutoRetries ?? 3;
     this.qoeIntervalMs = opts.qoeIntervalMs ?? 10_000;
+    this.seekLockInAds = opts.seekLockInAds ?? false;
     this.preferNativeIosFullscreen = opts.preferNativeIosFullscreen ?? false;
     if (opts.adapters) this.adapters = [...opts.adapters];
   }
@@ -199,6 +207,7 @@ export class VideoPlayerEngine {
       s().setCurrentTime(video.currentTime);
       this.syncLive(video);
       this.syncChapter(video.currentTime);
+      this.syncAdBreaks(video.currentTime);
       for (const percent of this.quartiles.update(video.currentTime, video.duration)) {
         this.emitter.emit('quartile', { percent });
       }
@@ -250,6 +259,9 @@ export class VideoPlayerEngine {
       this.stallTotalMs = 0;
       this.stallStartedAt = 0;
       this.quartiles.reset();
+      this.adTracker.reset();
+      s().setAdBreaks([]);
+      s().setInAdBreak(false);
       this.stopQoeTimer();
       this.qoe.reset();
       this.emitter.emit('sourcechange', { src: video.currentSrc || video.src });
@@ -431,6 +443,23 @@ export class VideoPlayerEngine {
     this.restorePoint = null;
     if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
     this.cancelAutoRetry();
+  }
+
+  // ── Ad breaks ──────────────────────────────────────────────────────────────
+
+  private syncAdBreaks(time: number): void {
+    const s = this.store.getState();
+    for (const event of this.adTracker.update(s.adBreaks, time)) {
+      this.emitter.emit(event.type === 'start' ? 'adbreak:start' : 'adbreak:end', event.adBreak);
+    }
+    const inside = this.adTracker.current !== null;
+    if (inside !== s.inAdBreak) s.setInAdBreak(inside);
+  }
+
+  /** The adapter's current list of breaks. */
+  private setAdBreaks(breaks: AdBreak[]): void {
+    this.store.getState().setAdBreaks(breaks);
+    if (this.video) this.syncAdBreaks(this.video.currentTime);
   }
 
   // ── Chapters ───────────────────────────────────────────────────────────────
@@ -711,6 +740,7 @@ export class VideoPlayerEngine {
       s.setActiveQualityLabel(qualities[activeIndex]?.label ?? null);
       s.setSelectedQuality(auto ? AUTO_QUALITY_VALUE : String(activeIndex));
     },
+    updateAdBreaks: (breaks) => this.setAdBreaks(breaks),
     updateRendition: (rendition) => {
       this.qoe.setRendition(rendition, Date.now());
     },
@@ -894,6 +924,7 @@ export class VideoPlayerEngine {
 
   seek(seconds: number): void {
     if (!this.video) return;
+    if (this.seekLockInAds && this.store.getState().inAdBreak) return;
     this.video.currentTime = Math.max(0, Math.min(this.video.duration || 0, seconds));
   }
 
@@ -1099,7 +1130,8 @@ export class VideoPlayerEngine {
     }
   }
 
-  updateProps(opts: Pick<VideoPlayerEngineOptions, 'controlsVisible' | 'autoHideControls'>): void {
+  updateProps(opts: Pick<VideoPlayerEngineOptions, 'controlsVisible' | 'autoHideControls' | 'seekLockInAds'>): void {
+    this.seekLockInAds = opts.seekLockInAds ?? false;
     this.controlsVisible = opts.controlsVisible;
     this.autoHideControls = opts.autoHideControls ?? true;
     if (opts.controlsVisible !== undefined) {

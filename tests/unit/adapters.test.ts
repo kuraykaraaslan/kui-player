@@ -211,3 +211,32 @@ describe('lowLatencyConfig', () => {
     expect(lowLatencyConfig({ catchUpRate: 0.5 }).maxLiveSyncPlaybackRate).toBe(1);
   });
 });
+
+describe('hls adapter ad breaks', () => {
+  it('publishes SSAI cues from a loaded playlist', async () => {
+    const EVENTS = {
+      MANIFEST_PARSED: 'manifest', LEVEL_SWITCHED: 'level', AUDIO_TRACKS_UPDATED: 'audios',
+      AUDIO_TRACK_SWITCHED: 'audio', ERROR: 'error', LEVEL_LOADED: 'loaded', LEVEL_UPDATED: 'updated',
+    };
+    const handlers: Record<string, (e: string, d: unknown) => void> = {};
+    class Fake {
+      static isSupported() { return true; }
+      static Events = EVENTS;
+      levels = []; audioTracks = []; currentLevel = -1; autoLevelEnabled = true; audioTrack = 0;
+      on(event: string, cb: (e: string, d: unknown) => void) { handlers[event] = cb; }
+      attachMedia() {} loadSource() {} destroy() {}
+    }
+    const received: unknown[] = [];
+    const h = { ...host(), updateAdBreaks: (b: unknown[]) => received.push(b) };
+    const a = createHlsAdapter({ Hls: Fake as never });
+    await a.attach(document.createElement('video'), 'https://x/live.m3u8', h);
+
+    const details = { fragments: [
+      { start: 0 }, { start: 10, tagList: [['CUE-OUT', '20']] }, { start: 30, tagList: [['CUE-IN', '']] },
+    ] };
+    handlers.loaded?.('loaded', { details });
+    handlers.updated?.('updated', { details });   // a refresh republishes the same list
+    expect(received).toHaveLength(2);
+    expect(received[0]).toEqual([{ id: 'cue-10.000', start: 10, end: 30, duration: 20, source: 'cue-out' }]);
+  });
+});

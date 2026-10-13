@@ -261,3 +261,30 @@ describe('AirPlay', () => {
     engine.dispose();
   });
 });
+
+describe('ad breaks', () => {
+  it('reports adbreak:start/end as the playhead passes through, and can lock seeking inside one', () => {
+    const { engine, video } = setup();
+    const seen: string[] = [];
+    engine.on('adbreak:start', (b) => seen.push(`start:${b.id}`));
+    engine.on('adbreak:end', (b) => seen.push(`end:${b.id}`));
+    engine.store.getState().setAdBreaks([{ id: 'a1', start: 10, end: 20, duration: 10, source: 'cue-out' }]);
+
+    emit(video, 'loadedmetadata', { duration: 100 });
+    emit(video, 'timeupdate', { currentTime: 5 });
+    emit(video, 'timeupdate', { currentTime: 12 });
+    expect(engine.store.getState().inAdBreak).toBe(true);
+
+    engine.seekLockInAds = true;
+    engine.seek(50);
+    expect(video.currentTime).not.toBe(50);   // locked while inside the break
+
+    engine.seekLockInAds = false;
+    emit(video, 'timeupdate', { currentTime: 25 });
+    expect(seen).toEqual(['start:a1', 'end:a1']);
+    expect(engine.store.getState().inAdBreak).toBe(false);
+    engine.seek(50);
+    expect(video.currentTime).toBe(50);
+    engine.dispose();
+  });
+});

@@ -1,4 +1,5 @@
 import type { AudioTrackOption, QualityOption } from '../videoplayer.types.js';
+import { extractAdBreaks, type TaggedFragment } from '../videoplayer.adbreaks.js';
 import { AUTO_QUALITY, heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types.js';
 
 // ─── the slice of the hls.js surface we actually touch ───────────────────────
@@ -19,12 +20,19 @@ type HlsInstance = {
   on(event: string, cb: (event: string, data: unknown) => void): void;
 };
 
+type HlsFragment = { start: number; duration?: number; programDateTime?: number | null; tagList?: string[][] };
+const toTagged = (f: HlsFragment): TaggedFragment => ({
+  start: f.start, duration: f.duration, programDateTime: f.programDateTime, tagList: f.tagList,
+});
+
 type HlsEvents = {
   MANIFEST_PARSED: string;
   LEVEL_SWITCHED: string;
   AUDIO_TRACKS_UPDATED: string;
   AUDIO_TRACK_SWITCHED: string;
   ERROR: string;
+  LEVEL_LOADED?: string;
+  LEVEL_UPDATED?: string;
 };
 
 export type HlsConstructor = {
@@ -155,6 +163,13 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         if (qualities.length === 0) qualities = levelsToQualities(instance.levels);
         host.updateQualities(qualities, instance.currentLevel, instance.autoLevelEnabled);
       });
+      // Playlist (re)loads carry the SSAI markers; rescanning is cheap and idempotent.
+      const scanAds = (_e: string, data: unknown) => {
+        const fragments = (data as { details?: { fragments?: HlsFragment[] } } | undefined)?.details?.fragments;
+        if (fragments) host.updateAdBreaks(extractAdBreaks(fragments.map(toTagged)));
+      };
+      if (ctor.Events.LEVEL_LOADED) instance.on(ctor.Events.LEVEL_LOADED, scanAds);
+      if (ctor.Events.LEVEL_UPDATED) instance.on(ctor.Events.LEVEL_UPDATED, scanAds);
       instance.on(ctor.Events.AUDIO_TRACKS_UPDATED, () => {
         audioTracks = instance.audioTracks.map(hlsAudioLabel);
         host.updateAudioTracks(audioTracks, instance.audioTrack);

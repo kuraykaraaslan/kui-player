@@ -14,6 +14,7 @@ import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.type
 import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
+import { adSpans } from '../modules/videoplayer/videoplayer.adbreaks.js';
 import { miniEnabled, type MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
 import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
@@ -377,6 +378,8 @@ export function VideoPlayerChrome({
     : duration > 0 ? (currentTime / duration) * 100 : 0;
   const liveLatency = isLive && dvrWindow > 0
     ? Math.max(0, dvrWindow - (currentTime - dvrStart)) : null;
+  const adBreaks = useVideoPlayerStore(s => s.adBreaks);
+  const adSpanList = adSpans(adBreaks, isLive && dvrWindow > 0 ? dvrStart : 0, isLive && dvrWindow > 0 ? dvrWindow : duration);
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   return (
@@ -545,6 +548,7 @@ export function VideoPlayerChrome({
               ? null
               : (isLive && dvrWindow > 0 ? dvrStart + seekHoverRatio * dvrWindow : seekHoverRatio * duration)}
             chapters={chapterList}
+            adSpans={adSpanList}
             tiles={tiles}
             valueText={isLive
               ? (atLiveEdge
