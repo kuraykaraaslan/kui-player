@@ -88,22 +88,28 @@ yoktur; gerçek oynatma e2e'ye girmez, elle doğrulanır.
 - [ ] MediaConvert job'a **CMAF + `cbcs` + SPEKE** ekle (Widevine + PlayReady)
 - [ ] Backend: izleme hakkını doğrula → kısa ömürlü **lisans token'ı** üret
 - [ ] Oynatıcıya `drm.headers` ile token'ı geçir
-- [ ] **Örnek backend:** küçük bir Node ya da Cloudflare Worker örneği; izleme hakkını doğrulayıp
+- [x] **Örnek backend:** küçük bir Node ya da Cloudflare Worker örneği; izleme hakkını doğrulayıp
       kısa ömürlü lisans token'ı üretir (ve 7.1/7.2 için Cloudflare imzalı token /
-      CloudFront signed cookie). `examples/` altında, kütüphane bundle'ına girmez
+      CloudFront signed cookie). `examples/token-server/` altında, kütüphane bundle'ına girmez. Cloudflare Stream token'ı (RS256), CloudFront imzalı çerezler (RSA-SHA1 özel politika) ve lisans JWT'si (HS256) üretir; imzalar birim testle doğrulandı, **gerçek servislerce kabulü denenmedi** (Cloudflare dokümanına ağdan erişilemedi)
 - [ ] Chrome (Widevine) ve Edge (PlayReady) üzerinde elle test
 - [ ] Negatif testler: token yok / süresi dolmuş / başka içerik → lisans reddi UI'a doğru düşüyor
 - [ ] Şifreli dosyanın VLC / token'sız oynatmada açılmadığını doğrula
 
 **Çıkış:** Şifreli akış yalnızca geçerli token'la oynuyor.
 
+
+**Durum:** yalnızca örnek backend yapıldı. DRM sağlayıcı hesabı, MediaConvert/SPEKE, Chrome/Edge'de elle test, negatif testler ve şifreli dosyanın token'sız açılmaması gerçek hesap gerektirir; yapılmadı.
+
 ## 7.5 — Karşılaştırma ve karar 🟣 XS
 
 - [ ] Cloudflare Stream vs AWS: kurulum süresi, maliyet, DRM kapsamı, kontrol
-- [ ] Sonucu `recipes/` altına kısa bir "hangisi ne zaman" notu olarak yaz
+- [x] Sonucu `recipes/streaming-hosts.md` altına yaz (**taslak**: ölçülmüş karşılaştırma değil, karar çerçevesi; ölçüm için 8.1 QoE olayları kullanılabilir)
 - [ ] Gerekirse Cast tarafında DRM'li içerik davranışını kontrol et (alıcı da DRM desteklemeli)
 
 ---
+
+
+**Durum:** karşılaştırma maddesi (kurulum süresi, maliyet, DRM kapsamı) gerçek hesaplar olmadan yapılamadı; Cloudflare'in DRM durumu doğrulanamadı. Cast + DRM kontrol edilmedi.
 
 ## Sıra ve bağımlılık
 

@@ -19,6 +19,6 @@
       "@kuraykaraaslan/kui-player/react": ["./react/index.ts"]
     }
   },
-  "include": ["modules/**/*", "react/**/*", "libs/**/*", "src/**/*"],
+  "include": ["modules/**/*", "react/**/*", "libs/**/*", "src/**/*", "examples/**/*"],
   "exclude": ["node_modules", "dist", "coverage"]
 }
