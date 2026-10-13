@@ -27,14 +27,14 @@ yarışına girerse kaybeder. Strateji:
 | [3](./03-quality-gate.md) | Kalite kapısı | 🔴 Zorunlu | ~2 hafta | ✅ |
 | [4](./04-expected-features.md) | Beklenen özellikler | 🟡 Olsa iyi | ~4 hafta | ✅ |
 | [5](./05-differentiation.md) | Niş farklılaşma | 🟣 Stratejik | ~3 hafta | ✅ |
-| [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | ⏸️ talep bekliyor |
-| [7](./07-drm-streaming.md) | DRM ve yayın altyapısı (Cloudflare + AWS) | 🟣 Keşif | ~3–4 hafta | 📋 planlandı |
-| [8](./08-streaming-ops.md) | Yayın kalitesi ve operasyon | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
-| [9](./09-ux-accessibility.md) | Kullanıcı deneyimi ve erişilebilirlik | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
-| [10](./10-polish-and-embed.md) | Cilalama, bölümler ve cihaz içi çeviri | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
+| [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | 🟡 6.2 (düzenleyici hariç), 6.3, 6.4, 6.6 yapıldı; 6.1 ve 6.5 bilerek yapılmadı |
+| [7](./07-drm-streaming.md) | DRM ve yayın altyapısı (Cloudflare + AWS) | 🟣 Keşif | ~3–4 hafta | 🟡 yalnızca kod tarafı (7.3, örnek backend); hesap gerektiren 7.1/7.2/7.4/7.5 açık |
+| [8](./08-streaming-ops.md) | Yayın kalitesi ve operasyon | 🟡 Olsa iyi | ~3–4 hafta | ✅ (8.5 yalnızca DRM'siz tek dosya prototipi) |
+| [9](./09-ux-accessibility.md) | Kullanıcı deneyimi ve erişilebilirlik | 🟡 Olsa iyi | ~3–4 hafta | ✅ |
+| [10](./10-polish-and-embed.md) | Cilalama, bölümler ve cihaz içi çeviri | 🟡 Olsa iyi | ~3–4 hafta | ✅ (10.3-B canlı altyazı yapılmadı) |
 
 **Faz 0–3 "gereken"dir** — bunlar bitmeden `0.1.0` etiketi atılmamalı.
-**Faz 0–5 tamamlandı: `0.1.0` yayınlanabilir.**
+**Faz 0–5 tamamlandı: `0.1.0` yayınlanabilir.** Faz 8–10 sonradan kodlandı; her fazın belgesinde neyin *doğrulanmadığı* (gerçek servis, gerçek cihaz, elle test) ayrıca yazılıdır.
 Faz 4 rekabette kalmak, Faz 5 kazanmak içindi. Faz 6 bir yol haritası değil, opsiyon
 havuzu — ve kendi kuralı gereği **yayın sonrası gerçek talep** olmadan seçim yapılmaz.
 Bugünkü durum ve öneri: [Faz 6](./06-verticals.md#durum-neden-hiçbiri-yapılmadı).
