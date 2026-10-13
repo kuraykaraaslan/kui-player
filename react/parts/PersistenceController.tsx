@@ -35,6 +35,12 @@ export default function PersistenceController({ options, src, subtitles, skipRes
     setResumeTo(storage.readPosition(src)?.time ?? null);
   }
 
+  // The subtitle delay belongs to the source — a fix for one release's timing
+  // would be wrong for the next — so it is read when the source changes.
+  useEffect(() => {
+    engine.store.getState().setSubtitleOffset(storage.readSubtitleOffset(src));
+  }, [engine, storage, src]);
+
   // Preferences are source-independent, so they are applied once on mount.
   useEffect(() => {
     const prefs = storage.readPreferences();
@@ -77,6 +83,8 @@ export default function PersistenceController({ options, src, subtitles, skipRes
             : subtitles?.[state.secondarySubtitle]?.srclang ?? null,
         });
       }
+
+      if (state.subtitleOffset !== previous.subtitleOffset) storage.writeSubtitleOffset(src, state.subtitleOffset);
 
       if (state.currentTime === previous.currentTime) return;
       const now = Date.now();

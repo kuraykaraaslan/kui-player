@@ -37,3 +37,24 @@ describe('PLAYER_META', () => {
     expect(PLAYER_META.version).toBe(pkg.version);
   });
 });
+
+import { clampSubtitleOffset, formatSubtitleOffset, isLocalTrack } from '../../modules/videoplayer/videoplayer.subtitles';
+
+describe('subtitle offset helpers', () => {
+  it('rounds to a tenth and clamps', () => {
+    expect(clampSubtitleOffset(0.1 + 0.2)).toBe(0.3);
+    expect(clampSubtitleOffset(500)).toBe(120);
+    expect(clampSubtitleOffset(-500)).toBe(-120);
+  });
+  it('formats with a sign', () => {
+    expect(formatSubtitleOffset(0.3)).toBe('+0.3 s');
+    expect(formatSubtitleOffset(-1.5)).toBe('-1.5 s');
+    expect(formatSubtitleOffset(0)).toBe('0 s');
+    expect(formatSubtitleOffset(12)).toBe('+12 s');
+  });
+  it('knows which tracks the player must time itself', () => {
+    expect(isLocalTrack({ src: '/a.vtt' })).toBe(false);
+    expect(isLocalTrack({ src: '/a.srt' })).toBe(true);
+    expect(isLocalTrack({ src: 'blob:abc', local: true })).toBe(true);
+  });
+});

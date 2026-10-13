@@ -3,6 +3,7 @@ import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.en
 import { SPEEDS } from '../../modules/videoplayer/videoplayer.constants.js';
 import { chapterJumpTarget, skippableAt } from '../../modules/videoplayer/videoplayer.chapters.js';
 import type { Chapter } from '../../modules/videoplayer/videoplayer.vtt.js';
+import { clampSubtitleOffset } from '../../modules/videoplayer/videoplayer.subtitles.js';
 import { lookupShortcut, type Keymap } from '../../modules/videoplayer/videoplayer.shortcuts.js';
 
 type Options = {
@@ -82,6 +83,12 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
         case 'end': if (s.duration > 0) engine.seek(s.duration); break;
         case 'help': toggleHelp(); break;
         case 'stats': toggleStats(); break;
+        case 'subtitleEarlier': case 'subtitleLater':
+          // Only when something is showing; a silent offset change is a bug report waiting to happen.
+          if (s.selectedSubtitle !== null) {
+            s.setSubtitleOffset(clampSubtitleOffset(s.subtitleOffset + (action === 'subtitleLater' ? 0.1 : -0.1)));
+          }
+          break;
         case 'skip': {
           const skippable = skippableAt(chapterList, s.currentTime);
           if (skippable) engine.seek(skippable.to);

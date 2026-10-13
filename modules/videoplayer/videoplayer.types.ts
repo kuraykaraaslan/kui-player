@@ -2,7 +2,17 @@ import type { MediaAdapter } from './adapters/adapter.types.js';
 import type { Chapter } from './videoplayer.vtt.js';
 
 export type QualityOption = { label: string; value: string };
-export type SubtitleTrack = { label: string; srclang?: string; src: string };
+export type SubtitleTrack = {
+  label: string;
+  srclang?: string;
+  src: string;
+  /**
+   * Fetch and time this track in the player instead of handing it to the
+   * element's text-track machinery. Set for files the viewer drops in (their
+   * object URLs have no extension to go by); needed whenever a delay applies.
+   */
+  local?: boolean;
+};
 /** `description` is audio description for blind and low-vision viewers. */
 export type AudioTrackKind = 'main' | 'description' | 'commentary';
 export type AudioTrackOption = { label: string; language?: string; kind?: AudioTrackKind };

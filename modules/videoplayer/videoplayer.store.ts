@@ -59,6 +59,8 @@ export type VideoPlayerState = {
   /** The viewer wants audio description whenever the stream offers one. */
   audioDescription: boolean;
   selectedSubtitle: number | null;
+  /** Seconds the subtitles are delayed for this source (negative: earlier). */
+  subtitleOffset: number;
   /** Second line of a dual-language pair; always a different track from `selectedSubtitle`. */
   secondarySubtitle: number | null;
   /** Target language of an on-device translation of the primary track, instead of a second file. */
@@ -115,6 +117,7 @@ export type VideoPlayerActions = {
   setLoopRange:          (v: LoopRange | null) => void;
   setInAdBreak:          (v: boolean) => void;
   setAudioDescription:   (v: boolean) => void;
+  setSubtitleOffset:     (v: number) => void;
   setSelectedSubtitle:   (v: number | null) => void;
   setSecondarySubtitle:  (v: number | null) => void;
   setSecondaryTranslation: (v: string | null) => void;
@@ -176,6 +179,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     activeQualityLabel: null,
     audioDescription: false,
     selectedSubtitle: null,
+    subtitleOffset: 0,
     secondarySubtitle: null,
     secondaryTranslation: null,
     selectedAudioTrack: 0,
@@ -224,6 +228,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setQualityAuto:        (v) => set({ qualityAuto: v }),
     setActiveQualityLabel: (v) => set({ activeQualityLabel: v }),
     setAudioDescription:   (v) => set({ audioDescription: v }),
+    setSubtitleOffset:     (v) => set({ subtitleOffset: v }),
     setSelectedSubtitle:   (v) => set((s) => ({ selectedSubtitle: v, secondarySubtitle: v !== null && v === s.secondarySubtitle ? null : s.secondarySubtitle })),
     // One second line at a time: a file or a translation, never both.
     setSecondarySubtitle:  (v) => set((s) => ({

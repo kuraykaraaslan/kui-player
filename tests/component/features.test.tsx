@@ -726,6 +726,7 @@ describe('on-device subtitle translation', () => {
 });
 
 describe('frame tools and A-B loop', () => {
+  const tick = (video: HTMLVideoElement, t: number) => act(() => { emit(video, 'timeupdate', { currentTime: t }); });
   async function setup(props: Partial<React.ComponentProps<typeof VideoPlayer>> = {}) {
     const user = userEvent.setup();
     const utils = render(<VideoPlayer src={SRC} enableCast={false} frameTools={{ fps: 25 }} {...props} />);
@@ -734,7 +735,7 @@ describe('frame tools and A-B loop', () => {
     await screen.findByRole('group', { name: 'Frame tools' }, { timeout: 4000 });
     return { user, video, ...utils };
   }
-  const tick = (video: HTMLVideoElement, t: number) => act(() => { emit(video, 'timeupdate', { currentTime: t }); });
+
 
   it('is off unless asked for', async () => {
     render(<VideoPlayer src={SRC} enableCast={false} />);
@@ -833,5 +834,67 @@ describe('frame tools and A-B loop', () => {
     tick(video, 20);
     await user.click(screen.getByRole('button', { name: 'Set loop end (B)' }));   // the same range again
     await waitFor(() => expect(video.playbackRate).toBe(0.5));
+  });
+});
+
+describe('subtitle delay', () => {
+  const tick = (video: HTMLVideoElement, t: number) => act(() => { emit(video, 'timeupdate', { currentTime: t }); });
+  const subtitles = [{ label: 'English', srclang: 'en', src: '/en.srt' }];
+  let fetchSpy: MockInstance<typeof fetch>;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      new Response('1\n00:00:01,000 --> 00:00:04,000\nHello there\n', { status: 200 }));
+  });
+  afterEach(() => { fetchSpy.mockRestore(); });
+
+  const primaryText = (c: HTMLElement) => c.querySelector('.kui-subtitle-text:not(.kui-subtitle-text--secondary)')?.textContent ?? null;
+
+  it('shifts cues later with h and earlier with g, and shows the delay', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 60 });
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+
+    tick(video, 4.5);
+    await waitFor(() => expect(primaryText(container)).toBeNull());       // cue ended at 4 s
+
+    for (let i = 0; i < 10; i += 1) await user.keyboard('h');             // +1.0 s
+    expect(await screen.findByText('Subtitle delay: +1 s')).toBeInTheDocument();
+    tick(video, 4.5);
+    await waitFor(() => expect(primaryText(container)).toBe('Hello there'));   // now runs 2–5 s
+    tick(video, 1.5);
+    await waitFor(() => expect(primaryText(container)).toBeNull());       // not yet at 1.5 s
+
+    for (let i = 0; i < 20; i += 1) await user.keyboard('g');             // −1.0 s
+    tick(video, 0.5);
+    await waitFor(() => expect(primaryText(container)).toBe('Hello there'));   // runs 0–3 s
+  });
+
+  it('does nothing while no subtitle is selected', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} />);
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('h');
+    expect(screen.queryByText(/Subtitle delay/)).not.toBeInTheDocument();
+  });
+
+  it('can be reset from the subtitles menu', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('hhh');
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Reset subtitle delay (+0.3 s)' }));
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.keyboard('h');
+    expect(await screen.findByText('Subtitle delay: +0.1 s')).toBeInTheDocument();
   });
 });

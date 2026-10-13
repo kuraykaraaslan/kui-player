@@ -917,3 +917,19 @@
   pointer-events: none;
   z-index: 1;
 }
+
+/* ── subtitle delay indicator ────────────────────────────────────────────── */
+
+.kui-sub-offset {
+  position: absolute;
+  inset-block-start: 1rem;
+  inset-inline-end: 1rem;
+  z-index: 26;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--_kui-radius-sm);
+  background: var(--_kui-surface);
+  border: 1px solid var(--_kui-border);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}

@@ -7,7 +7,7 @@ export type ShortcutAction =
   | 'playPause' | 'seekBack' | 'seekForward' | 'volumeUp' | 'volumeDown' | 'mute'
   | 'fullscreen' | 'pip' | 'captions' | 'percent' | 'frameBack' | 'frameForward'
   | 'slower' | 'faster' | 'start' | 'end' | 'help' | 'stats'
-  | 'skip' | 'prevChapter' | 'nextChapter';
+  | 'skip' | 'prevChapter' | 'nextChapter' | 'subtitleEarlier' | 'subtitleLater';
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, readonly string[]>> = {
   playPause: [' ', 'k'],
@@ -31,6 +31,8 @@ export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, readonly string[
   skip: ['s'],
   prevChapter: ['['],
   nextChapter: [']'],
+  subtitleEarlier: ['g'],
+  subtitleLater: ['h'],
 };
 
 /**

@@ -23,6 +23,7 @@ import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { Icon } from './icons/index.js';
+import { formatSubtitleOffset } from '../modules/videoplayer/videoplayer.subtitles.js';
 import { useTranslatedCues, useTranslationTargets } from './hooks/useTranslatedCues.js';
 import { useSecondaryCues } from './hooks/useSecondaryCues.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
@@ -233,12 +234,26 @@ export function VideoPlayerChrome({
   const castApi = useRef<CastApi | null>(null);
   const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
-  const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
+  const subtitleOffset = useVideoPlayerStore(s => s.subtitleOffset);
+  const setSubtitleOffset = useVideoPlayerStore(s => s.setSubtitleOffset);
+  // A delay fixes one release's timing; a new source starts from zero. Done during
+  // render so a remembered value (restored by the persistence controller's effect) lands after it.
+  const [offsetSrc, setOffsetSrc] = useState(src);
+  if (offsetSrc !== src) { setOffsetSrc(src); setSubtitleOffset(0); }
+  const [offsetFlash, setOffsetFlash] = useState(false);
+  const [seenOffset, setSeenOffset] = useState(subtitleOffset);
+  if (seenOffset !== subtitleOffset) { setSeenOffset(subtitleOffset); setOffsetFlash(true); }
+  useEffect(() => {
+    if (!offsetFlash) return;
+    const id = window.setTimeout(() => setOffsetFlash(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [offsetFlash, subtitleOffset]);
+  const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles, offset: subtitleOffset });
   const secondaryTranslation = useVideoPlayerStore(s => s.secondaryTranslation);
   const setSecondaryTranslation = useVideoPlayerStore(s => s.setSecondaryTranslation);
   const primaryTrack = selectedSubtitle === null ? undefined : subtitles?.[selectedSubtitle];
   const translationTargets = useTranslationTargets(translation?.targets, primaryTrack);
-  const translated = useTranslatedCues({ videoRef, source: primaryTrack, target: secondaryTranslation });
+  const translated = useTranslatedCues({ videoRef, source: primaryTrack, target: secondaryTranslation, offset: subtitleOffset });
   const fileSecondaryText = useSecondaryCues({ videoRef, selectedSecondary: secondarySubtitle, subtitles });
   const secondaryText = fileSecondaryText ?? translated.text
     ?? (translated.downloading !== null ? t('translationDownloading', { percent: Math.round(translated.downloading * 100) }) : null);
@@ -525,6 +540,10 @@ export function VideoPlayerChrome({
           />
         </Suspense>
       )}
+      {offsetFlash && selectedSubtitle !== null && (
+        <div className="kui-sub-offset" role="status">{t('subtitleDelay', { value: formatSubtitleOffset(subtitleOffset) })}</div>
+      )}
+
       {(cueText || secondaryText) && (
         <SubtitleOverlay
           cueText={cueText}
@@ -600,6 +619,8 @@ export function VideoPlayerChrome({
               applyQuality={applyQuality}
               applySpeed={applySpeed}
               applySubtitle={applySubtitle}
+              subtitleOffset={subtitleOffset}
+              resetSubtitleOffset={() => { setSubtitleOffset(0); closeSettings(); }}
               applySecondary={applySecondary}
               applySubtitleSize={applySubtitleSize}
               applyAudioTrack={applyAudioTrack}

@@ -280,7 +280,7 @@ function VideoPlayerInner({
         {effectiveSubtitles?.map((sub, i) => (
           // SRT and ASS are fetched and timed by the player instead: a <track>
           // pointing at them would only produce a load error.
-          detectFormat(sub.src) === 'vtt'
+          !sub.local && detectFormat(sub.src) === 'vtt'
             ? <track key={i} kind="subtitles" label={sub.label} srcLang={sub.srclang} src={sub.src} />
             : null
         ))}

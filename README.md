@@ -396,6 +396,7 @@ Active while the player container is focused:
 | `?` | open the shortcut list |
 | `s` | skip the intro / recap chapter you are in |
 | `[` / `]` | previous / next chapter (`[` restarts the chapter when more than 3 s in) |
+| `g` / `h` | subtitles earlier / later by 0.1 s (a brief indicator shows the delay; *Reset* is in the Subtitles menu). Remembered per source with `persist` |
 | `Shift`+`I` | technical info panel (resolution, bitrate, buffer, dropped frames, stalls; copyable) |
 | `Esc` | close the settings panel, or leave emulated fullscreen |
 

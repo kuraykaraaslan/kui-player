@@ -115,6 +115,20 @@ export class PlayerStorage {
     write(this.storage, key, { time, duration, at: Date.now() } satisfies StoredPosition);
   }
 
+  /** The subtitle delay chosen for a source (seconds), or `0`. */
+  readSubtitleOffset(src: string): number {
+    if (!this.preferencesEnabled || !src) return 0;
+    const stored = read<{ offset: number }>(this.storage, `${this.namespace}:sub:${hashSource(src)}`);
+    return stored && Number.isFinite(stored.offset) ? stored.offset : 0;
+  }
+
+  writeSubtitleOffset(src: string, offset: number): void {
+    if (!this.preferencesEnabled || !src) return;
+    const key = `${this.namespace}:sub:${hashSource(src)}`;
+    if (offset === 0) { try { this.storage?.removeItem(key); } catch { /* ignore */ } return; }
+    write(this.storage, key, { offset });
+  }
+
   clearPosition(src: string): void {
     try { this.storage?.removeItem(`${this.namespace}:pos:${hashSource(src)}`); } catch { /* ignore */ }
   }

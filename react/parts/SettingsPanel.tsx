@@ -1,3 +1,4 @@
+import { formatSubtitleOffset } from '../../modules/videoplayer/videoplayer.subtitles.js';
 import { hasDescription } from '../../modules/videoplayer/videoplayer.audiokind.js';
 import { forwardRef } from 'react';
 import { Icon } from '../icons/index.js';
@@ -46,6 +47,8 @@ type SettingsPanelProps = {
   applyQuality: (value: string) => void;
   applySpeed: (s: number) => void;
   applySubtitle: (index: number | null) => void;
+  subtitleOffset: number;
+  resetSubtitleOffset: () => void;
   applySecondary: (index: number | null) => void;
   applySubtitleSize: (size: SubtitleFontSize) => void;
   applySubtitleColor: (color: string) => void;
@@ -62,7 +65,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
     view, onChangeView, onAbout, qualities, subtitles, audioTracks, chapters, onSeekTo,
     selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, secondaryTranslation, translationTargets, applyTranslation, selectedAudioTrack,
     speed, subtitleFontSize, subtitleColor, subtitleBackground, subtitleEdge, subtitleFont,
-    audioDescription, onToggleAudioDescription,
+    audioDescription, onToggleAudioDescription, subtitleOffset, resetSubtitleOffset,
     applyQuality, applySpeed, applySubtitle, applySecondary, applySubtitleSize, applyAudioTrack,
     applySubtitleColor, applySubtitleBackground, applySubtitleEdge, applySubtitleFont,
   },
@@ -159,6 +162,9 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
           {subtitles.map((sub, i) => (
             <SettingsOption key={i} label={sub.label} selected={selectedSubtitle === i} onClick={() => applySubtitle(i)} />
           ))}
+          {selectedSubtitle !== null && subtitleOffset !== 0 && (
+            <SettingsOption label={t('resetDelay', { value: formatSubtitleOffset(subtitleOffset) })} selected={false} onClick={resetSubtitleOffset} />
+          )}
           {selectedSubtitle !== null && (subtitles.length > 1 || translationTargets.length > 0) && (
             <>
               <p className="kui-label kui-option-heading">{t('secondSubtitle')}</p>

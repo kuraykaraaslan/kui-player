@@ -58,6 +58,10 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  'shortcut.subtitleEarlier': string;
+  'shortcut.subtitleLater': string;
+  subtitleDelay: string;
+  resetDelay: string;
   frameTools: string;
   goToFrame: string;
   frame: string;
@@ -207,6 +211,10 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  'shortcut.subtitleEarlier': "Subtitles earlier (−0.1 s)",
+  'shortcut.subtitleLater': "Subtitles later (+0.1 s)",
+  subtitleDelay: "Subtitle delay: {value}",
+  resetDelay: "Reset subtitle delay ({value})",
   frameTools: "Frame tools",
   goToFrame: "Go to frame or timecode",
   frame: "Frame",

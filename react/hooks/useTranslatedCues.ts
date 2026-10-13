@@ -41,14 +41,15 @@ type Options = {
   videoRef: RefObject<HTMLVideoElement | null>;
   source: SubtitleTrack | undefined;
   target: string | null;
+  offset?: number;
 };
 
 /**
  * The current cue of `source`, translated into `target` on the device. Cues are
  * translated as the playhead reaches them, and each at most once.
  */
-export function useTranslatedCues({ videoRef, source, target }: Options): TranslationLine {
-  const raw = useCueTrack({ videoRef, src: target ? source?.src : undefined });
+export function useTranslatedCues({ videoRef, source, target, offset }: Options): TranslationLine {
+  const raw = useCueTrack({ videoRef, src: target ? source?.src : undefined, offset });
   const srcLang = source?.srclang;
   const active = Boolean(target && srcLang && source?.src);
 

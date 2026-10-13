@@ -97,3 +97,39 @@ describe('PlayerStorage', () => {
     expect(new PlayerStorage({ storage }).readPreferences()).toBeNull();
   });
 });
+
+describe('subtitle delay per source', () => {
+  const memory = () => {
+    const map = new Map<string, string>();
+    return {
+      map,
+      storage: {
+        getItem: (k: string) => map.get(k) ?? null,
+        setItem: (k: string, v: string) => { map.set(k, v); },
+        removeItem: (k: string) => { map.delete(k); },
+      },
+    };
+  };
+
+  it('remembers the delay for one source and not another', async () => {
+    const { PlayerStorage } = await import('../../modules/videoplayer/videoplayer.persist');
+    const { storage } = memory();
+    const store = new PlayerStorage({ storage });
+    store.writeSubtitleOffset('https://x/a.mp4', 1.5);
+    expect(store.readSubtitleOffset('https://x/a.mp4')).toBe(1.5);
+    expect(store.readSubtitleOffset('https://x/b.mp4')).toBe(0);
+  });
+
+  it('forgets it when it returns to zero, and is inert without preferences', async () => {
+    const { PlayerStorage } = await import('../../modules/videoplayer/videoplayer.persist');
+    const { storage, map } = memory();
+    const store = new PlayerStorage({ storage });
+    store.writeSubtitleOffset('a', 2);
+    store.writeSubtitleOffset('a', 0);
+    expect(map.size).toBe(0);
+    const off = new PlayerStorage({ storage, preferences: false });
+    off.writeSubtitleOffset('a', 2);
+    expect(map.size).toBe(0);
+    expect(off.readSubtitleOffset('a')).toBe(0);
+  });
+});

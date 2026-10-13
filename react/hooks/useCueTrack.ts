@@ -6,6 +6,8 @@ type Options = {
   videoRef: RefObject<HTMLVideoElement | null>;
   /** The subtitle file to follow; `undefined` for none. */
   src: string | undefined;
+  /** Seconds the cues are delayed. */
+  offset?: number;
 };
 
 /**
@@ -15,7 +17,7 @@ type Options = {
  * that route. It also keeps tracks on independent clocks: a translation whose
  * cues do not line up with the original still advances on its own timing.
  */
-export function useCueTrack({ videoRef, src }: Options): string | null {
+export function useCueTrack({ videoRef, src, offset = 0 }: Options): string | null {
   const [loaded, setLoaded] = useState<{ src: string; cues: VttCue[] } | null>(null);
   const [shown, setShown] = useState<{ src: string; text: string | null }>({ src: '', text: null });
   const cues = src && loaded?.src === src ? loaded.cues : null;
@@ -38,8 +40,9 @@ export function useCueTrack({ videoRef, src }: Options): string | null {
     const video = videoRef.current;
     if (!video || !cues || !src) return;
     const update = () => {
-      const cue = findAt(cues, video.currentTime);
-      const active = cue && video.currentTime >= cue.start && video.currentTime < cue.end ? cue : null;
+      const shifted = video.currentTime - offset;
+      const cue = findAt(cues, shifted);
+      const active = cue && shifted >= cue.start && shifted < cue.end ? cue : null;
       setShown({ src, text: active?.text ?? null });
     };
     video.addEventListener('timeupdate', update);
@@ -49,7 +52,7 @@ export function useCueTrack({ videoRef, src }: Options): string | null {
       video.removeEventListener('timeupdate', update);
       video.removeEventListener('seeked', update);
     };
-  }, [videoRef, cues, src]);
+  }, [videoRef, cues, src, offset]);
 
   return src && shown.src === src ? shown.text : null;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { detectFormat } from '../../modules/videoplayer/videoplayer.subtitles.js';
+import { detectFormat, isLocalTrack } from '../../modules/videoplayer/videoplayer.subtitles.js';
 import { findAt } from '../../modules/videoplayer/videoplayer.timeline.js';
 import type { VttCue } from '../../modules/videoplayer/videoplayer.vtt.js';
 import type { SubtitleTrack } from '../../modules/videoplayer/videoplayer.types.js';
@@ -8,6 +8,8 @@ type Options = {
   videoRef: RefObject<HTMLVideoElement | null>;
   selectedSubtitle: number | null;
   subtitles?: SubtitleTrack[];
+  /** Seconds the subtitles are delayed (negative: earlier). */
+  offset?: number;
 };
 
 /**
@@ -18,7 +20,7 @@ type Options = {
  * draw them. SRT and ASS the browser will not touch, so those are fetched and
  * timed here; either way the same styled overlay renders the result.
  */
-export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Options) {
+export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles, offset = 0 }: Options) {
   // Both are keyed by what produced them, so switching track or source shows
   // nothing rather than the previous track's line.
   const [cueState, setCueState] = useState<{ key: string; text: string | null }>({ key: '', text: null });
@@ -26,8 +28,8 @@ export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Optio
 
   const track = selectedSubtitle === null ? undefined : subtitles?.[selectedSubtitle];
   const src = track?.src;
-  const format = src ? detectFormat(src) : 'vtt';
-  const isSidecar = format !== 'vtt';
+  // A delay needs our own clock: the element times WebVTT cues by itself and cannot shift them.
+  const isSidecar = Boolean(track && isLocalTrack(track)) || (offset !== 0 && Boolean(src));
   const cueKey = src ?? '';
   const sidecar = src && loaded?.src === src ? loaded.cues : null;
 
@@ -56,10 +58,11 @@ export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Optio
     if (!video || !sidecar) return;
 
     const onTimeUpdate = () => {
-      const cue = findAt(sidecar, video.currentTime);
+      const shifted = video.currentTime - offset;
+      const cue = findAt(sidecar, shifted);
       // `findAt` returns the last cue once playback is past it; only show a cue
       // that actually covers now.
-      const active = cue && video.currentTime >= cue.start && video.currentTime < cue.end ? cue : null;
+      const active = cue && shifted >= cue.start && shifted < cue.end ? cue : null;
       setCueState({ key: cueKey, text: active?.text ?? null });
     };
 
@@ -70,7 +73,7 @@ export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Optio
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('seeked', onTimeUpdate);
     };
-  }, [videoRef, sidecar, cueKey]);
+  }, [videoRef, sidecar, cueKey, offset]);
 
   // ── WebVTT through the element's own text tracks ──
   useEffect(() => {
@@ -85,7 +88,7 @@ export function useSubtitleCues({ videoRef, selectedSubtitle, subtitles }: Optio
     // index is not the subtitle index whenever an SRT/ASS track precedes it.
     const vttIndex = subtitles
       .slice(0, selectedSubtitle)
-      .filter((sub) => detectFormat(sub.src) === 'vtt').length;
+      .filter((sub) => !sub.local && detectFormat(sub.src) === 'vtt').length;
     const textTrack = video.textTracks[vttIndex];
     if (!textTrack) return;
 
