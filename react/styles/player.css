@@ -681,6 +681,20 @@
   cursor: pointer;
 }
 .kui-resume-dismiss:hover { color: var(--_kui-text); }
+.kui-share {
+  position: absolute;
+  inset-block-start: 1rem;
+  inset-inline-end: 1rem;
+  z-index: 25;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--_kui-border);
+  border-radius: var(--_kui-radius-sm);
+  background: var(--_kui-surface);
+  color: var(--_kui-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
 
 .kui-modal { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .kui-modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); }

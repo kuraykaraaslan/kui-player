@@ -10,12 +10,15 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import { readUrlTime } from '../modules/videoplayer/videoplayer.share.js';
+import type { ShareOptions } from './parts/ShareController.js';
 import type { PersistOptions } from '../modules/videoplayer/videoplayer.persist.js';
 import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
 
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
 const MediaSessionController = lazy(() => import('./parts/MediaSessionController.js'));
+const ShareController = lazy(() => import('./parts/ShareController.js'));
 const PersistenceController = lazy(() => import('./parts/PersistenceController.js'));
 const PlaylistController = lazy(() => import('./parts/PlaylistController.js'));
 import { usePlayerStyles } from './styles/index.js';
@@ -45,12 +48,18 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * viewer's storage uninvited is not a default this player takes.
    */
   persist?: boolean | PersistOptions;
+  /**
+   * Timestamped links: start at `?t=90` / `#t=1m30s` and show a "Share from
+   * here" button. Off by default; pass `true` or `{ param, onShare }`.
+   */
+  share?: boolean | ShareOptions;
   /** Your own nodes in named positions of the chrome. */
   slots?: PlayerSlots<ReactNode>;
 };
 
 const NO_ICON_OVERRIDES: IconOverrides = {};
 const EMPTY_PERSIST: PersistOptions = {};
+const EMPTY_SHARE: ShareOptions = {};
 
 export function VideoPlayer(props: VideoPlayerComponentProps) {
   usePlayerStyles(props.injectStyles ?? true);
@@ -91,7 +100,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, theme, slots,
+  mediaSession = true, persist = false, share = false, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -113,6 +122,9 @@ function VideoPlayerInner({
   const effectiveSubtitles = item?.subtitles ?? subtitles;
   const effectiveChapters = item?.chapters ?? chapters;
   const effectiveThumbnails = item?.thumbnails ?? thumbnails;
+  const shareOptions = share === true ? EMPTY_SHARE : share === false ? null : share;
+  const urlTime = shareOptions && typeof window !== 'undefined'
+    ? readUrlTime(window.location.href, shareOptions.param) : null;
   const persistOptions = persist === true ? EMPTY_PERSIST : persist === false ? null : persist;
 
   // Attach video element to engine on mount
@@ -233,7 +245,14 @@ function VideoPlayerInner({
             options={persistOptions}
             src={srcKey}
             subtitles={effectiveSubtitles}
+            skipResume={urlTime !== null}
           />
+        </Suspense>
+      )}
+
+      {shareOptions && (
+        <Suspense fallback={null}>
+          <ShareController options={shareOptions} src={srcKey} />
         </Suspense>
       )}
 

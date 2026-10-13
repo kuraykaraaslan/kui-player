@@ -12,13 +12,13 @@ ile kapsam paylaşır.
 
 ## 9.1 — Zaman damgalı paylaşım linki 🟡 S
 
-- [ ] Açılışta `?t=90`, `?t=1m30s` ve `#t=90` okuma; geçersiz değer sessizce yok sayılır
-- [ ] "Buradan paylaş" butonu: geçerli saniyeyi içeren URL'i panoya kopyalar
+- [x] Açılışta `?t=90`, `?t=1m30s` ve `#t=90` okuma; geçersiz değer sessizce yok sayılır
+- [x] "Buradan paylaş" butonu: geçerli saniyeyi içeren URL'i panoya kopyalar
       (`navigator.clipboard`, yoksa seçim + `execCommand` yedeği), "Kopyalandı" duyurusu (canlı bölge)
-- [ ] Seçenekler: `shareParam` (varsayılan `t`), `onShare` callback'i (kendi paylaşım UI'ın için)
-- [ ] Kalıcılık ([4.3](./04-expected-features.md)) ile çakışma: URL zamanı **kaydedilmiş konumu ezer**
-- [ ] i18n: 6 dilde metinler; skin ve web component'te de çalışır
-- [ ] Test: parse birimleri, kopyalama (mock), URL zamanı vs kaydedilmiş konum önceliği
+- [x] Seçenekler: `shareParam` (varsayılan `t`), `onShare` callback'i (kendi paylaşım UI'ın için)
+- [x] Kalıcılık ([4.3](./04-expected-features.md)) ile çakışma: URL zamanı **kaydedilmiş konumu ezer**
+- [x] i18n: 6 dilde metinler (React bileşeni). Skin / web component bağlaması henüz yok
+- [x] Test: parse birimleri, kopyalama (mock), URL zamanı vs kaydedilmiş konum önceliği
 
 ## 9.2 — Mini oynatıcı 🟡 S
 

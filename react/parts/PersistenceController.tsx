@@ -9,6 +9,8 @@ type Props = {
   options: PersistOptions;
   src: string;
   subtitles?: SubtitleTrack[];
+  /** An explicit link (`?t=`) beats the saved position: no resume offer. */
+  skipResume?: boolean;
 };
 
 const WRITE_INTERVAL_MS = 5000;
@@ -18,7 +20,7 @@ const WRITE_INTERVAL_MS = 5000;
  * pick up where the viewer left off. Lazy and opt-in — with `persist` unset the
  * player touches no storage at all.
  */
-export default function PersistenceController({ options, src, subtitles }: Props) {
+export default function PersistenceController({ options, src, subtitles, skipResume }: Props) {
   const engine = useVideoPlayerEngine();
   const t = useTranslate();
   // Built once: the options object is usually a fresh literal every render.
@@ -75,7 +77,7 @@ export default function PersistenceController({ options, src, subtitles }: Props
 
   // The offer is exactly that — an offer. A player that silently jumps twelve
   // minutes in is a player people stop trusting.
-  if (resumeTo === null) return null;
+  if (resumeTo === null || skipResume) return null;
 
   return (
     <div className="kui-resume" role="status">

@@ -58,6 +58,9 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  shareFromHere: string;
+  linkCopied: string;
+  linkCopyFailed: string;
   playingNext: string;
   cancel: string;
 
@@ -141,6 +144,9 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  shareFromHere: 'Share from here',
+  linkCopied: 'Link copied',
+  linkCopyFailed: 'Could not copy the link',
   playingNext: 'Next in {seconds}s: {title}',
   cancel: 'Cancel',
 

@@ -9,6 +9,7 @@ export { PLAYER_META } from './videoplayer/videoplayer.meta.js';
 export {
   parseVtt, parseChapters, parseStoryboard, parseTimestamp,
 } from './videoplayer/videoplayer.vtt.js';
+export { parseTimeParam, readUrlTime, buildShareUrl } from './videoplayer/videoplayer.share.js';
 export { findAt } from './videoplayer/videoplayer.timeline.js';
 export type { VttCue, Chapter, StoryboardTile } from './videoplayer/videoplayer.vtt.js';
 export { detectFormat } from './videoplayer/videoplayer.subtitles.js';
