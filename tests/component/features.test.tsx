@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { VideoPlayer } from '../../react';
 import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
@@ -896,5 +896,87 @@ describe('subtitle delay', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     await user.keyboard('h');
     expect(await screen.findByText('Subtitle delay: +0.1 s')).toBeInTheDocument();
+  });
+});
+
+describe('subtitle search and dropped files', () => {
+  const SRT = '1\n00:00:05,000 --> 00:00:08,000\nWhere is the key?\n\n2\n00:01:10,000 --> 00:01:12,000\nThe key is here.\n\n3\n00:02:00,000 --> 00:02:02,000\nGoodbye\n';
+  let fetchSpy: MockInstance<typeof fetch>;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(SRT, { status: 200 }));
+  });
+  afterEach(() => { fetchSpy.mockRestore(); });
+
+  it('finds a line by its text and seeks to it (including the delay)', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} subtitles={[{ label: 'English', srclang: 'en', src: '/en.srt' }]} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 300 });
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    expect(screen.queryByRole('menuitemradio', { name: 'Search subtitles' })).not.toBeInTheDocument();   // nothing chosen yet
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('hhhhh');   // +0.5 s
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Search subtitles' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Search subtitles' });
+    await user.type(within(dialog).getByRole('searchbox'), 'KEY');
+    const hits = await within(dialog).findAllByRole('button', { name: /key/i });
+    expect(hits).toHaveLength(2);
+    await user.click(hits[1]!);
+    expect(video.currentTime).toBeCloseTo(70.5);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('says so when nothing matches', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} subtitles={[{ label: 'English', srclang: 'en', src: '/en.srt' }]} />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    void container;
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Search subtitles' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Search subtitles' });
+    await user.type(within(dialog).getByRole('searchbox'), 'zzzz');
+    expect(await within(dialog).findByText('No matches')).toBeInTheDocument();
+  });
+
+  it('adds a subtitle file dropped on the player, selects it, and shows its lines', async () => {
+    const created: string[] = [];
+    URL.createObjectURL = vi.fn(() => { const url = `blob:test/${created.length}`; created.push(url); return url; });
+    URL.revokeObjectURL = vi.fn();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 300 });
+    const file = new File([SRT], 'movie.tr.srt', { type: '' });
+    Object.defineProperty(file, 'text', { value: async () => SRT });
+
+    const player = container.querySelector('.kui-player') as HTMLElement;
+    act(() => { fireEvent.dragOver(player, { dataTransfer: { types: ['Files'], files: [file] } }); });
+    expect(player).toHaveClass('is-dropping');
+    await act(async () => { fireEvent.drop(player, { dataTransfer: { types: ['Files'], files: [file] } }); });
+
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect(player).not.toHaveClass('is-dropping');
+    act(() => { emit(video, 'timeupdate', { currentTime: 6 }); });
+    await waitFor(() => expect(container.querySelector('.kui-subtitle-text')?.textContent).toBe('Where is the key?'));
+  });
+
+  it('leaves files that are not subtitles to the page', async () => {
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} />);
+    const player = container.querySelector('.kui-player') as HTMLElement;
+    const image = new File(['x'], 'cat.png');
+    const prevented = !fireEvent.drop(player, { dataTransfer: { types: ['Files'], files: [image] } });
+    expect(prevented).toBe(false);   // not default-prevented: the browser/page may handle it
   });
 });

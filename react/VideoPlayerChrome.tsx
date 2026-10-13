@@ -1,6 +1,6 @@
 import {
   Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore,
-  type ReactNode, type RefObject,
+  type DragEvent, type ReactNode, type RefObject,
 } from 'react';
 import { cn } from '../libs/utils/cn.js';
 import { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine.js';
@@ -36,6 +36,7 @@ import type { CastApi } from './parts/CastController.js';
 // `enableCast` is on.
 const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => ({ default: m.SettingsPanel })));
 const SkipController = lazy(() => import('./parts/SkipController.js'));
+const SubtitleSearch = lazy(() => import('./parts/SubtitleSearch.js'));
 const StatsPanel = lazy(() => import('./parts/StatsPanel.js'));
 const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
 const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
@@ -44,6 +45,7 @@ const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
 const VttLoader = lazy(() => import('./parts/VttLoader.js'));
 
 /** Stable empties, so the fetch hook's identity checks hold. */
+const MAX_DROPPED_SUBTITLE_BYTES = 5 * 1024 * 1024;
 const NO_SKIP_OPTIONS: SkipOptions = {};
 const NO_CHAPTERS: Chapter[] = [];
 const NO_TILES: StoryboardTile[] = [];
@@ -140,7 +142,7 @@ export interface VideoPlayerChromeProps {
 
 export function VideoPlayerChrome({
   videoRef, children, skin = false, theme, slots, onToggleFullscreen,
-  src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
+  src = '', poster, title, qualities, subtitles: subtitleProp, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
   gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, onCastStateChange,
@@ -248,6 +250,17 @@ export function VideoPlayerChrome({
     const id = window.setTimeout(() => setOffsetFlash(false), 2000);
     return () => window.clearTimeout(id);
   }, [offsetFlash, subtitleOffset]);
+  // The tracks the page supplied plus any subtitle file the viewer dropped on the player.
+  const [dropped, setDropped] = useState<SubtitleTrack[]>([]);
+  const droppedRef = useRef<SubtitleTrack[]>([]);
+  useEffect(() => { droppedRef.current = dropped; }, [dropped]);
+  useEffect(() => () => { droppedRef.current.forEach((track) => URL.revokeObjectURL(track.src)); }, []);
+  const subtitles = useMemo(
+    () => (dropped.length === 0 ? subtitleProp : [...(subtitleProp ?? []), ...dropped]),
+    [subtitleProp, dropped],
+  );
+  const [showSearch, setShowSearch] = useState(false);
+  const [dropping, setDropping] = useState(false);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles, offset: subtitleOffset });
   const secondaryTranslation = useVideoPlayerStore(s => s.secondaryTranslation);
   const setSecondaryTranslation = useVideoPlayerStore(s => s.setSecondaryTranslation);
@@ -270,6 +283,24 @@ export function VideoPlayerChrome({
   const miniOn = miniEnabled(miniPlayer, touchDevice) && !docPip.active;
   const mini = useMiniPlayer({ enabled: miniOn, skin, playing, fullscreen: isFullscreen });
   const { setContainer: setMiniContainer, setPlaceholder: setMiniPlaceholder } = mini;
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+    e.preventDefault();
+    setDropping(true);
+  }, []);
+  const handleDrop = useCallback(async (e: DragEvent<HTMLDivElement>) => {
+    const file = Array.from(e.dataTransfer.files).find((f) => /\.(srt|vtt|ass|ssa)$/i.test(f.name));
+    setDropping(false);
+    if (!file) return;   // not a subtitle file: leave it to the page
+    e.preventDefault();
+    if (file.size > MAX_DROPPED_SUBTITLE_BYTES) return;
+    const text = await file.text();
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const track: SubtitleTrack = { label: file.name, src: URL.createObjectURL(blob), local: true };
+    const index = (subtitleProp?.length ?? 0) + droppedRef.current.length;
+    setDropped((list) => [...list, track]);
+    setSelectedSubtitle(index);
+  }, [subtitleProp, setSelectedSubtitle]);
   const containerCallbackRef = useCallback((el: HTMLDivElement | null) => {
     containerRef.current = el;
     setMiniContainer(el);
@@ -488,11 +519,14 @@ export function VideoPlayerChrome({
       tabIndex={0}
       aria-label={title ? t('videoTitled', { title }) : t('videoPlayer')}
       dir={dictionary.dir ?? 'ltr'}
-      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', mini.floating && 'is-mini', className)}
+      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', mini.floating && 'is-mini', dropping && 'is-dropping', className)}
       data-kui-mini={mini.floating ? miniCorner : undefined}
       data-kui-theme={theme}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
+      onDragOver={handleDragOver}
+      onDragLeave={() => setDropping(false)}
+      onDrop={handleDrop}
       onFocus={handleFocusIn}
       onBlur={handleFocusOut}
       onPointerDownCapture={notePointer}
@@ -575,7 +609,7 @@ export function VideoPlayerChrome({
             src={src}
             title={title}
             poster={poster}
-            subtitles={subtitles}
+            subtitles={subtitleProp}
             queue={castQueue}
             receiverAppId={castReceiverAppId}
             onCastStateChange={onCastStateChange}
@@ -619,6 +653,7 @@ export function VideoPlayerChrome({
               applyQuality={applyQuality}
               applySpeed={applySpeed}
               applySubtitle={applySubtitle}
+              onSearchSubtitles={() => { setShowSearch(true); closeSettings(); }}
               subtitleOffset={subtitleOffset}
               resetSubtitleOffset={() => { setSubtitleOffset(0); closeSettings(); }}
               applySecondary={applySecondary}
@@ -700,6 +735,17 @@ export function VideoPlayerChrome({
       {skipSegments && chapterList.length > 0 && (
         <Suspense fallback={null}>
           <SkipController chapters={chapterList} options={skipSegments === true ? NO_SKIP_OPTIONS : skipSegments} />
+        </Suspense>
+      )}
+
+      {showSearch && primaryTrack && (
+        <Suspense fallback={null}>
+          <SubtitleSearch
+            src={primaryTrack.src}
+            offset={subtitleOffset}
+            onSeek={(time) => engine.seek(time)}
+            onClose={() => setShowSearch(false)}
+          />
         </Suspense>
       )}
 

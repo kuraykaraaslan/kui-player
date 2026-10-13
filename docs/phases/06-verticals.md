@@ -145,6 +145,12 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   1/2/3/5/10 tekrar, aralık başına hız hafızası.
 - **Doğrulanmadı:** gerçek `requestVideoFrameCallback` yolu tarayıcıda denenmedi (testler
   `timeupdate` yedeğini sürüyor); kare hızı ölçümü gerçek bir videoyla doğrulanmadı.
-- **6.1, 6.2, 6.5, 6.6 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
+- **6.2 (kısmen yapıldı):** `g` / `h` ile ±0,1 sn altyazı kaydırma (gösterge, menüden sıfırlama,
+  `persist` ile kaynak başına hatırlama), altyazı arama + cue'ya seek (gecikme dahil), harici altyazı
+  dosyası sürükle-bırak (SRT/VTT/ASS, bellekte; yüklenmez, `persist` ile hatırlanmaz) ve çift dil
+  (9.5). *Yapılmadı:* altyazı **düzenleyici** (cue metni/zamanı düzenleme, dışa aktarma). Not: maddedeki
+  `[` / `]` tuşları bölüm gezinmesine ayrılmıştı (10.2), bu yüzden `g` / `h` kullanıldı. Dosya boyutu
+  sınırı 5 MB; sürükle-bırak yalnızca Chromium/Firefox masaüstünde denenmedi — testler jsdom'da.
+- **6.1, 6.5, 6.6 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
   ürün kararları.
 

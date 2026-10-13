@@ -58,6 +58,9 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  searchSubtitles: string;
+  searchPlaceholder: string;
+  noMatches: string;
   'shortcut.subtitleEarlier': string;
   'shortcut.subtitleLater': string;
   subtitleDelay: string;
@@ -211,6 +214,9 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  searchSubtitles: "Search subtitles",
+  searchPlaceholder: "Search the dialogue…",
+  noMatches: "No matches",
   'shortcut.subtitleEarlier': "Subtitles earlier (−0.1 s)",
   'shortcut.subtitleLater': "Subtitles later (+0.1 s)",
   subtitleDelay: "Subtitle delay: {value}",
