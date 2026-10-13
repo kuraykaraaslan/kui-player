@@ -51,11 +51,11 @@ Reklam göstermek değil, **stream içindeki işaretleri olay olarak vermek**. F
 
 DRM'in tamamlayıcısı: sızıntıyı kullanıcıya bağlayabilmek için.
 
-- [ ] `watermark` seçeneği: metin (kullanıcı ID/e-posta) + opaklık + konum
-- [ ] Konum **periyodik olarak** değişir (kenarlara sabitlenmiş filigran kırpılabilir)
-- [ ] Tam ekranda ve mini oynatıcıda ([9.2](./09-ux-accessibility.md)) da görünür kalır
-- [ ] DOM'dan kaldırılırsa/gizlenirse oynatmayı duraklatma seçeneği (MutationObserver)
-- [ ] Dürüst not: ekran kaydını engellemez, caydırıcıdır
+- [x] `watermark` seçeneği: metin (kullanıcı ID/e-posta) + opaklık + konum
+- [x] Konum **periyodik olarak** değişir (kenarlara sabitlenmiş filigran kırpılabilir)
+- [x] Tam ekranda görünür kalır (mark oynatıcı container'ının içinde). Mini oynatıcı ([9.2](./09-ux-accessibility.md)) henüz yok; gelince doğrulanacak
+- [x] DOM'dan kaldırılırsa/gizlenirse oynatmayı duraklatma seçeneği (MutationObserver)
+- [x] Dürüst not: ekran kaydını engellemez, caydırıcıdır
 
 ## 8.5 — Çevrimdışı izleme 🔴 L · opsiyonel
 

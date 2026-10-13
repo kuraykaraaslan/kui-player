@@ -198,3 +198,46 @@ describe('live streams', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'LIVE' })).toBeDisabled());
   });
 });
+
+describe('watermark', () => {
+  it('renders the text inside the player container, so fullscreen keeps it', () => {
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} watermark={{ text: 'user-42' }} />,
+    );
+    return waitFor(() => {
+      const mark = container.querySelector('.kui-player .kui-watermark');
+      expect(mark?.textContent).toBe('user-42');
+    });
+  });
+
+  it('pauses and rebuilds the mark when it is removed (pauseOnTamper)', async () => {
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} watermark={{ text: 'user-42', pauseOnTamper: true }} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    const pause = vi.spyOn(video, 'pause');
+    const mark = await waitFor(() => {
+      const el = container.querySelector('.kui-watermark');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    mark.remove();
+    await waitFor(() => expect(pause).toHaveBeenCalled());
+    await waitFor(() => expect(container.querySelector('.kui-watermark')?.textContent).toBe('user-42'));
+  });
+
+  it('pauses when the mark is hidden with inline style', async () => {
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} watermark={{ text: 'user-42', pauseOnTamper: true }} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    const pause = vi.spyOn(video, 'pause');
+    const mark = await waitFor(() => {
+      const el = container.querySelector('.kui-watermark');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    mark.style.display = 'none';
+    await waitFor(() => expect(pause).toHaveBeenCalled());
+  });
+});

@@ -12,6 +12,8 @@ export {
 export { parseTimeParam, readUrlTime, buildShareUrl } from './videoplayer/videoplayer.share.js';
 export { DEFAULT_SHORTCUTS, buildKeymap, resolveShortcuts } from './videoplayer/videoplayer.shortcuts.js';
 export type { ShortcutAction, ShortcutOverrides } from './videoplayer/videoplayer.shortcuts.js';
+export { nextWatermarkSlot } from './videoplayer/videoplayer.watermark.js';
+export type { WatermarkOptions } from './videoplayer/videoplayer.watermark.js';
 export { findAt } from './videoplayer/videoplayer.timeline.js';
 export type { VttCue, Chapter, StoryboardTile } from './videoplayer/videoplayer.vtt.js';
 export { detectFormat } from './videoplayer/videoplayer.subtitles.js';

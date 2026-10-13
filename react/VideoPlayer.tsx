@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { WatermarkOptions } from '../modules/videoplayer/videoplayer.watermark.js';
 import type { ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { readUrlTime } from '../modules/videoplayer/videoplayer.share.js';
 import type { ShareOptions } from './parts/ShareController.js';
@@ -19,6 +20,7 @@ import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
 const MediaSessionController = lazy(() => import('./parts/MediaSessionController.js'));
+const Watermark = lazy(() => import('./parts/Watermark.js'));
 const ShareController = lazy(() => import('./parts/ShareController.js'));
 const PersistenceController = lazy(() => import('./parts/PersistenceController.js'));
 const PlaylistController = lazy(() => import('./parts/PlaylistController.js'));
@@ -54,6 +56,11 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * here" button. Off by default; pass `true` or `{ param, onShare }`.
    */
   share?: boolean | ShareOptions;
+  /**
+   * A visible, moving text mark (user id, e-mail) that stays on in fullscreen.
+   * Deters leaks; it cannot stop screen recording.
+   */
+  watermark?: WatermarkOptions;
   /** Remap or disable keyboard shortcuts; `?` opens the key list. */
   shortcuts?: ShortcutOverrides | false;
   /** Your own nodes in named positions of the chrome. */
@@ -103,7 +110,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -251,6 +258,12 @@ function VideoPlayerInner({
             subtitles={effectiveSubtitles}
             skipResume={urlTime !== null}
           />
+        </Suspense>
+      )}
+
+      {watermark?.text && (
+        <Suspense fallback={null}>
+          <Watermark options={watermark} />
         </Suspense>
       )}
 

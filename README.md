@@ -456,6 +456,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `thumbnails` | `string` | WebVTT storyboard for seek previews |
 | `playlist` / `playlistIndex` / `onPlaylistIndexChange` / `playlistCountdown` | — | play through a list |
 | `persist` | `boolean \| PersistOptions` | remember position and preferences; **off by default** |
+| `watermark` | `{ text, opacity?, intervalMs?, pauseOnTamper? }` | visible moving text mark (user id / e-mail), kept in fullscreen. Deters leaks; cannot stop screen recording |
 | `shortcuts` | `{ [action]: key \| key[] \| false } \| false` | remap or disable keyboard shortcuts |
 | `share` | `boolean \| { param?, onShare? }` | start at `?t=90` / `#t=1m30s` and show a "Share from here" button; **off by default** |
 | `mediaSession` | `boolean` | OS media controls, default `true` |
