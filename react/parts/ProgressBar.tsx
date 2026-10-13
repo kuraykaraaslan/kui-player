@@ -28,6 +28,8 @@ type ProgressBarProps = {
   chapters: Chapter[];
   /** Ad-break spans as percentages of the bar. */
   adSpans?: AdSpan[];
+  /** Bar heights 0–1: draws a waveform behind the played part. */
+  peaks?: number[] | null;
   /** The A-B loop range as a percentage span. */
   loopSpan?: { left: number; width: number } | null;
   tiles: StoryboardTile[];
@@ -44,7 +46,7 @@ const PAGE_STEP_RATIO = 0.1;
 export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function ProgressBar(
   {
     progress, buffered, seekHoverRatio, hoverTime, valueText, duration,
-    hoverSeconds, chapters, tiles, adSpans, loopSpan,
+    hoverSeconds, chapters, tiles, adSpans, loopSpan, peaks,
     onSeek, onSeekMouseMove, onSeekLeave, onScrubStart, onScrubMove, onScrubEnd,
     onSeekBy, onSeekToRatio,
   },
@@ -85,7 +87,8 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
       onPointerCancel={onScrubEnd}
       onKeyDown={onKeyDown}
     >
-      <div ref={ref} className="kui-seek-track">
+      <div ref={ref} className={peaks ? 'kui-seek-track kui-seek-track--wave' : 'kui-seek-track'}>
+        {peaks && <WaveformBars peaks={peaks} progress={progress} />}
         <div className="kui-seek-buffered" style={{ width: `${buffered}%` }} />
         <ChapterTrack chapters={chapters} duration={duration} progress={progress} />
         {loopSpan && (
@@ -117,3 +120,32 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
     </div>
   );
 });
+
+/**
+ * Two layers of the same bars: the full wave dimmed, and the played part on
+ * top, clipped to the playhead. The slider around it keeps all the keyboard
+ * and screen-reader behaviour; this is only what it looks like.
+ */
+function WaveformBars({ peaks, progress }: Readonly<{ peaks: number[]; progress: number }>) {
+  const bar = 100 / peaks.length;
+  const path = peaks
+    .map((p, i) => {
+      const h = Math.max(4, p * 100);
+      return `M${(i * bar + bar * 0.15).toFixed(3)} ${((100 - h) / 2).toFixed(2)}h${(bar * 0.7).toFixed(3)}v${h.toFixed(2)}h-${(bar * 0.7).toFixed(3)}z`;
+    })
+    .join('');
+  return (
+    <>
+      <svg className="kui-wave kui-wave--base" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={path} /></svg>
+      <svg
+        className="kui-wave kui-wave--played"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        style={{ clipPath: `inset(0 ${100 - Math.max(0, Math.min(100, progress))}% 0 0)` }}
+      >
+        <path d={path} />
+      </svg>
+    </>
+  );
+}

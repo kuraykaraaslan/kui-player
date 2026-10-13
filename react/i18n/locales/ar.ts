@@ -48,6 +48,8 @@ export const ar: PartialDictionary = {
   resumeFrom: 'المتابعة من {time}؟',
   resume: 'متابعة',
   dismiss: 'تجاهل',
+  transcript: "النص",
+  noTranscript: "لا يحتوي هذا المسار على نص.",
   searchSubtitles: "البحث في الترجمة",
   searchPlaceholder: "ابحث في الحوار…",
   noMatches: "لا نتائج",

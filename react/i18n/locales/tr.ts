@@ -48,6 +48,8 @@ export const tr: PartialDictionary = {
   resumeFrom: '{time} konumundan devam edilsin mi?',
   resume: 'Devam et',
   dismiss: 'Kapat',
+  transcript: "Transkript",
+  noTranscript: "Bu izde metin yok.",
   searchSubtitles: "Altyazıda ara",
   searchPlaceholder: "Diyalogda ara…",
   noMatches: "Eşleşme yok",

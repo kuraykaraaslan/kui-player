@@ -58,6 +58,8 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  transcript: string;
+  noTranscript: string;
   searchSubtitles: string;
   searchPlaceholder: string;
   noMatches: string;
@@ -214,6 +216,8 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  transcript: "Transcript",
+  noTranscript: "This track has no text.",
   searchSubtitles: "Search subtitles",
   searchPlaceholder: "Search the dialogue…",
   noMatches: "No matches",

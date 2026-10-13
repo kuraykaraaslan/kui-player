@@ -36,6 +36,8 @@ import type { CastApi } from './parts/CastController.js';
 // `enableCast` is on.
 const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => ({ default: m.SettingsPanel })));
 const SkipController = lazy(() => import('./parts/SkipController.js'));
+const WaveformLoader = lazy(() => import('./parts/WaveformLoader.js'));
+const Transcript = lazy(() => import('./parts/Transcript.js'));
 const SubtitleSearch = lazy(() => import('./parts/SubtitleSearch.js'));
 const StatsPanel = lazy(() => import('./parts/StatsPanel.js'));
 const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
@@ -45,6 +47,7 @@ const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
 const VttLoader = lazy(() => import('./parts/VttLoader.js'));
 
 /** Stable empties, so the fetch hook's identity checks hold. */
+const WAVE_BARS = 160;
 const MAX_DROPPED_SUBTITLE_BYTES = 5 * 1024 * 1024;
 const NO_SKIP_OPTIONS: SkipOptions = {};
 const NO_CHAPTERS: Chapter[] = [];
@@ -118,6 +121,18 @@ export interface VideoPlayerChromeProps {
   autoFullscreenOnLandscape?: boolean;
   /** Start with audio description on, when the stream offers a description track. */
   audioDescription?: boolean;
+  /**
+   * A podcast / audio layout: big artwork (`poster`), always-visible controls, an
+   * optional waveform and a transcript button. The `<video>` element still plays
+   * the audio; it is just not drawn.
+   */
+  audioOnly?: boolean;
+  /**
+   * Draw a waveform on the seek bar: a peaks array, a URL to a peaks JSON
+   * (wavesurfer or BBC `audiowaveform`), or `'decode'` to compute it from the
+   * audio in the browser (downloads and decodes the whole file; small files only).
+   */
+  waveform?: string | number[];
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /**
@@ -145,7 +160,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles: subtitleProp, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, audioOnly = false, waveform, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -225,7 +240,7 @@ export function VideoPlayerChrome({
 
   useEffect(() => { engine.setChapters(chapterList); }, [engine, chapterList]);
 
-  const effectiveControls = isCasting
+  const effectiveControls = isCasting || audioOnly
     ? true
     : engine.controlsVisible !== undefined
       ? engine.controlsVisible
@@ -261,6 +276,9 @@ export function VideoPlayerChrome({
   );
   const [showSearch, setShowSearch] = useState(false);
   const [dropping, setDropping] = useState(false);
+  const [peaks, setPeaks] = useState<number[] | null>(null);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const transcriptTrack = subtitles?.[selectedSubtitle ?? 0];
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles, offset: subtitleOffset });
   const secondaryTranslation = useVideoPlayerStore(s => s.secondaryTranslation);
   const setSecondaryTranslation = useVideoPlayerStore(s => s.setSecondaryTranslation);
@@ -519,7 +537,7 @@ export function VideoPlayerChrome({
       tabIndex={0}
       aria-label={title ? t('videoTitled', { title }) : t('videoPlayer')}
       dir={dictionary.dir ?? 'ltr'}
-      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', mini.floating && 'is-mini', dropping && 'is-dropping', className)}
+      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', audioOnly && 'kui-player--audio', mini.floating && 'is-mini', dropping && 'is-dropping', className)}
       data-kui-mini={mini.floating ? miniCorner : undefined}
       data-kui-theme={theme}
       onMouseMove={() => engine.resetHideTimer()}
@@ -536,6 +554,33 @@ export function VideoPlayerChrome({
         : undefined}
     >
       {children}
+
+      {audioOnly && (
+        <>
+          {!showTranscript && poster && <img className="kui-artwork" src={poster} alt="" />}
+          {showTranscript && transcriptTrack && (
+            <Suspense fallback={null}>
+              <Transcript src={transcriptTrack.src} offset={subtitleOffset} />
+            </Suspense>
+          )}
+          {transcriptTrack && (
+            <button
+              type="button"
+              className="kui-btn-outline kui-transcript-toggle"
+              aria-pressed={showTranscript}
+              onClick={() => setShowTranscript((v) => !v)}
+            >
+              {t('transcript')}
+            </button>
+          )}
+        </>
+      )}
+
+      {waveform !== undefined && (
+        <Suspense fallback={null}>
+          <WaveformLoader waveform={waveform} src={typeof src === 'string' ? src : ''} buckets={WAVE_BARS} onPeaks={setPeaks} />
+        </Suspense>
+      )}
 
       {mini.floating && (
         <div className="kui-mini-bar">
@@ -691,6 +736,7 @@ export function VideoPlayerChrome({
               : (isLive && dvrWindow > 0 ? dvrStart + seekHoverRatio * dvrWindow : seekHoverRatio * duration)}
             chapters={chapterList}
             adSpans={adSpanList}
+            peaks={peaks}
             loopSpan={loopSpan}
             tiles={tiles}
             valueText={isLive

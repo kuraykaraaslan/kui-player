@@ -96,6 +96,18 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * (press `a` to mark A, B, then clear). Off by default; loaded on demand.
    */
   frameTools?: boolean | FrameToolsOptions;
+  /**
+   * A podcast / audio layout: big artwork (`poster`), always-visible controls, an
+   * optional waveform and a transcript button. The `<video>` element still plays
+   * the audio; it is just not drawn.
+   */
+  audioOnly?: boolean;
+  /**
+   * Draw a waveform on the seek bar: a peaks array, a URL to a peaks JSON
+   * (wavesurfer or BBC `audiowaveform`), or `'decode'` to compute it from the
+   * audio in the browser (downloads and decodes the whole file; small files only).
+   */
+  waveform?: string | number[];
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -152,7 +164,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioDescription, signLanguage, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -233,6 +245,8 @@ function VideoPlayerInner({
       shortcuts={shortcuts}
       skipSegments={skipSegments}
       miniPlayer={miniPlayer}
+      audioOnly={audioOnly}
+      waveform={waveform}
       translation={translation}
       documentPictureInPicture={documentPictureInPicture}
       audioDescription={audioDescription}

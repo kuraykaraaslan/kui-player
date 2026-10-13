@@ -97,7 +97,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "35 kB"
+      "limit": "36.5 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -109,7 +109,7 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "42 kB"
+      "limit": "44 kB"
     },
     {
       "name": "facade (click-to-load cover)",
@@ -124,7 +124,7 @@
     {
       "name": "stylesheet",
       "path": "dist/styles.css",
-      "limit": "6.5 kB"
+      "limit": "7 kB"
     },
     {
       "name": "skin mode (bundler entry)",
@@ -139,7 +139,7 @@
       "path": [
         "dist/locales/index.js"
       ],
-      "limit": "8.5 kB"
+      "limit": "9 kB"
     }
   ],
   "peerDependencies": {

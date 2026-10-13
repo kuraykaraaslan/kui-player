@@ -980,3 +980,90 @@ describe('subtitle search and dropped files', () => {
     expect(prevented).toBe(false);   // not default-prevented: the browser/page may handle it
   });
 });
+
+describe('audio layout and waveform', () => {
+  const POSTER = 'https://example.com/cover.jpg';
+  const TRANSCRIPT = '1\n00:00:02,000 --> 00:00:05,000\nWelcome to the show.\n\n2\n00:00:06,000 --> 00:00:09,000\nToday: waveforms.\n';
+  let fetchSpy: MockInstance<typeof fetch>;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === '/peaks.json') return new Response(JSON.stringify({ bits: 8, data: [-10, 20, -128, 64, -5, 5] }), { status: 200 });
+      if (url === '/en.srt') return new Response(TRANSCRIPT, { status: 200 });
+      return new Response('', { status: 404 });
+    });
+  });
+  afterEach(() => { fetchSpy.mockRestore(); });
+
+  it('shows artwork, keeps the controls up, and hides the video without stopping it', async () => {
+    const { container } = render(<VideoPlayer src="/episode.mp3" poster={POSTER} audioOnly enableCast={false} />);
+    await waitFor(() => expect(container.querySelector('.kui-player--audio')).not.toBeNull());
+    expect(container.querySelector('.kui-artwork')).toHaveAttribute('src', POSTER);
+    expect(container.querySelector('.kui-chrome')).not.toHaveClass('is-hidden');
+    expect(container.querySelector('video')).not.toBeNull();
+  });
+
+  it('draws a waveform from a peaks array, and keeps the seek slider', async () => {
+    const { container } = render(
+      <VideoPlayer src="/episode.mp3" audioOnly waveform={[0.1, 0.8, 0.4, 1]} enableCast={false} />,
+    );
+    await waitFor(() => expect(container.querySelectorAll('.kui-wave')).toHaveLength(2));
+    expect(screen.getByRole('slider', { name: 'Seek' })).toBeInTheDocument();   // still the accessible control
+  });
+
+  it('draws it from a peaks file by URL', async () => {
+    const { container } = render(<VideoPlayer src="/episode.mp3" audioOnly waveform="/peaks.json" enableCast={false} />);
+    await waitFor(() => expect(container.querySelectorAll('.kui-wave')).toHaveLength(2), { timeout: 4000 });
+    expect(container.querySelector('.kui-wave--base path')?.getAttribute('d')).toBeTruthy();
+  });
+
+  it('falls back to a plain bar when the peaks cannot be loaded', async () => {
+    const { container } = render(<VideoPlayer src="/episode.mp3" audioOnly waveform="/missing.json" enableCast={false} />);
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('/missing.json', expect.anything()), { timeout: 4000 });
+    expect(container.querySelector('.kui-wave')).toBeNull();
+  });
+
+  it('computes the waveform from the audio itself with "decode"', async () => {
+    const decodeAudioData = vi.fn(async () => ({
+      numberOfChannels: 1,
+      getChannelData: () => Float32Array.from([0.1, 0.5, 0.2, 1, 0.3, 0.2, 0.1, 0.9]),
+    }));
+    const close = vi.fn(async () => {});
+    (globalThis as { AudioContext?: unknown }).AudioContext = class { decodeAudioData = decodeAudioData; close = close; };
+    fetchSpy.mockImplementation(async () => new Response(new ArrayBuffer(8), { status: 200 }));
+    try {
+      const { container } = render(<VideoPlayer src="/episode.mp3" audioOnly waveform="decode" enableCast={false} />);
+      await waitFor(() => expect(container.querySelectorAll('.kui-wave')).toHaveLength(2), { timeout: 4000 });
+      expect(decodeAudioData).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
+    } finally {
+      delete (globalThis as { AudioContext?: unknown }).AudioContext;
+    }
+  });
+
+  it('opens a transcript, marks the line being spoken, and seeks on click', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <VideoPlayer src="/episode.mp3" audioOnly poster={POSTER} enableCast={false}
+        subtitles={[{ label: 'English', srclang: 'en', src: '/en.srt' }]} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 120 });
+    await user.click(await screen.findByRole('button', { name: 'Transcript' }));
+    expect(await screen.findByText('Welcome to the show.')).toBeInTheDocument();
+    expect(container.querySelector('.kui-artwork')).toBeNull();            // the transcript takes the artwork's place
+
+    act(() => { emit(video, 'timeupdate', { currentTime: 7 }); });
+    await waitFor(() => expect(screen.getByText('Today: waveforms.').closest('li')).toHaveAttribute('aria-current', 'true'));
+
+    await user.click(screen.getByText('Welcome to the show.'));
+    expect(video.currentTime).toBe(2);
+  });
+
+  it('is an ordinary player unless asked', async () => {
+    const { container } = render(<VideoPlayer src="/episode.mp3" poster={POSTER} enableCast={false} />);
+    await waitFor(() => expect(container.querySelector('.kui-player')).not.toBeNull());
+    expect(container.querySelector('.kui-artwork')).toBeNull();
+    expect(container.querySelector('.kui-player--audio')).toBeNull();
+  });
+});

@@ -48,6 +48,8 @@ export const de: PartialDictionary = {
   resumeFrom: 'Bei {time} fortsetzen?',
   resume: 'Fortsetzen',
   dismiss: 'Schließen',
+  transcript: "Transkript",
+  noTranscript: "Diese Spur enthält keinen Text.",
   searchSubtitles: "Untertitel durchsuchen",
   searchPlaceholder: "Dialog durchsuchen …",
   noMatches: "Keine Treffer",

@@ -48,6 +48,8 @@ export const fr: PartialDictionary = {
   resumeFrom: 'Reprendre à {time} ?',
   resume: 'Reprendre',
   dismiss: 'Ignorer',
+  transcript: "Transcription",
+  noTranscript: "Cette piste n'a pas de texte.",
   searchSubtitles: "Rechercher dans les sous-titres",
   searchPlaceholder: "Rechercher dans les dialogues…",
   noMatches: "Aucun résultat",

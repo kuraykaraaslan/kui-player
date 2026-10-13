@@ -21,6 +21,7 @@ import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter
  *   ?theme=cinema apply a theme preset
  *   ?mini=1       float the player into a corner when scrolled away while playing
  *   ?docpip=1     Document Picture-in-Picture for the PiP button
+ *   ?audio=1      podcast layout with a waveform and a transcript button
  *   ?facade=1     show only a poster and a play button until clicked
  */
 const params = new URLSearchParams(location.search);
@@ -90,6 +91,10 @@ createRoot(document.getElementById('stage')!).render(
     thumbnails={params.get('chapters') ? '/media/storyboard.vtt' : undefined}
     persist={params.get('persist') === '1'}
     miniPlayer={params.get('mini') === '1'}
+    audioOnly={params.get('audio') === '1'}
+    waveform={params.get('audio') === '1'
+      ? Array.from({ length: 120 }, (_, i) => 0.2 + 0.8 * Math.abs(Math.sin(i / 7) * Math.cos(i / 17)))
+      : undefined}
     documentPictureInPicture={params.get('docpip') === '1'}
     locale={locale && locale in locales ? locales[locale as keyof typeof locales] : undefined}
     qualities={params.get('adapter') ? undefined : [

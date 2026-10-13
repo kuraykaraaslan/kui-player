@@ -151,6 +151,14 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   (9.5). *Yapılmadı:* altyazı **düzenleyici** (cue metni/zamanı düzenleme, dışa aktarma). Not: maddedeki
   `[` / `]` tuşları bölüm gezinmesine ayrılmıştı (10.2), bu yüzden `g` / `h` kullanıldı. Dosya boyutu
   sınırı 5 MB; sürükle-bırak yalnızca Chromium/Firefox masaüstünde denenmedi — testler jsdom'da.
-- **6.1, 6.5, 6.6 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
+- **6.6 (yapıldı, kısmen):** `audioOnly` podcast düzeni (büyük kapak, hep görünür kontroller, video
+  çizilmez ama oynar), `waveform` ile dalga formu seek çubuğunda (peaks dizisi, wavesurfer /
+  `audiowaveform` JSON'u ya da `'decode'` ile Web Audio'dan hesaplama; 60 MB sınırı), bölüm
+  işaretleri mevcut chapters çubuğundan, transkript paneli (altyazı izinden, geçerli satır
+  işaretli, tıklayınca seek). Gerçek Chromium'da ekran görüntüsüyle ve Playwright ile görülüp
+  doğrulandı (bir CSS özgüllük hatası böyle yakalandı). *Yapılmadı:* RTL'de dalga formunun aynalanması,
+  ayrı bir "audio-only skin" paketi (skin modu sürümü), peaks üretim betiği. `'decode'` yolu gerçek bir
+  ses dosyasıyla denenmedi (testler Web Audio'yu taklit ediyor).
+- **6.1, 6.5 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
   ürün kararları.
 
