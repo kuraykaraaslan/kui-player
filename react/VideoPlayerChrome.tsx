@@ -24,6 +24,7 @@ import type { CastApi } from './parts/CastController.js';
 // reachable after a click, and the Cast SDK plumbing never loads at all unless
 // `enableCast` is on.
 const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => ({ default: m.SettingsPanel })));
+const StatsPanel = lazy(() => import('./parts/StatsPanel.js'));
 const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
 const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
 const CastController = lazy(() => import('./parts/CastController.js'));
@@ -124,6 +125,8 @@ export function VideoPlayerChrome({
   const settingsPanelRef = useRef<HTMLDivElement>(null);
   const [showAbout, setShowAbout] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const toggleStats = useCallback(() => setShowStats((v) => !v), []);
   const keymap = useMemo(() => buildKeymap(shortcuts), [shortcuts]);
   const toggleHelp = useCallback(() => setShowHelp((v) => !v), []);
 
@@ -198,7 +201,7 @@ export function VideoPlayerChrome({
   const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
-  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp });
+  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats });
   const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
   const suppressRef = useRef<() => boolean>(() => false);
@@ -529,6 +532,12 @@ export function VideoPlayerChrome({
           />
         </div>
       </div>
+
+      {showStats && (
+        <Suspense fallback={null}>
+          <StatsPanel onClose={() => setShowStats(false)} />
+        </Suspense>
+      )}
 
       {showHelp && (
         <Suspense fallback={null}>

@@ -10,15 +10,16 @@ type Options = {
   /** Number of subtitle tracks; `c` does nothing without any. */
   subtitleCount: number;
   onToggleHelp: () => void;
+  onToggleStats: () => void;
 };
 
 /** Frame length when the real rate is unknown — the video element does not expose it. */
 const FRAME_SECONDS = 1 / 30;
 
-export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp }: Options) {
+export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp, onToggleStats }: Options) {
   // Latest-value ref so the listener is attached once and never goes stale.
-  const live = useRef({ keymap, subtitleCount, onToggleHelp });
-  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp }; });
+  const live = useRef({ keymap, subtitleCount, onToggleHelp, onToggleStats });
+  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp, onToggleStats }; });
   const lastCaption = useRef(0);
 
   useEffect(() => {
@@ -46,8 +47,8 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
       // Modified keys belong to the browser and the screen reader (Ctrl+L, Alt+←…).
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp } = live.current;
-      const action = lookupShortcut(map, e.key);
+      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp, onToggleStats: toggleStats } = live.current;
+      const action = lookupShortcut(map, e.key, e.shiftKey);
       if (!action) return;
       e.preventDefault();
 
@@ -76,6 +77,7 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
         case 'start': engine.seek(0); break;
         case 'end': if (s.duration > 0) engine.seek(s.duration); break;
         case 'help': toggleHelp(); break;
+        case 'stats': toggleStats(); break;
       }
     };
     document.addEventListener('keydown', handler);

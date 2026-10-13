@@ -71,13 +71,13 @@ cihazda mı, istek sunucuya gidiyor mu) dokümandan teyit et; teyit edilemeyen p
 
 "Stats for nerds": akışı debug etmek için. Faz 7'de Cloudflare ve AWS'yi karşılaştırırken doğrudan işe yarar.
 
-- [ ] Sağ tık menüsünden ya da `Shift+I` ile açılır; varsayılan kapalı
-- [ ] Gösterilen: çözünürlük, anlık/ortalama bitrate, codec, tampon uzunluğu, düşen kare,
-      gecikme (canlıda), adapter adı (`hls`/`dash`/native), DRM durumu ([7.3](./07-drm-streaming.md))
-- [ ] Veri kaynağı QoE ([8.1](./08-streaming-ops.md)) ve `MediaAdapterHost`; yeni ölçüm yazılmaz
-- [ ] Salt okunur, "kopyala" ile panodaki metni hata raporuna eklenebilir
-- [ ] a11y: panel `role="dialog"`/`aria-label`, ekran okuyucuyu sürekli konuşturmaz (canlı bölge yok)
-- [ ] Test: bileşen testi, sahte store ile değerlerin gösterimi
+- [x] `Shift+I` ile açılır; varsayılan kapalı. Sağ tık menüsü **eklenmedi** (tarayıcının kendi menüsünü ezmek istemedik)
+- [x] Gösterilen: çözünürlük, anlık/ortalama bitrate, codec, tampon uzunluğu, düşen kare,
+      gecikme (canlıda), adapter adı (`hls`/`dash`/native), DRM durumu ([7.3](./07-drm-streaming.md) yapılınca eklenecek; şimdilik satır yok)
+- [x] Veri kaynağı QoE ([8.1](./08-streaming-ops.md)) ve `MediaAdapterHost`; yeni ölçüm yazılmaz
+- [x] Salt okunur, "kopyala" ile panodaki metni hata raporuna eklenebilir
+- [x] a11y: panel `role="dialog"`/`aria-label`, ekran okuyucuyu sürekli konuşturmaz (canlı bölge yok)
+- [x] Test: bileşen testi, sahte store ile değerlerin gösterimi
 
 ## 10.5 — Tıklayınca yüklenen kapak (facade) 🟡 M
 

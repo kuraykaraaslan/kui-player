@@ -26,6 +26,14 @@ describe('shortcut keymap', () => {
     expect(buildKeymap(false).size).toBe(0);
   });
 
+  it('resolves Shift+I to the stats panel, never to the plain i action', () => {
+    const map = buildKeymap();
+    expect(lookupShortcut(map, 'I', true)).toBe('stats');
+    expect(lookupShortcut(map, 'i')).toBe('pip');
+    expect(lookupShortcut(buildKeymap({ stats: false }), 'I', true)).toBeUndefined();
+    expect(lookupShortcut(map, '?', true)).toBe('help');   // shifted symbols keep working
+  });
+
   it('describes keys for the help list', () => {
     expect(describeKey(' ')).toBe('Space');
     expect(describeKey('ArrowLeft')).toBe('←');

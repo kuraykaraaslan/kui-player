@@ -58,6 +58,21 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  stats: string;
+  copy: string;
+  copied: string;
+  'stats.adapter': string;
+  'stats.resolution': string;
+  'stats.bitrate': string;
+  'stats.avgBitrate': string;
+  'stats.bandwidth': string;
+  'stats.codec': string;
+  'stats.buffer': string;
+  'stats.dropped': string;
+  'stats.stalls': string;
+  'stats.switches': string;
+  'stats.latency': string;
+  'shortcut.stats': string;
   shortcuts: string;
   'shortcut.playPause': string;
   'shortcut.seekBack': string;
@@ -162,6 +177,21 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  stats: "Technical info",
+  copy: "Copy",
+  copied: "Copied",
+  'stats.adapter': "Adapter",
+  'stats.resolution': "Resolution",
+  'stats.bitrate': "Bitrate",
+  'stats.avgBitrate': "Average bitrate",
+  'stats.bandwidth': "Bandwidth",
+  'stats.codec': "Codec",
+  'stats.buffer': "Buffer ahead",
+  'stats.dropped': "Dropped frames",
+  'stats.stalls': "Stalls",
+  'stats.switches': "Quality switches",
+  'stats.latency': "Latency behind live",
+  'shortcut.stats': "Technical info",
   shortcuts: "Keyboard shortcuts",
   'shortcut.playPause': "Play / pause",
   'shortcut.seekBack': "Back 10 s",

@@ -387,6 +387,7 @@ Active while the player container is focused:
 | `<` / `>` | slower / faster |
 | `Home` / `End` | start / end |
 | `?` | open the shortcut list |
+| `Shift`+`I` | technical info panel (resolution, bitrate, buffer, dropped frames, stalls; copyable) |
 | `Esc` | close the settings panel, or leave emulated fullscreen |
 
 Keys never fire with `Ctrl`/`Meta`/`Alt` held, nor while a slider or text field has focus.

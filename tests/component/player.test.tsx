@@ -215,6 +215,26 @@ describe('keyboard shortcuts', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('opens the technical info panel with Shift+I (not Picture-in-Picture) and Esc closes it', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPlayer();
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('{Shift>}I{/Shift}');
+    const dialog = await screen.findByRole('dialog', { name: 'Technical info' });
+    expect(dialog).toHaveTextContent('Resolution');
+    expect(dialog).toHaveTextContent('Dropped frames');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('leaves Shift+I alone when the stats shortcut is disabled', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPlayer({ shortcuts: { stats: false } });
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('{Shift>}I{/Shift}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('does nothing while focus is outside the player', async () => {
     const user = userEvent.setup();
     const { video } = renderPlayer();

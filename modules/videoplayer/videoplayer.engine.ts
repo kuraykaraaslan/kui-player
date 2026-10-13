@@ -5,6 +5,7 @@ import {
   type PlayerEventHandler, type PlayerEventName,
 } from './videoplayer.events.js';
 import { QoeTracker, type QoeSummary } from './videoplayer.qoe.js';
+import type { Diagnostics } from './videoplayer.diagnostics.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
 } from './videoplayer.types.js';
@@ -438,6 +439,28 @@ export class VideoPlayerEngine {
       q ? { dropped: q.droppedVideoFrames, total: q.totalVideoFrames } : null,
       this.activeAdapter?.getBandwidth?.() ?? null,
     );
+  }
+
+  /** A snapshot for the technical-info panel. */
+  getDiagnostics(): Diagnostics {
+    const v = this.video;
+    const s = this.store.getState();
+    let ahead = 0;
+    if (v) {
+      for (let i = 0; i < v.buffered.length; i += 1) {
+        if (v.buffered.start(i) <= v.currentTime && v.buffered.end(i) >= v.currentTime) {
+          ahead = v.buffered.end(i) - v.currentTime;
+        }
+      }
+    }
+    return {
+      adapter: this.activeAdapter?.name ?? 'native',
+      videoWidth: v?.videoWidth ?? 0,
+      videoHeight: v?.videoHeight ?? 0,
+      bufferSeconds: ahead,
+      liveLatency: s.isLive && s.dvrWindow > 0 ? Math.max(0, s.dvrWindow - (s.currentTime - s.dvrStart)) : null,
+      qoe: this.getQoe(),
+    };
   }
 
   private setQoePlaying(playing: boolean): void {

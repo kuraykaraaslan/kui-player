@@ -6,7 +6,7 @@
 export type ShortcutAction =
   | 'playPause' | 'seekBack' | 'seekForward' | 'volumeUp' | 'volumeDown' | 'mute'
   | 'fullscreen' | 'pip' | 'captions' | 'percent' | 'frameBack' | 'frameForward'
-  | 'slower' | 'faster' | 'start' | 'end' | 'help';
+  | 'slower' | 'faster' | 'start' | 'end' | 'help' | 'stats';
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, readonly string[]>> = {
   playPause: [' ', 'k'],
@@ -26,6 +26,7 @@ export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, readonly string[
   start: ['Home'],
   end: ['End'],
   help: ['?'],
+  stats: ['Shift+I'],
 };
 
 /**
@@ -37,7 +38,10 @@ export type ShortcutOverrides = Partial<Record<ShortcutAction, string | readonly
 export type Keymap = ReadonlyMap<string, ShortcutAction>;
 
 /** Letters match case-insensitively (Caps Lock must not disable the player). */
-const normalise = (key: string): string => (key.length === 1 ? key.toLowerCase() : key);
+const normalise = (key: string): string => {
+  if (key.length === 1) return key.toLowerCase();
+  return /^shift\+/i.test(key) ? `shift+${key.slice(6).toLowerCase()}` : key;
+};
 
 export function resolveShortcuts(
   overrides: ShortcutOverrides | false = {},
@@ -59,7 +63,15 @@ export function buildKeymap(overrides: ShortcutOverrides | false = {}): Keymap {
   return map;
 }
 
-export function lookupShortcut(keymap: Keymap, key: string): ShortcutAction | undefined {
+/**
+ * `Shift+<letter>` bindings are looked up first; a shifted letter with no such
+ * binding resolves to nothing rather than to the plain-letter action, so
+ * `Shift+I` never falls through to `i` when the stats panel is disabled.
+ */
+export function lookupShortcut(keymap: Keymap, key: string, shift = false): ShortcutAction | undefined {
+  if (shift && key.length === 1 && key.toLowerCase() !== key.toUpperCase()) {
+    return keymap.get(`shift+${key.toLowerCase()}`);
+  }
   return keymap.get(normalise(key));
 }
 
