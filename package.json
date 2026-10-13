@@ -97,7 +97,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "36.5 kB"
+      "limit": "38 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -109,7 +109,7 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "44 kB"
+      "limit": "46 kB"
     },
     {
       "name": "facade (click-to-load cover)",
@@ -132,14 +132,14 @@
         "dist/skin/index.js",
         "dist/skin/skin.js"
       ],
-      "limit": "36 kB"
+      "limit": "38 kB"
     },
     {
       "name": "locales (all six)",
       "path": [
         "dist/locales/index.js"
       ],
-      "limit": "9 kB"
+      "limit": "10 kB"
     }
   ],
   "peerDependencies": {

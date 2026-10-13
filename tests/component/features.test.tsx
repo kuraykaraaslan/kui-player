@@ -1157,3 +1157,86 @@ describe('offline viewing', () => {
     expect(screen.queryByRole('menuitemcheckbox', { name: /Offline viewing/ })).not.toBeInTheDocument();
   });
 });
+
+describe('subtitle editor', () => {
+  const SRT = '1\n00:00:01,000 --> 00:00:03,000\nHello there\n\n2\n00:00:05,000 --> 00:00:07,000\nSecond line\n';
+  let fetchSpy: MockInstance<typeof fetch>;
+  beforeEach(() => {
+    vi.stubGlobal('Blob', NodeBlob);   // jsdom's Blob has no text()
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(SRT, { status: 200 }));
+    URL.createObjectURL = vi.fn(() => 'blob:edited');
+    URL.revokeObjectURL = vi.fn();
+  });
+  afterEach(() => { fetchSpy.mockRestore(); vi.unstubAllGlobals(); });
+
+  async function openEditor(user: ReturnType<typeof userEvent.setup>) {
+    const utils = render(<VideoPlayer src={SRC} enableCast={false} subtitles={[{ label: 'English', srclang: 'en', src: '/en.srt' }]} />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Edit subtitles' }));
+    const dialog = await screen.findByRole('dialog', { name: /Edit subtitles/ });
+    await within(dialog).findAllByLabelText('Text');
+    return { ...utils, dialog };
+  }
+
+  it('lists the lines, and applying edits makes a new selected track with the changes', async () => {
+    const user = userEvent.setup();
+    const { container, dialog } = await openEditor(user);
+    const texts = within(dialog).getAllByLabelText('Text') as HTMLTextAreaElement[];
+    expect(texts.map((t) => t.value)).toEqual(['Hello there', 'Second line']);
+
+    await user.clear(texts[0]!);
+    await user.type(texts[0]!, 'Hi!');
+    const starts = within(dialog).getAllByLabelText('Start');
+    await user.clear(starts[0]!);
+    await user.type(starts[0]!, '2');                       // now 2–3 s instead of 1–3 s
+    await user.click(within(dialog).getByRole('button', { name: 'Use these edits' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // The edit was written out as WebVTT with the new text and the new start time…
+    const made = (URL.createObjectURL as unknown as { mock: { calls: [Blob][] } }).mock.calls.at(-1)![0];
+    const vtt = await made.text();
+    expect(vtt).toContain('WEBVTT');
+    expect(vtt).toContain('00:00:02.000 --> 00:00:03.000\nHi!');
+    expect(vtt).toContain('Second line');
+    // …and became a track of its own, selected, with the original still there to go back to.
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    expect(screen.getByRole('menuitemradio', { name: 'English ✎' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getAllByRole('menuitemradio', { name: 'English' }).length).toBeGreaterThan(0);
+    void container;
+  });
+
+  it('refuses nonsense times instead of guessing, and keeps the dialog open', async () => {
+    const user = userEvent.setup();
+    const { dialog } = await openEditor(user);
+    const ends = within(dialog).getAllByLabelText('End');
+    await user.clear(ends[1]!);
+    await user.type(ends[1]!, 'soon');
+    await user.click(within(dialog).getByRole('button', { name: 'Use these edits' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Check the highlighted times');
+    expect(ends[1]).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('deletes a line, adds one at the playhead, and saves SRT or WebVTT', async () => {
+    const user = userEvent.setup();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const { dialog } = await openEditor(user);
+    await user.click(within(dialog).getAllByRole('button', { name: 'Delete line' })[0]!);
+    expect(within(dialog).getAllByLabelText('Text')).toHaveLength(1);
+    await user.click(within(dialog).getByRole('button', { name: 'Add a line at the playhead' }));
+    expect(within(dialog).getAllByLabelText('Text')).toHaveLength(2);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Download SRT' }));
+    expect(click).toHaveBeenCalledTimes(1);
+    const srt = await ((URL.createObjectURL as unknown as { mock: { calls: [Blob][] } }).mock.calls.at(-1)![0]).text();
+    expect(srt).toContain('Second line');
+    expect(srt).not.toContain('Hello there');          // the deleted line is gone
+    click.mockRestore();
+  });
+});

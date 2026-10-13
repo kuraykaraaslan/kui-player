@@ -58,6 +58,16 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  editSubtitles: string;
+  applyEdits: string;
+  downloadSrt: string;
+  downloadVtt: string;
+  addCueHere: string;
+  deleteCue: string;
+  cueStart: string;
+  cueEnd: string;
+  cueText: string;
+  invalidTime: string;
   offlineViewing: string;
   offlineDownload: string;
   offlineDownloading: string;
@@ -222,6 +232,16 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  editSubtitles: "Edit subtitles",
+  applyEdits: "Use these edits",
+  downloadSrt: "Download SRT",
+  downloadVtt: "Download VTT",
+  addCueHere: "Add a line at the playhead",
+  deleteCue: "Delete line",
+  cueStart: "Start",
+  cueEnd: "End",
+  cueText: "Text",
+  invalidTime: "Check the highlighted times (e.g. 62.5 or 1:02.500).",
   offlineViewing: "Offline viewing",
   offlineDownload: "Download",
   offlineDownloading: "Downloading…",

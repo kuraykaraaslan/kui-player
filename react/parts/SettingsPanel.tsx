@@ -53,6 +53,7 @@ type SettingsPanelProps = {
   onOffline: () => void;
   subtitleOffset: number;
   onSearchSubtitles: () => void;
+  onEditSubtitles: () => void;
   resetSubtitleOffset: () => void;
   applySecondary: (index: number | null) => void;
   applySubtitleSize: (size: SubtitleFontSize) => void;
@@ -70,7 +71,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
     view, onChangeView, onAbout, qualities, subtitles, audioTracks, chapters, onSeekTo,
     selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, secondaryTranslation, translationTargets, applyTranslation, selectedAudioTrack,
     speed, subtitleFontSize, subtitleColor, subtitleBackground, subtitleEdge, subtitleFont,
-    audioDescription, onToggleAudioDescription, offline, onOffline, subtitleOffset, resetSubtitleOffset, onSearchSubtitles,
+    audioDescription, onToggleAudioDescription, offline, onOffline, subtitleOffset, resetSubtitleOffset, onSearchSubtitles, onEditSubtitles,
     applyQuality, applySpeed, applySubtitle, applySecondary, applySubtitleSize, applyAudioTrack,
     applySubtitleColor, applySubtitleBackground, applySubtitleEdge, applySubtitleFont,
   },
@@ -183,6 +184,9 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
           ))}
           {selectedSubtitle !== null && (
             <SettingsOption label={t('searchSubtitles')} selected={false} onClick={onSearchSubtitles} />
+          )}
+          {selectedSubtitle !== null && (
+            <SettingsOption label={t('editSubtitles')} selected={false} onClick={onEditSubtitles} />
           )}
           {selectedSubtitle !== null && subtitleOffset !== 0 && (
             <SettingsOption label={t('resetDelay', { value: formatSubtitleOffset(subtitleOffset) })} selected={false} onClick={resetSubtitleOffset} />

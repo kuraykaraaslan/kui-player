@@ -38,6 +38,7 @@ const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => 
 const SkipController = lazy(() => import('./parts/SkipController.js'));
 const WaveformLoader = lazy(() => import('./parts/WaveformLoader.js'));
 const Transcript = lazy(() => import('./parts/Transcript.js'));
+const SubtitleEditor = lazy(() => import('./parts/SubtitleEditor.js'));
 const SubtitleSearch = lazy(() => import('./parts/SubtitleSearch.js'));
 const StatsPanel = lazy(() => import('./parts/StatsPanel.js'));
 const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
@@ -275,6 +276,7 @@ export function VideoPlayerChrome({
     [subtitleProp, dropped],
   );
   const [showSearch, setShowSearch] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
   const [dropping, setDropping] = useState(false);
   const offline = useVideoPlayerStore(s => s.offline);
   const requestOffline = useVideoPlayerStore(s => s.requestOffline);
@@ -707,6 +709,7 @@ export function VideoPlayerChrome({
               offline={offline}
               onOffline={handleOffline}
               onSearchSubtitles={() => { setShowSearch(true); closeSettings(); }}
+              onEditSubtitles={() => { setShowEditor(true); closeSettings(); }}
               subtitleOffset={subtitleOffset}
               resetSubtitleOffset={() => { setSubtitleOffset(0); closeSettings(); }}
               applySecondary={applySecondary}
@@ -799,6 +802,26 @@ export function VideoPlayerChrome({
             offset={subtitleOffset}
             onSeek={(time) => engine.seek(time)}
             onClose={() => setShowSearch(false)}
+          />
+        </Suspense>
+      )}
+
+      {showEditor && primaryTrack && (
+        <Suspense fallback={null}>
+          <SubtitleEditor
+            label={primaryTrack.label}
+            src={primaryTrack.src}
+            onClose={() => setShowEditor(false)}
+            onApply={(cues) => {
+              // The edited version becomes a track of its own (the original stays selectable).
+              void import('../modules/videoplayer/videoplayer.subtitles.js').then(({ serializeVtt }) => {
+                const blob = new Blob([serializeVtt(cues)], { type: 'text/vtt;charset=utf-8' });
+                const track: SubtitleTrack = { label: `${primaryTrack.label} ✎`, srclang: primaryTrack.srclang, src: URL.createObjectURL(blob), local: true };
+                const index = (subtitleProp?.length ?? 0) + droppedRef.current.length;
+                setDropped((list) => [...list, track]);
+                setSelectedSubtitle(index);
+              });
+            }}
           />
         </Suspense>
       )}

@@ -36,3 +36,46 @@ export const clampSubtitleOffset = (seconds: number): number =>
 /** `+0.3 s`, `-1.5 s`, `0 s`. */
 export const formatSubtitleOffset = (seconds: number): string =>
   `${seconds > 0 ? '+' : ''}${seconds.toFixed(Math.abs(seconds) < 10 ? 1 : 0).replace(/\.0$/, '')} s`;
+
+// ── writing subtitles back out (the editor) ──────────────────────────────────
+
+export type EditableCue = { start: number; end: number; text: string };
+
+const two = (n: number) => String(n).padStart(2, '0');
+
+function clock(seconds: number, separator: '.' | ','): string {
+  const ms = Math.max(0, Math.round(seconds * 1000));
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return `${two(h)}:${two(m)}:${two(s)}${separator}${String(ms % 1000).padStart(3, '0')}`;
+}
+
+/** Cues in time order, ends never before starts, empty text dropped. */
+export function tidyCues(cues: readonly EditableCue[]): EditableCue[] {
+  return cues
+    .map((c) => ({ start: Math.max(0, c.start), end: Math.max(c.start, c.end), text: c.text.replace(/\r\n?/g, '\n').trim() }))
+    .filter((c) => c.text !== '')
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+export function serializeSrt(cues: readonly EditableCue[]): string {
+  return tidyCues(cues)
+    .map((c, i) => `${i + 1}\n${clock(c.start, ',')} --> ${clock(c.end, ',')}\n${c.text}\n`)
+    .join('\n');
+}
+
+export function serializeVtt(cues: readonly EditableCue[]): string {
+  // "-->" inside cue text would end the cue early for any VTT parser.
+  const safe = (text: string) => text.replace(/-->/g, '→');
+  return `WEBVTT\n\n${tidyCues(cues)
+    .map((c) => `${clock(c.start, '.')} --> ${clock(c.end, '.')}\n${safe(c.text)}\n`)
+    .join('\n')}`;
+}
+
+/** `1:02.5`, `00:01:02,500`, `62.5` → seconds; `null` when it is none of those. */
+export function parseEditedTime(text: string): number | null {
+  const t = text.trim().replace(',', '.');
+  if (!/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(t)) return null;
+  return t.split(':').reduce((acc, part) => acc * 60 + Number(part), 0);
+}
