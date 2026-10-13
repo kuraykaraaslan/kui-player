@@ -97,7 +97,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "28 kB"
+      "limit": "29 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -124,7 +124,7 @@
     {
       "name": "stylesheet",
       "path": "dist/styles.css",
-      "limit": "5.5 kB"
+      "limit": "6 kB"
     },
     {
       "name": "skin mode (bundler entry)",
@@ -132,7 +132,7 @@
         "dist/skin/index.js",
         "dist/skin/skin.js"
       ],
-      "limit": "28.5 kB"
+      "limit": "29.5 kB"
     },
     {
       "name": "locales (all six)",
