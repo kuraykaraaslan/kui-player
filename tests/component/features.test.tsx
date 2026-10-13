@@ -1240,3 +1240,96 @@ describe('subtitle editor', () => {
     click.mockRestore();
   });
 });
+
+describe('study mode', () => {
+  const mem = () => {
+    const map = new Map<string, string>();
+    return { map, storage: {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => { map.set(k, v); },
+      removeItem: (k: string) => { map.delete(k); },
+    } };
+  };
+  const play = (video: HTMLVideoElement, from: number, to: number) => {
+    for (let t = from; t < to; t += 1) {
+      act(() => { emit(video, 'play', { paused: false }); emit(video, 'timeupdate', { currentTime: t + 1 }); });
+    }
+  };
+
+  it('is off unless asked for', async () => {
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Notes/ })).not.toBeInTheDocument();
+  });
+
+  it('tracks what was actually watched and reports it', async () => {
+    const onProgress = vi.fn();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} learning={{ onProgress }} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    const toggle = await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 });
+    expect(toggle).toHaveTextContent('0% watched');
+
+    play(video, 0, 40);                                   // watched the first 40 s
+    act(() => { emit(video, 'timeupdate', { currentTime: 95 }); });   // …then skipped to the end
+    await waitFor(() => expect(toggle).toHaveTextContent('40% watched'));
+    expect(onProgress).toHaveBeenLastCalledWith(40);
+  });
+
+  it('keeps notes with the time they were started at, seeks on click, and exports Markdown', async () => {
+    const user = userEvent.setup();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    URL.createObjectURL = vi.fn(() => 'blob:notes');
+    URL.revokeObjectURL = vi.fn();
+    const { container } = render(<VideoPlayer src={SRC} title="Cell biology" enableCast={false} learning />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 600 });
+    act(() => { emit(video, 'timeupdate', { currentTime: 125 }); });
+    await user.click(await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 }));
+    const dialog = await screen.findByRole('dialog', { name: 'Notes' });
+
+    const input = within(dialog).getByRole('textbox');
+    await user.type(input, 'ATP is the unit of energy');
+    act(() => { emit(video, 'timeupdate', { currentTime: 200 }); });         // typing took a while
+    await user.click(within(dialog).getByRole('button', { name: 'Add' }));
+    expect(within(dialog).getByText('2:05')).toBeInTheDocument();          // stamped when typing began, not at 3:20
+    expect(within(dialog).getByText(/Notes are kept only until you leave/)).toBeInTheDocument();   // no persist → says so
+
+    await user.click(within(dialog).getByRole('button', { name: 'Export Markdown' }));
+    expect(click).toHaveBeenCalledTimes(1);
+    click.mockRestore();
+
+    await user.click(within(dialog).getByText('ATP is the unit of energy'));
+    expect(video.currentTime).toBe(125);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('remembers notes and progress across visits with persist, per source', async () => {
+    const { map, storage } = mem();
+    const user = userEvent.setup();
+    const first = render(<VideoPlayer src={SRC} enableCast={false} learning persist={{ storage }} />);
+    await user.click(await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 }));
+    await user.type(within(await screen.findByRole('dialog')).getByRole('textbox'), 'remember me');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add' }));
+    expect([...map.keys()].some((k) => k.includes(':notes:'))).toBe(true);
+    first.unmount();
+
+    render(<VideoPlayer src={SRC} enableCast={false} learning persist={{ storage }} />);
+    await user.click(await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('remember me')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/kept only until/)).not.toBeInTheDocument();
+  });
+
+  it('deletes a note', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} learning />);
+    await user.click(await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox'), 'temp');
+    await user.click(within(dialog).getByRole('button', { name: 'Add' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Delete note' }));
+    expect(within(dialog).queryByText('temp')).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/No notes yet/)).toBeInTheDocument();
+  });
+});

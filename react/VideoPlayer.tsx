@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { LearningOptions } from './parts/LearningPanel.js';
 import type { OfflineOptions } from './parts/OfflineController.js';
 import type { FrameToolsOptions } from './parts/FrameTools.js';
 import type { SignLanguageOptions } from './parts/SignLanguageVideo.js';
@@ -25,6 +26,7 @@ import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
 const MediaSessionController = lazy(() => import('./parts/MediaSessionController.js'));
+const LearningPanel = lazy(() => import('./parts/LearningPanel.js'));
 const OfflineController = lazy(() => import('./parts/OfflineController.js'));
 const FrameTools = lazy(() => import('./parts/FrameTools.js'));
 const SignLanguageVideo = lazy(() => import('./parts/SignLanguageVideo.js'));
@@ -99,6 +101,12 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    */
   frameTools?: boolean | FrameToolsOptions;
   /**
+   * Study mode: timestamped notes (export as Markdown or JSON) and a map of what was
+   * actually watched, with an `onProgress` hook for your own LMS. Notes and progress
+   * are kept across visits only with `persist`. Off by default.
+   */
+  learning?: boolean | LearningOptions;
+  /**
    * Let the viewer save the current file on their device (Cache Storage) and play
    * the saved copy from then on. Whole progressive files only — not HLS/DASH, not
    * DRM-protected content. Off by default.
@@ -131,6 +139,7 @@ const EMPTY_PERSIST: PersistOptions = {};
 const EMPTY_SHARE: ShareOptions = {};
 const NO_FRAME_OPTIONS: FrameToolsOptions = {};
 const NO_OFFLINE_OPTIONS: OfflineOptions = {};
+const NO_LEARNING_OPTIONS: LearningOptions = {};
 
 export function VideoPlayer(props: VideoPlayerComponentProps) {
   usePlayerStyles(props.injectStyles ?? true);
@@ -173,7 +182,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, offline, audioDescription, signLanguage, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, offline, learning, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -331,6 +340,17 @@ function VideoPlayerInner({
             src={srcKey}
             subtitles={effectiveSubtitles}
             skipResume={urlTime !== null}
+          />
+        </Suspense>
+      )}
+
+      {learning && (
+        <Suspense fallback={null}>
+          <LearningPanel
+            options={learning === true ? NO_LEARNING_OPTIONS : learning}
+            src={pagePrimary}
+            title={effectiveTitle}
+            persist={persistOptions}
           />
         </Suspense>
       )}

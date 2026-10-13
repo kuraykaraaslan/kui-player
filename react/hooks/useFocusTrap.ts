@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const FOCUSABLE = [
   'a[href]', 'button:not([disabled])', 'input:not([disabled])',
@@ -29,6 +29,13 @@ export function useFocusTrap(
   active: boolean,
   onEscape?: () => void,
 ): void {
+  // Callers pass a fresh arrow each render. Depending on it would tear the trap
+  // down and rebuild it on every render — and each rebuild moves focus back to
+  // the first control, so typing in a dialog (or any re-render while one is
+  // open, such as the playhead ticking) would keep stealing focus.
+  const escape = useRef(onEscape);
+  useEffect(() => { escape.current = onEscape; });
+
   useEffect(() => {
     const root = ref.current;
     if (!active || !root) return;
@@ -42,7 +49,7 @@ export function useFocusTrap(
     (first ?? root).focus({ preventScroll: true });
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onEscape) { e.preventDefault(); e.stopPropagation(); onEscape(); return; }
+      if (e.key === 'Escape' && escape.current) { e.preventDefault(); e.stopPropagation(); escape.current(); return; }
       if (e.key !== 'Tab') return;
       const items = focusable(root);
       if (items.length === 0) { e.preventDefault(); return; }
@@ -64,5 +71,5 @@ export function useFocusTrap(
         previous.focus({ preventScroll: true });
       }
     };
-  }, [ref, active, onEscape]);
+  }, [ref, active]);
 }

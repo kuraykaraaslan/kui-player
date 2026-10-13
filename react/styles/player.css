@@ -1003,3 +1003,19 @@
 .kui-editor-error { margin: 0.5rem 0 0; color: #fca5a5; font-size: 0.8125rem; }
 .kui-editor-foot { flex-wrap: wrap; gap: 0.5rem; }
 @media (max-width: 36rem) { .kui-editor-row { grid-template-columns: 1fr 1fr auto; } .kui-editor-text { grid-column: 1 / -1; } }
+
+/* ── study mode ──────────────────────────────────────────────────────────── */
+
+.kui-learning-toggle {
+  position: absolute;
+  inset-block-start: 1rem;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+}
+.kui-player[dir="rtl"] .kui-learning-toggle { transform: translateX(50%); }
+.kui-watched { position: relative; height: 0.75rem; border-radius: 9999px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.kui-watched-run { position: absolute; inset-block: 0; background: var(--_kui-accent); }
+.kui-note { display: flex; align-items: center; gap: 0.25rem; }
+.kui-note .kui-search-hit { flex: 1; }
+.kui-note-input { flex: 1; min-width: 0; }

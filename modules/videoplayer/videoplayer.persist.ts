@@ -129,6 +129,17 @@ export class PlayerStorage {
     write(this.storage, key, { offset });
   }
 
+  /** Study data kept per source: notes and the watched map. Same switch as preferences. */
+  readStudy<T>(kind: 'notes' | 'watched', src: string): T | null {
+    if (!this.preferencesEnabled || !src) return null;
+    return read<T>(this.storage, `${this.namespace}:${kind}:${hashSource(src)}`);
+  }
+
+  writeStudy(kind: 'notes' | 'watched', src: string, value: unknown): void {
+    if (!this.preferencesEnabled || !src) return;
+    write(this.storage, `${this.namespace}:${kind}:${hashSource(src)}`, value);
+  }
+
   clearPosition(src: string): void {
     try { this.storage?.removeItem(`${this.namespace}:pos:${hashSource(src)}`); } catch { /* ignore */ }
   }

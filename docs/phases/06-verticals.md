@@ -159,6 +159,12 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   doğrulandı (bir CSS özgüllük hatası böyle yakalandı). *Yapılmadı:* RTL'de dalga formunun aynalanması,
   ayrı bir "audio-only skin" paketi (skin modu sürümü), peaks üretim betiği. `'decode'` yolu gerçek bir
   ses dosyasıyla denenmedi (testler Web Audio'yu taklit ediyor).
-- **6.1, 6.5 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
+- **6.5 (kısmen yapıldı):** `learning` prop'u — transkript paneli (6.6'da, tıklayınca seek +
+  geçerli satır işaretli; altyazı **araması** 6.2'de), zaman damgalı notlar (yazmaya başlanan
+  an damgalanır; Markdown/JSON dışa aktarma, `persist` ile kalıcı), gerçekten izlenen
+  bölümlerin haritası ve `onProgress` kancası, hız ve tercih devamlılığı (`persist`, mevcut).
+  *Yapılmadı:* xAPI/SCORM (ayrı ürün kararı), izlenen haritasının seek çubuğunda gösterimi
+  (yalnızca panelde), LMS'e gönderim.
+- **6.1 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
   ürün kararları.
 

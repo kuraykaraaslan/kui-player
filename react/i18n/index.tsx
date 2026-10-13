@@ -58,6 +58,15 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  notes: string;
+  watchedPercent: string;
+  noteAt: string;
+  addNote: string;
+  noNotes: string;
+  deleteNote: string;
+  notesNotSaved: string;
+  exportMarkdown: string;
+  exportJson: string;
   editSubtitles: string;
   applyEdits: string;
   downloadSrt: string;
@@ -232,6 +241,15 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  notes: "Notes",
+  watchedPercent: "{percent}% watched",
+  noteAt: "Note at {time}",
+  addNote: "Add",
+  noNotes: "No notes yet. Type one while you watch.",
+  deleteNote: "Delete note",
+  notesNotSaved: "Notes are kept only until you leave this page — export them to keep them.",
+  exportMarkdown: "Export Markdown",
+  exportJson: "Export JSON",
   editSubtitles: "Edit subtitles",
   applyEdits: "Use these edits",
   downloadSrt: "Download SRT",

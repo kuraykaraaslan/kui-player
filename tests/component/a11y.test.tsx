@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { VideoPlayer } from '../../react';
@@ -201,4 +201,21 @@ describe('accessibility', () => {
     );
     outside.remove();
   }, 12000);
+});
+
+describe('dialogs keep focus while the player re-renders', () => {
+  it('does not pull focus back to the first control as the playhead moves', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} learning />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    await user.click(await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 }));
+    const input = within(await screen.findByRole('dialog')).getByRole('textbox');
+    await user.click(input);
+    expect(input).toHaveFocus();
+    for (const t of [1, 2, 3]) {
+      act(() => { emit(video, 'timeupdate', { currentTime: t }); });
+    }
+    await user.type(input, 'still typing');
+    expect(input).toHaveValue('still typing');
+  });
 });
