@@ -1,11 +1,18 @@
 import type { AudioTrackOption, QualityOption } from '../videoplayer.types.js';
+import { audioKind } from '../videoplayer.audiokind.js';
 import { heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types.js';
 
 // ─── the slice of the dash.js surface we actually touch ──────────────────────
 
 type DashBitrateInfo = { qualityIndex?: number; bitrate?: number; height?: number; width?: number };
 type DashRepresentation = { index?: number; bandwidth?: number; height?: number; width?: number };
-type DashTrack = { lang?: string; index?: number; labels?: { text?: string }[] };
+type DashTrack = {
+  lang?: string;
+  index?: number;
+  labels?: { text?: string }[];
+  /** v4: strings; v5: `{ schemeIdUri, value }`. */
+  roles?: (string | { value?: string })[];
+};
 
 type DashPlayer = {
   initialize(video: HTMLVideoElement, src: string, autoPlay: boolean): void;
@@ -113,10 +120,14 @@ export function createDashAdapter(opts: DashAdapterOptions = {}): MediaAdapter {
       };
       const publishAudio = () => {
         dashTracks = p.getTracksFor('audio') ?? [];
-        audioTracks = dashTracks.map((t, i) => ({
-          label: t.labels?.[0]?.text ?? t.lang ?? `Track ${i + 1}`,
-          ...(t.lang ? { language: t.lang } : {}),
-        }));
+        audioTracks = dashTracks.map((t, i) => {
+          const kind = audioKind({ roles: t.roles });
+          return {
+            label: t.labels?.[0]?.text ?? t.lang ?? `Track ${i + 1}`,
+            ...(t.lang ? { language: t.lang } : {}),
+            ...(kind !== 'main' ? { kind } : {}),
+          };
+        });
         host.updateAudioTracks(audioTracks, audioTracks.length > 0 ? 0 : -1);
       };
 

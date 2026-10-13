@@ -14,6 +14,7 @@ import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.type
 import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
+import { pickDescriptionTrack, pickMainTrack } from '../modules/videoplayer/videoplayer.audiokind.js';
 import { adSpans } from '../modules/videoplayer/videoplayer.adbreaks.js';
 import { miniEnabled, type MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
 import { useMiniPlayer } from './hooks/useMiniPlayer.js';
@@ -109,6 +110,8 @@ export interface VideoPlayerChromeProps {
   gestures?: boolean | GestureOptions;
   /** Enter fullscreen when a phone rotates to landscape while playing. Default `false`. */
   autoFullscreenOnLandscape?: boolean;
+  /** Start with audio description on, when the stream offers a description track. */
+  audioDescription?: boolean;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Offer to skip intro/recap chapters (default on); `{ autoSkip: true }` skips them unasked. */
@@ -125,7 +128,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -318,7 +321,47 @@ export function VideoPlayerChrome({
   const applySubtitle    = useCallback((i: number | null) => { setSelectedSubtitle(i); closeSettings(); }, [setSelectedSubtitle, closeSettings]);
   // Actually switches the rendition (adapter or the element's own track list)
   // instead of only telling the consumer about it.
-  const applyAudioTrack  = useCallback((i: number) => { engine.setAudioTrack(i); onAudioTrackChange?.(i); closeSettings(); }, [engine, onAudioTrackChange, closeSettings]);
+  const audioDescription = useVideoPlayerStore(s => s.audioDescription);
+  const setAudioDescription = useVideoPlayerStore(s => s.setAudioDescription);
+  // A one-time default from the prop; the store owns the value afterwards.
+  useEffect(() => { if (audioDescriptionDefault) setAudioDescription(true); }, [audioDescriptionDefault, setAudioDescription]);
+  const mainTrackRef = useRef<number | null>(null);
+  const audioTracksRef = useRef<AudioTrackOption[] | undefined>(undefined);
+  const selectedAudioRef = useRef(0);
+  useEffect(() => { audioTracksRef.current = effectiveAudioTracks; selectedAudioRef.current = selectedAudioTrack; });
+
+  const applyAudioTrack  = useCallback((i: number) => {
+    // Picking a track by hand settles the question the switch asks.
+    const picked = audioTracksRef.current?.[i];
+    if (picked) setAudioDescription(picked.kind === 'description');
+    engine.setAudioTrack(i); onAudioTrackChange?.(i); closeSettings();
+  }, [engine, onAudioTrackChange, closeSettings, setAudioDescription]);
+  const toggleAudioDescription = useCallback(() => {
+    const tracks = audioTracksRef.current ?? [];
+    const current = selectedAudioRef.current;
+    const to = audioDescription ? pickMainTrack(tracks, current, mainTrackRef.current) : pickDescriptionTrack(tracks, current);
+    if (to === null) return;
+    if (!audioDescription) mainTrackRef.current = current;
+    setAudioDescription(!audioDescription);
+    engine.setAudioTrack(to);
+    onAudioTrackChange?.(to);
+    closeSettings();
+  }, [audioDescription, engine, onAudioTrackChange, closeSettings, setAudioDescription]);
+
+  // A preference (prop or remembered) that arrives before the tracks do is
+  // honoured as soon as a description track exists.
+  useEffect(() => {
+    const tracks = effectiveAudioTracks;
+    if (!audioDescription || !tracks) return;
+    const current = selectedAudioRef.current;
+    if (tracks[current]?.kind === 'description') return;
+    const to = pickDescriptionTrack(tracks, current);
+    if (to === null) return;
+    mainTrackRef.current = current;
+    engine.setAudioTrack(to);
+  // Only when the track list changes; later manual picks must not be fought.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveAudioTracks]);
   const applySubtitleSize= useCallback((sz: SubtitleFontSize) => { setSubtitleFontSize(sz); setSettingsView('main'); }, [setSubtitleFontSize, setSettingsView]);
 
   /** Pointer x → 0–1 along the bar. Reading layout is fine in a handler. */
@@ -519,6 +562,8 @@ export function VideoPlayerChrome({
               applySecondary={applySecondary}
               applySubtitleSize={applySubtitleSize}
               applyAudioTrack={applyAudioTrack}
+              audioDescription={audioDescription}
+              onToggleAudioDescription={toggleAudioDescription}
               applySubtitleColor={setSubtitleColor}
               applySubtitleBackground={setSubtitleBackground}
               applySubtitleEdge={setSubtitleEdge}

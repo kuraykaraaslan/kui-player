@@ -53,6 +53,8 @@ export type VideoPlayerState = {
   qualityAuto: boolean;
   /** Label of the rendition actually playing, shown next to "Auto". */
   activeQualityLabel: string | null;
+  /** The viewer wants audio description whenever the stream offers one. */
+  audioDescription: boolean;
   selectedSubtitle: number | null;
   /** Second line of a dual-language pair; always a different track from `selectedSubtitle`. */
   secondarySubtitle: number | null;
@@ -106,6 +108,7 @@ export type VideoPlayerActions = {
   setActiveQualityLabel: (v: string | null) => void;
   setAdBreaks:           (v: AdBreak[]) => void;
   setInAdBreak:          (v: boolean) => void;
+  setAudioDescription:   (v: boolean) => void;
   setSelectedSubtitle:   (v: number | null) => void;
   setSecondarySubtitle:  (v: number | null) => void;
   setSelectedAudioTrack: (v: number) => void;
@@ -163,6 +166,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     inAdBreak: false,
     qualityAuto: false,
     activeQualityLabel: null,
+    audioDescription: false,
     selectedSubtitle: null,
     secondarySubtitle: null,
     selectedAudioTrack: 0,
@@ -209,6 +213,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setInAdBreak:          (v) => set({ inAdBreak: v }),
     setQualityAuto:        (v) => set({ qualityAuto: v }),
     setActiveQualityLabel: (v) => set({ activeQualityLabel: v }),
+    setAudioDescription:   (v) => set({ audioDescription: v }),
     setSelectedSubtitle:   (v) => set((s) => ({ selectedSubtitle: v, secondarySubtitle: v !== null && v === s.secondarySubtitle ? null : s.secondarySubtitle })),
     setSecondarySubtitle:  (v) => set((s) => ({ secondarySubtitle: v !== null && v === s.selectedSubtitle ? null : v })),
     setSelectedAudioTrack: (v) => set({ selectedAudioTrack: v }),

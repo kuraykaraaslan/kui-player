@@ -69,6 +69,8 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * reported as `adbreak:start` / `adbreak:end`.
    */
   seekLockInAds?: boolean;
+  /** Start with audio description on, when the stream offers a description track. */
+  audioDescription?: boolean;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -124,7 +126,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, audioDescription, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -205,6 +207,7 @@ function VideoPlayerInner({
       shortcuts={shortcuts}
       skipSegments={skipSegments}
       miniPlayer={miniPlayer}
+      audioDescription={audioDescription}
       src={effectiveSrc}
       poster={effectivePoster}
       title={effectiveTitle}

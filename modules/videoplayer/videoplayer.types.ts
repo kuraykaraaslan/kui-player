@@ -3,7 +3,9 @@ import type { Chapter } from './videoplayer.vtt.js';
 
 export type QualityOption = { label: string; value: string };
 export type SubtitleTrack = { label: string; srclang?: string; src: string };
-export type AudioTrackOption = { label: string; language?: string };
+/** `description` is audio description for blind and low-vision viewers. */
+export type AudioTrackKind = 'main' | 'description' | 'commentary';
+export type AudioTrackOption = { label: string; language?: string; kind?: AudioTrackKind };
 
 export type VideoSource = { src: string; type?: string };
 export type SubtitleFontSize = 'sm' | 'md' | 'lg' | 'xl';

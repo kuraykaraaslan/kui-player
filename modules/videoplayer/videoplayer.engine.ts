@@ -5,6 +5,7 @@ import {
   type PlayerEventHandler, type PlayerEventName,
 } from './videoplayer.events.js';
 import { QoeTracker, type QoeSummary } from './videoplayer.qoe.js';
+import { audioKind } from './videoplayer.audiokind.js';
 import { chapterIndexAt, chapterKind } from './videoplayer.chapters.js';
 import type { Chapter } from './videoplayer.vtt.js';
 import { AdBreakTracker, type AdBreak } from './videoplayer.adbreaks.js';
@@ -16,7 +17,7 @@ import type {
 // ─── vendor-prefixed surfaces the DOM lib does not declare ───────────────────
 
 /** Safari's `AudioTrackList`; Chrome and Firefox expose no equivalent. */
-type NativeAudioTrack = { label?: string; language?: string; enabled: boolean };
+type NativeAudioTrack = { label?: string; language?: string; kind?: string; enabled: boolean };
 type NativeAudioTrackList = {
   length: number;
   [index: number]: NativeAudioTrack | undefined;
@@ -808,9 +809,11 @@ export class VideoPlayerEngine {
     for (let i = 0; i < list.length; i += 1) {
       const t = list[i];
       if (!t) continue;
+      const kind = audioKind({ kind: t.kind });
       tracks.push({
         label: t.label || t.language || `Track ${i + 1}`,
         ...(t.language ? { language: t.language } : {}),
+        ...(kind !== 'main' ? { kind } : {}),
       });
       if (t.enabled) active = tracks.length - 1;
     }

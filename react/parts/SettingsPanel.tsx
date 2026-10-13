@@ -1,3 +1,4 @@
+import { hasDescription } from '../../modules/videoplayer/videoplayer.audiokind.js';
 import { forwardRef } from 'react';
 import { Icon } from '../icons/index.js';
 import { SettingsRow } from './SettingsRow.js';
@@ -48,6 +49,8 @@ type SettingsPanelProps = {
   applySubtitleEdge: (edge: SubtitleEdge) => void;
   applySubtitleFont: (font: SubtitleFont) => void;
   applyAudioTrack: (index: number) => void;
+  audioDescription: boolean;
+  onToggleAudioDescription: () => void;
 };
 
 export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(function SettingsPanel(
@@ -55,6 +58,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
     view, onChangeView, onAbout, qualities, subtitles, audioTracks, chapters, onSeekTo,
     selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, selectedAudioTrack,
     speed, subtitleFontSize, subtitleColor, subtitleBackground, subtitleEdge, subtitleFont,
+    audioDescription, onToggleAudioDescription,
     applyQuality, applySpeed, applySubtitle, applySecondary, applySubtitleSize, applyAudioTrack,
     applySubtitleColor, applySubtitleBackground, applySubtitleEdge, applySubtitleFont,
   },
@@ -99,6 +103,14 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
             )}
             {audioTracks && audioTracks.length > 1 && (
               <SettingsRow label={t('audioLanguage')} value={currentAudioLabel} onClick={() => onChangeView('language')} />
+            )}
+            {hasDescription(audioTracks) && (
+              <SettingsRow
+                label={t('audioDescription')}
+                value={audioDescription ? t('on') : t('off')}
+                checked={audioDescription}
+                onClick={onToggleAudioDescription}
+              />
             )}
             {chapters && chapters.length > 0 && (
               <SettingsRow
@@ -226,7 +238,9 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
             <SettingsOption
               key={i}
               label={track.label}
-              sublabel={track.language}
+              sublabel={track.kind === 'description'
+                ? [t('audioDescription'), track.language].filter(Boolean).join(' · ')
+                : track.language}
               selected={selectedAudioTrack === i}
               onClick={() => applyAudioTrack(i)}
             />

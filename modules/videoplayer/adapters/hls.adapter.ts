@@ -1,11 +1,12 @@
 import type { AudioTrackOption, QualityOption } from '../videoplayer.types.js';
+import { audioKind } from '../videoplayer.audiokind.js';
 import { extractAdBreaks, type TaggedFragment } from '../videoplayer.adbreaks.js';
 import { AUTO_QUALITY, heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types.js';
 
 // ─── the slice of the hls.js surface we actually touch ───────────────────────
 
 type HlsLevel = { height?: number; width?: number; bitrate?: number; name?: string; videoCodec?: string };
-type HlsAudioTrack = { name?: string; lang?: string; language?: string };
+type HlsAudioTrack = { name?: string; lang?: string; language?: string; characteristics?: string };
 
 type HlsInstance = {
   levels: HlsLevel[];
@@ -104,7 +105,12 @@ function levelsToQualities(levels: HlsLevel[]): QualityOption[] {
 
 function hlsAudioLabel(t: HlsAudioTrack, i: number): AudioTrackOption {
   const language = t.lang ?? t.language;
-  return { label: t.name ?? language ?? `Track ${i + 1}`, ...(language ? { language } : {}) };
+  const kind = audioKind({ characteristics: t.characteristics });
+  return {
+    label: t.name ?? language ?? `Track ${i + 1}`,
+    ...(language ? { language } : {}),
+    ...(kind !== 'main' ? { kind } : {}),
+  };
 }
 
 /**

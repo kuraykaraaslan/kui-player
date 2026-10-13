@@ -474,3 +474,58 @@ describe('dual-language subtitles', () => {
     expect(screen.getAllByRole('menuitemradio', { name: 'English' })).toHaveLength(1);
   });
 });
+
+describe('audio description', () => {
+  const audioTracks = [
+    { label: 'English', language: 'en' },
+    { label: 'English AD', language: 'en', kind: 'description' as const },
+  ];
+
+  async function openSettings(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('menu');
+  }
+
+  it('has no switch when the stream offers no description track', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} audioTracks={[audioTracks[0]!, { label: 'Türkçe', language: 'tr' }]} />);
+    await openSettings(user);
+    expect(screen.queryByRole('menuitemcheckbox', { name: /Audio description/ })).not.toBeInTheDocument();
+  });
+
+  it('switches to the description track and back to the main one', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<VideoPlayer src={SRC} enableCast={false} audioTracks={audioTracks} onAudioTrackChange={onChange} />);
+    await openSettings(user);
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /Audio description/ }));
+    expect(onChange).toHaveBeenLastCalledWith(1);
+
+    await openSettings(user);
+    expect(screen.getByRole('menuitemcheckbox', { name: /Audio description/ })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('menuitemcheckbox', { name: /Audio description/ }));
+    expect(onChange).toHaveBeenLastCalledWith(0);
+  });
+
+  it('starts on description when asked to', async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} audioTracks={audioTracks} audioDescription onAudioTrackChange={onChange} />,
+    );
+    await waitFor(() => expect(container.querySelector('.kui-player')).toBeInTheDocument());
+    const user = userEvent.setup();
+    await openSettings(user);
+    await waitFor(() =>
+      expect(screen.getByRole('menuitemcheckbox', { name: /Audio description/ })).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('picking a plain track by hand turns the switch off', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} audioTracks={audioTracks} audioDescription />);
+    await openSettings(user);
+    await user.click(screen.getByRole('menuitem', { name: /Audio Language/i }));
+    await user.click((await screen.findAllByRole('menuitemradio'))[0]!);
+    await openSettings(user);
+    expect(screen.getByRole('menuitemcheckbox', { name: /Audio description/ })).toHaveAttribute('aria-checked', 'false');
+  });
+});
