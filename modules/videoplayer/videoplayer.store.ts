@@ -6,6 +6,15 @@ import type {
 import type { AdBreak } from './videoplayer.adbreaks.js';
 import type { LoopRange } from './videoplayer.loop.js';
 
+export type OfflineStatus = {
+  /** `unavailable`: not enabled, no storage, or a stream that cannot be saved as one file. */
+  state: 'unavailable' | 'none' | 'downloading' | 'downloaded' | 'failed';
+  percent: number | null;
+  bytes: number | null;
+  /** `quota` | `network` | `unsupported` | `unsafe` after a failure. */
+  reason: string | null;
+};
+
 export type VideoPlayerState = {
   playing: boolean;
   currentTime: number;
@@ -48,6 +57,10 @@ export type VideoPlayerState = {
   adaptiveQualities: QualityOption[];
   /** Ad breaks marked in the stream, in media time. */
   adBreaks: AdBreak[];
+  /** Offline copy of the current source (see `videoplayer.offline.ts`). */
+  offline: OfflineStatus;
+  /** A request from the UI to the offline controller; it clears this once it has taken it. */
+  offlineRequest: 'download' | 'cancel' | 'remove' | null;
   /** The A-B loop markers, when frame tools are on. */
   loopRange: LoopRange | null;
   /** True while the playhead is inside one. */
@@ -114,6 +127,8 @@ export type VideoPlayerActions = {
   setQualityAuto:        (v: boolean) => void;
   setActiveQualityLabel: (v: string | null) => void;
   setAdBreaks:           (v: AdBreak[]) => void;
+  setOffline:            (v: OfflineStatus) => void;
+  requestOffline:        (v: 'download' | 'cancel' | 'remove' | null) => void;
   setLoopRange:          (v: LoopRange | null) => void;
   setInAdBreak:          (v: boolean) => void;
   setAudioDescription:   (v: boolean) => void;
@@ -173,6 +188,8 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     selectedQuality: opts.defaultQuality ?? '',
     adaptiveQualities: [],
     adBreaks: [],
+    offline: { state: 'unavailable', percent: null, bytes: null, reason: null },
+    offlineRequest: null,
     loopRange: null,
     inAdBreak: false,
     qualityAuto: false,
@@ -223,6 +240,8 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setSelectedQuality:    (v) => set({ selectedQuality: v }),
     setAdaptiveQualities:  (v) => set({ adaptiveQualities: v }),
     setAdBreaks:           (v) => set({ adBreaks: v }),
+    setOffline:            (v) => set({ offline: v }),
+    requestOffline:        (v) => set({ offlineRequest: v }),
     setLoopRange:          (v) => set({ loopRange: v }),
     setInAdBreak:          (v) => set({ inAdBreak: v }),
     setQualityAuto:        (v) => set({ qualityAuto: v }),

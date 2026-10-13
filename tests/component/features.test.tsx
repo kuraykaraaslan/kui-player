@@ -1,3 +1,4 @@
+import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -1065,5 +1066,94 @@ describe('audio layout and waveform', () => {
     await waitFor(() => expect(container.querySelector('.kui-player')).not.toBeNull());
     expect(container.querySelector('.kui-artwork')).toBeNull();
     expect(container.querySelector('.kui-player--audio')).toBeNull();
+  });
+});
+
+describe('offline viewing', () => {
+  const FILE = 'https://example.com/lecture.mp4';
+  let entries: Map<string, Response>;
+  let fetchSpy: MockInstance<typeof fetch>;
+
+  beforeEach(() => {
+    vi.stubGlobal('Blob', NodeBlob);                         // jsdom's Blob cannot back a Response
+    entries = new Map();
+    const cache = {
+      match: async (r: string | Request) => entries.get(typeof r === 'string' ? r : r.url)?.clone(),
+      put: async (r: string | Request, res: Response) => { entries.set(typeof r === 'string' ? r : r.url, res); },
+      delete: async (r: string | Request) => entries.delete(typeof r === 'string' ? r : r.url),
+      keys: async () => [...entries.keys()].map((u) => new Request(u)),
+    };
+    vi.stubGlobal('caches', { open: async () => cache, delete: async () => true });
+    URL.createObjectURL = vi.fn(() => 'blob:offline-copy');
+    URL.revokeObjectURL = vi.fn();
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(
+      new ReadableStream({ start(c) { c.enqueue(new Uint8Array(1024)); c.close(); } }),
+      { status: 200, headers: { 'content-length': '1024', 'content-type': 'video/mp4' } },
+    ));
+  });
+  afterEach(() => { fetchSpy.mockRestore(); vi.unstubAllGlobals(); });
+
+  async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('menu');
+  }
+
+  it('downloads the file, then plays the saved copy next time', async () => {
+    const user = userEvent.setup();
+    const first = render(<VideoPlayer src={FILE} enableCast={false} offline />);
+    await openMenu(user);
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: /Offline viewing/ }, { timeout: 4000 }));
+    await waitFor(() => expect(entries.has(FILE)).toBe(true));
+
+    await openMenu(user);
+    const row = await screen.findByRole('menuitemcheckbox', { name: /Offline viewing/ });
+    expect(row).toHaveAttribute('aria-checked', 'true');
+    expect(row).toHaveTextContent('Downloaded · 1 kB');
+    // Mid-playback the source is deliberately left alone: swapping it would reload the video.
+    expect(first.container.querySelector('source')).toHaveAttribute('src', FILE);
+    first.unmount();
+
+    // A fresh mount (page reload): the network URL is never used for playback.
+    const second = render(<VideoPlayer src={FILE} enableCast={false} offline />);
+    await waitFor(() => expect(second.container.querySelector('source')).toHaveAttribute('src', 'blob:offline-copy'), { timeout: 4000 });
+  });
+
+  it('removes the copy and goes back to the network source', async () => {
+    const user = userEvent.setup();
+    entries.set(FILE, new Response(new Uint8Array(2048), { headers: { 'content-type': 'video/mp4' } }));
+    const { container } = render(<VideoPlayer src={FILE} enableCast={false} offline />);
+    await waitFor(() => expect(container.querySelector('source')).toHaveAttribute('src', 'blob:offline-copy'), { timeout: 4000 });
+    await openMenu(user);
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: /Offline viewing/ }));
+    await waitFor(() => expect(entries.has(FILE)).toBe(false));
+    await waitFor(() => expect(container.querySelector('source')).toHaveAttribute('src', FILE));
+  });
+
+  it('reports a failed download and lets the viewer retry', async () => {
+    const user = userEvent.setup();
+    fetchSpy.mockImplementationOnce(async () => new Response('', { status: 500 }));
+    render(<VideoPlayer src={FILE} enableCast={false} offline />);
+    await openMenu(user);
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: /Offline viewing/ }, { timeout: 4000 }));
+    await openMenu(user);
+    expect(await screen.findByRole('menuitemcheckbox', { name: /Offline viewing/ })).toHaveTextContent('Failed — retry');
+  });
+
+  it('is not offered for streams, without storage, or unless asked for', async () => {
+    const user = userEvent.setup();
+    const a = render(<VideoPlayer src="https://example.com/live.m3u8" enableCast={false} offline />);
+    await openMenu(user);
+    expect(screen.queryByRole('menuitemcheckbox', { name: /Offline viewing/ })).not.toBeInTheDocument();
+    a.unmount();
+
+    const b = render(<VideoPlayer src={FILE} enableCast={false} />);
+    await openMenu(user);
+    expect(screen.queryByRole('menuitemcheckbox', { name: /Offline viewing/ })).not.toBeInTheDocument();
+    b.unmount();
+
+    vi.stubGlobal('caches', undefined);
+    render(<VideoPlayer src={FILE} enableCast={false} offline />);
+    await openMenu(user);
+    expect(screen.queryByRole('menuitemcheckbox', { name: /Offline viewing/ })).not.toBeInTheDocument();
   });
 });

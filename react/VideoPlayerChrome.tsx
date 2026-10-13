@@ -276,6 +276,12 @@ export function VideoPlayerChrome({
   );
   const [showSearch, setShowSearch] = useState(false);
   const [dropping, setDropping] = useState(false);
+  const offline = useVideoPlayerStore(s => s.offline);
+  const requestOffline = useVideoPlayerStore(s => s.requestOffline);
+  const handleOffline = useCallback(() => {
+    const s = engine.store.getState().offline.state;
+    requestOffline(s === 'downloading' ? 'cancel' : s === 'downloaded' ? 'remove' : 'download');
+  }, [engine, requestOffline]);
   const [peaks, setPeaks] = useState<number[] | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const transcriptTrack = subtitles?.[selectedSubtitle ?? 0];
@@ -698,6 +704,8 @@ export function VideoPlayerChrome({
               applyQuality={applyQuality}
               applySpeed={applySpeed}
               applySubtitle={applySubtitle}
+              offline={offline}
+              onOffline={handleOffline}
               onSearchSubtitles={() => { setShowSearch(true); closeSettings(); }}
               subtitleOffset={subtitleOffset}
               resetSubtitleOffset={() => { setSubtitleOffset(0); closeSettings(); }}

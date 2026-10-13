@@ -119,7 +119,7 @@
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "50 kB"
+      "limit": "52 kB"
     },
     {
       "name": "stylesheet",

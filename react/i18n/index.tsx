@@ -58,6 +58,12 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  offlineViewing: string;
+  offlineDownload: string;
+  offlineDownloading: string;
+  offlineDownloaded: string;
+  offlineFailed: string;
+  offlineNoSpace: string;
   transcript: string;
   noTranscript: string;
   searchSubtitles: string;
@@ -216,6 +222,12 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  offlineViewing: "Offline viewing",
+  offlineDownload: "Download",
+  offlineDownloading: "Downloading…",
+  offlineDownloaded: "Downloaded",
+  offlineFailed: "Failed — retry",
+  offlineNoSpace: "Not enough space",
   transcript: "Transcript",
   noTranscript: "This track has no text.",
   searchSubtitles: "Search subtitles",

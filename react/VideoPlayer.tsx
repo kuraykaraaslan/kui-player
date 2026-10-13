@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { OfflineOptions } from './parts/OfflineController.js';
 import type { FrameToolsOptions } from './parts/FrameTools.js';
 import type { SignLanguageOptions } from './parts/SignLanguageVideo.js';
 import type { MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
@@ -24,6 +25,7 @@ import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
 const MediaSessionController = lazy(() => import('./parts/MediaSessionController.js'));
+const OfflineController = lazy(() => import('./parts/OfflineController.js'));
 const FrameTools = lazy(() => import('./parts/FrameTools.js'));
 const SignLanguageVideo = lazy(() => import('./parts/SignLanguageVideo.js'));
 const Watermark = lazy(() => import('./parts/Watermark.js'));
@@ -97,6 +99,12 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    */
   frameTools?: boolean | FrameToolsOptions;
   /**
+   * Let the viewer save the current file on their device (Cache Storage) and play
+   * the saved copy from then on. Whole progressive files only — not HLS/DASH, not
+   * DRM-protected content. Off by default.
+   */
+  offline?: boolean | OfflineOptions;
+  /**
    * A podcast / audio layout: big artwork (`poster`), always-visible controls, an
    * optional waveform and a transcript button. The `<video>` element still plays
    * the audio; it is just not drawn.
@@ -122,6 +130,7 @@ const NO_ICON_OVERRIDES: IconOverrides = {};
 const EMPTY_PERSIST: PersistOptions = {};
 const EMPTY_SHARE: ShareOptions = {};
 const NO_FRAME_OPTIONS: FrameToolsOptions = {};
+const NO_OFFLINE_OPTIONS: OfflineOptions = {};
 
 export function VideoPlayer(props: VideoPlayerComponentProps) {
   usePlayerStyles(props.injectStyles ?? true);
@@ -164,7 +173,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, audioDescription, signLanguage, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, offline, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -199,10 +208,14 @@ function VideoPlayerInner({
     return () => engine.detach();
   }, [engine]);
 
-  const sources = useMemo(
+  const pageSources = useMemo(
     () => (Array.isArray(effectiveSrc) ? effectiveSrc : [effectiveSrc]),
     [effectiveSrc],
   );
+  // With `offline`, a copy saved on this device replaces the network source (a blob: URL).
+  const [localCopy, setLocalCopy] = useState<string | null>(null);
+  const sources = useMemo(() => (localCopy ? [localCopy] : pageSources), [localCopy, pageSources]);
+  const pagePrimary = typeof pageSources[0] === 'string' ? pageSources[0] : pageSources[0]?.src ?? '';
   const srcKey = useMemo(
     () => sources.map((s) => (typeof s === 'string' ? s : s.src)).join('|'),
     [sources],
@@ -319,6 +332,12 @@ function VideoPlayerInner({
             subtitles={effectiveSubtitles}
             skipResume={urlTime !== null}
           />
+        </Suspense>
+      )}
+
+      {offline && (
+        <Suspense fallback={null}>
+          <OfflineController options={offline === true ? NO_OFFLINE_OPTIONS : offline} src={pagePrimary} onLocalSrc={setLocalCopy} />
         </Suspense>
       )}
 

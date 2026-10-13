@@ -1,3 +1,5 @@
+import { formatBytes } from '../../modules/videoplayer/videoplayer.offline.js';
+import type { OfflineStatus } from '../../modules/videoplayer/videoplayer.store.js';
 import { formatSubtitleOffset } from '../../modules/videoplayer/videoplayer.subtitles.js';
 import { hasDescription } from '../../modules/videoplayer/videoplayer.audiokind.js';
 import { forwardRef } from 'react';
@@ -47,6 +49,8 @@ type SettingsPanelProps = {
   applyQuality: (value: string) => void;
   applySpeed: (s: number) => void;
   applySubtitle: (index: number | null) => void;
+  offline: OfflineStatus;
+  onOffline: () => void;
   subtitleOffset: number;
   onSearchSubtitles: () => void;
   resetSubtitleOffset: () => void;
@@ -66,7 +70,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
     view, onChangeView, onAbout, qualities, subtitles, audioTracks, chapters, onSeekTo,
     selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, secondaryTranslation, translationTargets, applyTranslation, selectedAudioTrack,
     speed, subtitleFontSize, subtitleColor, subtitleBackground, subtitleEdge, subtitleFont,
-    audioDescription, onToggleAudioDescription, subtitleOffset, resetSubtitleOffset, onSearchSubtitles,
+    audioDescription, onToggleAudioDescription, offline, onOffline, subtitleOffset, resetSubtitleOffset, onSearchSubtitles,
     applyQuality, applySpeed, applySubtitle, applySecondary, applySubtitleSize, applyAudioTrack,
     applySubtitleColor, applySubtitleBackground, applySubtitleEdge, applySubtitleFont,
   },
@@ -112,6 +116,20 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
             )}
             {audioTracks && audioTracks.length > 1 && (
               <SettingsRow label={t('audioLanguage')} value={currentAudioLabel} onClick={() => onChangeView('language')} />
+            )}
+            {offline.state !== 'unavailable' && (
+              <SettingsRow
+                label={t('offlineViewing')}
+                value={offline.state === 'downloading'
+                  ? (offline.percent === null ? t('offlineDownloading') : `${offline.percent}%`)
+                  : offline.state === 'downloaded'
+                    ? `${t('offlineDownloaded')}${offline.bytes ? ` · ${formatBytes(offline.bytes)}` : ''}`
+                    : offline.state === 'failed'
+                      ? t(offline.reason === 'quota' ? 'offlineNoSpace' : 'offlineFailed')
+                      : t('offlineDownload')}
+                checked={offline.state === 'downloaded'}
+                onClick={onOffline}
+              />
             )}
             {hasDescription(audioTracks) && (
               <SettingsRow
