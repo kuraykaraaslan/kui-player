@@ -58,6 +58,7 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  secondSubtitle: string;
   miniReturn: string;
   miniClose: string;
   skipIntro: string;
@@ -184,6 +185,7 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  secondSubtitle: "Second language",
   miniReturn: "Back to the video",
   miniClose: "Close mini player",
   skipIntro: "Skip intro",

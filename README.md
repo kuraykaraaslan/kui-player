@@ -460,6 +460,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `playlist` / `playlistIndex` / `onPlaylistIndexChange` / `playlistCountdown` | — | play through a list |
 | `persist` | `boolean \| PersistOptions` | remember position and preferences; **off by default** |
 | `watermark` | `{ text, opacity?, intervalMs?, pauseOnTamper? }` | visible moving text mark (user id / e-mail), kept in fullscreen. Deters leaks; cannot stop screen recording |
+| *(dual subtitles)* | settings → Subtitles | pick a first language, then a *Second language*: two lines at once, each on its own timing (the second is drawn above, one size smaller, tinted with `--kui-subtitle-secondary`). Remembered with `persist`. Cast shows the primary track only |
 | `miniPlayer` | `boolean \| { corner?, touch? }` | float the player into a corner while it **plays** and is scrolled out of view (same `<video>` node, playback is not interrupted); buttons: play/pause, back to the video, close (pauses). Off by default; off on touch devices unless `touch: true` |
 | `VideoPlayerFacade` | `import … from '@kuraykaraaslan/kui-player/facade'` | poster + play button, ~1 kB; the player loads on click. See [recipes/facade.md](recipes/facade.md) |
 | `skipSegments` | `boolean \| { autoSkip? }` | "Skip intro / recap" button for chapters of that kind (default on); `autoSkip` skips unasked. Chapters get a `kind` (`intro` `recap` `credits`), or it is guessed from the title ("Intro", "Recap", "Credits"…) |

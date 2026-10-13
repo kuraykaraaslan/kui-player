@@ -19,6 +19,7 @@ import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { Icon } from './icons/index.js';
+import { useSecondaryCues } from './hooks/useSecondaryCues.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { useFocusTrap } from './hooks/useFocusTrap.js';
 import { usePlayerAnnouncements } from './hooks/usePlayerAnnouncements.js';
@@ -170,6 +171,8 @@ export function VideoPlayerChrome({
   const activeQualityLabel= useVideoPlayerStore(s => s.activeQualityLabel);
   const adaptiveAudioTracks = useVideoPlayerStore(s => s.adaptiveAudioTracks);
   const selectedSubtitle  = useVideoPlayerStore(s => s.selectedSubtitle);
+  const secondarySubtitle = useVideoPlayerStore(s => s.secondarySubtitle);
+  const setSecondarySubtitle = useVideoPlayerStore(s => s.setSecondarySubtitle);
   const selectedAudioTrack= useVideoPlayerStore(s => s.selectedAudioTrack);
   const subtitleFontSize  = useVideoPlayerStore(s => s.subtitleFontSize);
   const subtitleColor     = useVideoPlayerStore(s => s.subtitleColor);
@@ -213,6 +216,7 @@ export function VideoPlayerChrome({
   const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
+  const secondaryText = useSecondaryCues({ videoRef, selectedSecondary: secondarySubtitle, subtitles });
   useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList });
   const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
@@ -309,6 +313,7 @@ export function VideoPlayerChrome({
     onQualityChange?.(v);
     closeSettings();
   }, [adaptive, engine, setSelectedQuality, onQualityChange, closeSettings]);
+  const applySecondary   = useCallback((i: number | null) => { setSecondarySubtitle(i); closeSettings(); }, [setSecondarySubtitle, closeSettings]);
   const applySubtitle    = useCallback((i: number | null) => { setSelectedSubtitle(i); closeSettings(); }, [setSelectedSubtitle, closeSettings]);
   // Actually switches the rendition (adapter or the element's own track list)
   // instead of only telling the consumer about it.
@@ -436,9 +441,10 @@ export function VideoPlayerChrome({
           />
         </Suspense>
       )}
-      {cueText && (
+      {(cueText || secondaryText) && (
         <SubtitleOverlay
           cueText={cueText}
+          secondaryText={secondaryText}
           effectiveControls={effectiveControls}
           subtitleFontSize={subtitleFontSize}
           color={subtitleColor}
@@ -496,6 +502,7 @@ export function VideoPlayerChrome({
               selectedQuality={selectedQuality}
               activeQualityLabel={activeQualityLabel}
               selectedSubtitle={selectedSubtitle}
+              secondarySubtitle={secondarySubtitle}
               selectedAudioTrack={selectedAudioTrack}
               speed={speed}
               subtitleFontSize={subtitleFontSize}
@@ -506,6 +513,7 @@ export function VideoPlayerChrome({
               applyQuality={applyQuality}
               applySpeed={applySpeed}
               applySubtitle={applySubtitle}
+              applySecondary={applySecondary}
               applySubtitleSize={applySubtitleSize}
               applyAudioTrack={applyAudioTrack}
               applySubtitleColor={setSubtitleColor}

@@ -828,3 +828,9 @@
   .kui-player.is-mini { animation: kui-mini-in 160ms ease-out; }
 }
 @keyframes kui-mini-in { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: none; } }
+
+/* ── dual-language subtitles ─────────────────────────────────────────────── */
+
+.kui-subtitles { flex-direction: column; align-items: center; }
+.kui-subtitle-text--secondary { color: var(--kui-subtitle-secondary, #fde68a); margin-bottom: 0.25rem; }
+.kui-option-heading { margin: 0.5rem 0 0.25rem; padding: 0 0.75rem; }

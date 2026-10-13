@@ -25,6 +25,7 @@ export type StoredPreferences = {
   muted?: boolean;
   speed?: number;
   subtitleLanguage?: string | null;
+  subtitleSecondaryLanguage?: string | null;
   subtitleFontSize?: SubtitleFontSize;
 };
 

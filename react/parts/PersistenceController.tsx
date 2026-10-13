@@ -48,6 +48,10 @@ export default function PersistenceController({ options, src, subtitles, skipRes
       const index = subtitles.findIndex((track) => track.srclang === prefs.subtitleLanguage);
       if (index >= 0) s.setSelectedSubtitle(index);
     }
+    if (prefs.subtitleSecondaryLanguage && subtitles) {
+      const index = subtitles.findIndex((track) => track.srclang === prefs.subtitleSecondaryLanguage);
+      if (index >= 0) s.setSecondarySubtitle(index);
+    }
   }, [engine, storage, subtitles]);
 
   useEffect(() => {
@@ -55,7 +59,8 @@ export default function PersistenceController({ options, src, subtitles, skipRes
     return engine.store.subscribe((state, previous) => {
       if (state.volume !== previous.volume || state.muted !== previous.muted
         || state.speed !== previous.speed || state.subtitleFontSize !== previous.subtitleFontSize
-        || state.selectedSubtitle !== previous.selectedSubtitle) {
+        || state.selectedSubtitle !== previous.selectedSubtitle
+        || state.secondarySubtitle !== previous.secondarySubtitle) {
         storage.writePreferences({
           volume: state.volume,
           muted: state.muted,
@@ -64,6 +69,9 @@ export default function PersistenceController({ options, src, subtitles, skipRes
           subtitleLanguage: state.selectedSubtitle === null
             ? null
             : subtitles?.[state.selectedSubtitle]?.srclang ?? null,
+          subtitleSecondaryLanguage: state.secondarySubtitle === null
+            ? null
+            : subtitles?.[state.secondarySubtitle]?.srclang ?? null,
         });
       }
 

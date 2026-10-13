@@ -48,6 +48,7 @@ export const tr: PartialDictionary = {
   resumeFrom: '{time} konumundan devam edilsin mi?',
   resume: 'Devam et',
   dismiss: 'Kapat',
+  secondSubtitle: "İkinci dil",
   miniReturn: "Videoya dön",
   miniClose: "Mini oynatıcıyı kapat",
   skipIntro: "Girişi atla",

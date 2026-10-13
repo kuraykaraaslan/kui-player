@@ -124,3 +124,17 @@ describe('createStore', () => {
     expect(store.getState().count).toBe(2);
   });
 });
+
+describe('secondary subtitle', () => {
+  it('can never equal the primary', () => {
+    const store = createVideoPlayerStore();
+    const s = () => store.getState();
+    s().setSelectedSubtitle(0);
+    s().setSecondarySubtitle(0);
+    expect(s().secondarySubtitle).toBeNull();
+    s().setSecondarySubtitle(1);
+    expect(s().secondarySubtitle).toBe(1);
+    s().setSelectedSubtitle(1);   // promoting the secondary clears it
+    expect(s().secondarySubtitle).toBeNull();
+  });
+});

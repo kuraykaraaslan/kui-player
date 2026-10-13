@@ -106,10 +106,15 @@ export function GestureOverlay({ feedback }: { feedback: GestureFeedback }) {
   );
 }
 
+/** The secondary line is one step smaller than the primary. */
+const SMALLER_SIZE: Record<SubtitleFontSize, SubtitleFontSize> = { sm: 'sm', md: 'sm', lg: 'md', xl: 'lg' };
+
 export function SubtitleOverlay({
-  cueText, effectiveControls, subtitleFontSize, color, background, edge, font,
+  cueText, secondaryText, effectiveControls, subtitleFontSize, color, background, edge, font,
 }: {
-  cueText: string;
+  cueText: string | null;
+  /** Second-language line, drawn above the primary one so the two never overlap. */
+  secondaryText?: string | null;
   effectiveControls: boolean;
   subtitleFontSize: SubtitleFontSize;
   color: string;
@@ -120,6 +125,21 @@ export function SubtitleOverlay({
   const shadow = SUBTITLE_EDGE_STYLES[edge];
   return (
     <div className={cn('kui-subtitles', effectiveControls && 'is-raised')}>
+      {secondaryText && (
+        <span
+          className="kui-subtitle-text kui-subtitle-text--secondary"
+          style={{
+            fontSize: SUBTITLE_SIZES[SMALLER_SIZE[subtitleFontSize]],
+            background: background > 0 ? `rgba(0, 0, 0, ${background})` : 'transparent',
+            padding: background > 0 ? undefined : '0',
+            textShadow: shadow === 'none' ? undefined : shadow,
+            fontFamily: SUBTITLE_FONTS.find((f) => f.value === font)?.stack,
+          }}
+        >
+          {secondaryText}
+        </span>
+      )}
+      {cueText && (
       <span
         className="kui-subtitle-text"
         style={{
@@ -135,6 +155,7 @@ export function SubtitleOverlay({
       >
         {cueText}
       </span>
+      )}
     </div>
   );
 }

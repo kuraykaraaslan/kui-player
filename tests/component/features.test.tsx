@@ -393,3 +393,84 @@ describe('mini player', () => {
     await waitFor(() => expect(container.querySelector('.is-mini')).not.toBeInTheDocument());
   });
 });
+
+describe('dual-language subtitles', () => {
+  const subtitles = [
+    { label: 'English', srclang: 'en', src: '/en.srt' },
+    { label: 'Türkçe', srclang: 'tr', src: '/tr.vtt' },
+  ];
+  const files: Record<string, string> = {
+    '/en.srt': '1\n00:00:01,000 --> 00:00:04,000\nHello there\n',
+    // Deliberately offset from the English cue: the two tracks keep their own clocks.
+    '/tr.vtt': 'WEBVTT\n\n00:00:02.000 --> 00:00:05.000\nMerhaba\n',
+  };
+  let fetchSpy: MockInstance<typeof fetch>;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      return new Response(files[url] ?? '', { status: files[url] ? 200 : 404 });
+    });
+  });
+  afterEach(() => { fetchSpy.mockRestore(); });
+
+  async function pick(user: ReturnType<typeof userEvent.setup>, menuName: RegExp, optionName: string, nth = 0) {
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: menuName }));
+    await user.click((await screen.findAllByRole('menuitemradio', { name: optionName }))[nth]!);
+  }
+
+  it('shows both lines, each on its own timing, with the second above the first', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 60 });
+
+    await pick(user, /Subtitles/, 'English');
+    await pick(user, /Subtitles/, 'Türkçe', 1);   // second list: the second-language section
+
+    emit(video, 'timeupdate', { currentTime: 1.5 });
+    await waitFor(() => expect(container.querySelector('.kui-subtitle-text:not(.kui-subtitle-text--secondary)')?.textContent).toBe('Hello there'));
+    expect(container.querySelector('.kui-subtitle-text--secondary')).toBeNull();   // Turkish starts at 2 s
+
+    emit(video, 'timeupdate', { currentTime: 3 });
+    await waitFor(() => expect(container.querySelector('.kui-subtitle-text--secondary')?.textContent).toBe('Merhaba'));
+    const texts = Array.from(container.querySelectorAll('.kui-subtitles .kui-subtitle-text')).map((n) => n.textContent);
+    expect(texts).toEqual(['Merhaba', 'Hello there']);
+
+    emit(video, 'timeupdate', { currentTime: 4.5 });   // English over, Turkish still on
+    await waitFor(() => expect(container.querySelector('.kui-subtitle-text:not(.kui-subtitle-text--secondary)')).toBeNull());
+    expect(container.querySelector('.kui-subtitle-text--secondary')?.textContent).toBe('Merhaba');
+  });
+
+  it('remembers both languages when persistence is on', async () => {
+    const user = userEvent.setup();
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, v); },
+      removeItem: (k: string) => { store.delete(k); },
+    };
+    render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} persist={{ storage }} />);
+    await pick(user, /Subtitles/, 'English');
+    await pick(user, /Subtitles/, 'Türkçe', 1);
+    await waitFor(() => {
+      const saved = [...store.values()].map((v) => JSON.parse(v) as Record<string, unknown>);
+      expect(saved.some((p) => p.subtitleLanguage === 'en' && p.subtitleSecondaryLanguage === 'tr')).toBe(true);
+    });
+  });
+
+  it('offers a second language only once a first is chosen, never the same track twice', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    expect(screen.queryByText('Second language')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+    expect(screen.getByText('Second language')).toBeInTheDocument();
+    // English is the primary, so only Türkçe is offered below the heading.
+    expect(screen.getAllByRole('menuitemradio', { name: 'English' })).toHaveLength(1);
+  });
+});

@@ -49,6 +49,8 @@ export type VideoPlayerState = {
   /** Label of the rendition actually playing, shown next to "Auto". */
   activeQualityLabel: string | null;
   selectedSubtitle: number | null;
+  /** Second line of a dual-language pair; always a different track from `selectedSubtitle`. */
+  secondarySubtitle: number | null;
   selectedAudioTrack: number;
   /** Audio renditions discovered from the element or an adapter. */
   adaptiveAudioTracks: AudioTrackOption[];
@@ -98,6 +100,7 @@ export type VideoPlayerActions = {
   setQualityAuto:        (v: boolean) => void;
   setActiveQualityLabel: (v: string | null) => void;
   setSelectedSubtitle:   (v: number | null) => void;
+  setSecondarySubtitle:  (v: number | null) => void;
   setSelectedAudioTrack: (v: number) => void;
   setAdaptiveAudioTracks:(v: AudioTrackOption[]) => void;
   setSubtitleFontSize:   (v: SubtitleFontSize) => void;
@@ -152,6 +155,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     qualityAuto: false,
     activeQualityLabel: null,
     selectedSubtitle: null,
+    secondarySubtitle: null,
     selectedAudioTrack: 0,
     adaptiveAudioTracks: [],
     subtitleFontSize: 'md',
@@ -194,7 +198,8 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setAdaptiveQualities:  (v) => set({ adaptiveQualities: v }),
     setQualityAuto:        (v) => set({ qualityAuto: v }),
     setActiveQualityLabel: (v) => set({ activeQualityLabel: v }),
-    setSelectedSubtitle:   (v) => set({ selectedSubtitle: v }),
+    setSelectedSubtitle:   (v) => set((s) => ({ selectedSubtitle: v, secondarySubtitle: v !== null && v === s.secondarySubtitle ? null : s.secondarySubtitle })),
+    setSecondarySubtitle:  (v) => set((s) => ({ secondarySubtitle: v !== null && v === s.selectedSubtitle ? null : v })),
     setSelectedAudioTrack: (v) => set({ selectedAudioTrack: v }),
     setAdaptiveAudioTracks:(v) => set({ adaptiveAudioTracks: v }),
     setSubtitleFontSize:   (v) => set({ subtitleFontSize: v }),

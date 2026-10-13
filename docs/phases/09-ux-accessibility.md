@@ -62,9 +62,9 @@ Mevcut ses-izi seçimi ([1.2](./01-playback-compat.md)) bir liste sunuyor; tür 
 [Faz 6.2](./06-verticals.md) listesindeki "çift altyazı"nın somut hâli; senkron kaydırma
 (offset) ve düzenleyici bu fazın dışında, 6.2'de kalır.
 
-- [ ] İki altyazı izi aynı anda seçilebilir (birincil + ikincil), ikincil üstte küçük/farklı renk
-- [ ] Stil paneli ([4.9](./04-expected-features.md)) her iki iz için ayrı ayarlar
-- [ ] Konum: iki satır çakışmaz, kontrol çubuğu açılınca birlikte yukarı kayar
-- [ ] SRT/ASS/WebVTT hepsiyle çalışır; zaman uyuşmazlığı varsa iki iz bağımsız ilerler
-- [ ] Cast'e yalnızca birincil iz gönderilir (alıcı tarafı kısıtı, belgelenir)
-- [ ] Test: iki cue kümesi ile render, seçim durumu, kalıcılık
+- [x] İki altyazı izi aynı anda seçilebilir (birincil + ikincil), ikincil üstte küçük/farklı renk
+- [x] Stil: ikincil satır birincinin bir boyut küçüğü, `--kui-subtitle-secondary` ile renklendirilir (varsayılan sarımsı); arka plan/kenar/yazı tipi ortak. **İki iz için tam ayrı stil paneli yapılmadı**
+- [x] Konum: iki satır çakışmaz, kontrol çubuğu açılınca birlikte yukarı kayar
+- [x] SRT/ASS/WebVTT hepsiyle çalışır; zaman uyuşmazlığı varsa iki iz bağımsız ilerler
+- [x] Cast'te yalnızca birincil iz etkin (alıcıya `activeTrackIds` olarak yalnızca o gider); ikincil yalnızca yerel oynatmada görünür
+- [x] Test: iki cue kümesi ile render, bağımsız zamanlama, seçim kuralı, kalıcılık

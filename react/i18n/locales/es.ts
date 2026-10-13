@@ -48,6 +48,7 @@ export const es: PartialDictionary = {
   resumeFrom: '¿Continuar desde {time}?',
   resume: 'Continuar',
   dismiss: 'Descartar',
+  secondSubtitle: "Segundo idioma",
   miniReturn: "Volver al vídeo",
   miniClose: "Cerrar minirreproductor",
   skipIntro: "Saltar intro",

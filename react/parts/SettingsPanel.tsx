@@ -30,6 +30,7 @@ type SettingsPanelProps = {
   /** Rendition ABR actually settled on — shown beside "Auto". */
   activeQualityLabel?: string | null;
   selectedSubtitle: number | null;
+  secondarySubtitle: number | null;
   selectedAudioTrack: number;
   speed: number;
   subtitleFontSize: SubtitleFontSize;
@@ -40,6 +41,7 @@ type SettingsPanelProps = {
   applyQuality: (value: string) => void;
   applySpeed: (s: number) => void;
   applySubtitle: (index: number | null) => void;
+  applySecondary: (index: number | null) => void;
   applySubtitleSize: (size: SubtitleFontSize) => void;
   applySubtitleColor: (color: string) => void;
   applySubtitleBackground: (value: number) => void;
@@ -51,9 +53,9 @@ type SettingsPanelProps = {
 export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(function SettingsPanel(
   {
     view, onChangeView, onAbout, qualities, subtitles, audioTracks, chapters, onSeekTo,
-    selectedQuality, activeQualityLabel, selectedSubtitle, selectedAudioTrack,
+    selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, selectedAudioTrack,
     speed, subtitleFontSize, subtitleColor, subtitleBackground, subtitleEdge, subtitleFont,
-    applyQuality, applySpeed, applySubtitle, applySubtitleSize, applyAudioTrack,
+    applyQuality, applySpeed, applySubtitle, applySecondary, applySubtitleSize, applyAudioTrack,
     applySubtitleColor, applySubtitleBackground, applySubtitleEdge, applySubtitleFont,
   },
   ref,
@@ -140,6 +142,15 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
           {subtitles.map((sub, i) => (
             <SettingsOption key={i} label={sub.label} selected={selectedSubtitle === i} onClick={() => applySubtitle(i)} />
           ))}
+          {subtitles.length > 1 && selectedSubtitle !== null && (
+            <>
+              <p className="kui-label kui-option-heading">{t('secondSubtitle')}</p>
+              <SettingsOption label={t('off')} selected={secondarySubtitle === null} onClick={() => applySecondary(null)} />
+              {subtitles.map((sub, i) => i === selectedSubtitle ? null : (
+                <SettingsOption key={i} label={sub.label} selected={secondarySubtitle === i} onClick={() => applySecondary(i)} />
+              ))}
+            </>
+          )}
         </SettingsSubMenu>
       )}
 
