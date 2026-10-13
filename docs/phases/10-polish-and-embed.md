@@ -97,9 +97,9 @@ Sayfa hızı için: oynatıcı, kullanıcı tıklayana kadar ağır kodu yüklem
 Önizleme küçük resimleri ([4.5](./04-expected-features.md)) oynatma tarafında var; **sprite ve
 VTT dosyasını üreten araç yok**, pratikte en çok takılınan yer.
 
-- [ ] `scripts/` altında `ffmpeg` tabanlı betik: videodan N saniyede bir kare, tek sprite + `thumbs.vtt`
-- [ ] Parametreler: aralık, küçük resim boyutu, sütun sayısı
-- [ ] Çıktı formatı mevcut storyboard okuyucusuyla bire bir uyumlu (round-trip testi)
-- [ ] Cloudflare Stream'in kendi `thumbnails` çıktısıyla karşılaştırma notu
+- [x] `scripts/` altında `ffmpeg` tabanlı betik: videodan N saniyede bir kare, tek sprite + `thumbs.vtt`
+- [x] Parametreler: aralık, küçük resim boyutu, sütun sayısı
+- [x] Çıktı formatı mevcut storyboard okuyucusuyla bire bir uyumlu (round-trip testi)
+- [x] Cloudflare Stream'in kendi `thumbnails` çıktısıyla karşılaştırma notu
       ([Faz 7.1](./07-drm-streaming.md)); AWS tarafında MediaConvert frame capture ile alternatif
-- [ ] `recipes/storyboard.md`
+- [x] `recipes/storyboard.md`
