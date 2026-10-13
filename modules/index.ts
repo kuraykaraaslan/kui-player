@@ -27,6 +27,7 @@ export type { AdBreak, AdSpan, TaggedFragment } from './videoplayer/videoplayer.
 export { audioKind, pickDescriptionTrack, pickMainTrack, hasDescription } from './videoplayer/videoplayer.audiokind.js';
 export { planSignSync } from './videoplayer/videoplayer.signsync.js';
 export type { SignSyncInput, SignSyncPlan } from './videoplayer/videoplayer.signsync.js';
+export { getDocumentPip, pipWindowSize } from './videoplayer/videoplayer.docpip.js';
 export { findAt } from './videoplayer/videoplayer.timeline.js';
 export type { VttCue, Chapter, StoryboardTile } from './videoplayer/videoplayer.vtt.js';
 export { detectFormat } from './videoplayer/videoplayer.subtitles.js';

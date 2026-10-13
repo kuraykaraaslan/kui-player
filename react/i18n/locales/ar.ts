@@ -48,6 +48,7 @@ export const ar: PartialDictionary = {
   resumeFrom: 'المتابعة من {time}؟',
   resume: 'متابعة',
   dismiss: 'تجاهل',
+  pipPlaying: "التشغيل في وضع صورة داخل صورة",
   audioDescription: "الوصف الصوتي",
   on: "تشغيل",
   signLanguageVideo: "فيديو لغة الإشارة",

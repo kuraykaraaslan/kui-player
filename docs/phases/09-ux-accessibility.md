@@ -35,13 +35,13 @@ ile kapsam paylaşır.
 Bugün PiP yalnızca video ([`videoplayer.engine.ts`](../../modules/videoplayer/videoplayer.engine.ts));
 kontroller pencerede yok.
 
-- [ ] `documentPictureInPicture.requestWindow()` ile kontrolleri de taşıyan pencere
-- [ ] Stil taşıma: `player.css` + tema değişkenleri yeni belgeye kopyalanır
-- [ ] Olay/odak/klavye kısayolları yeni pencerede de çalışır
-- [ ] **Özellik tespiti:** API yoksa (Safari, Firefox) mevcut video PiP'e düşer
-- [ ] Pencere kapanınca oynatıcı sayfaya geri döner, durum (oynatma/zaman) korunur
-- [ ] Mini oynatıcıyla ([9.2](#92--mini-oynatıcı--s)) çakışma kuralı: biri açıkken diğeri kapalı
-- [ ] Test: API mock'u ile akış; gerçek davranış Chrome'da elle doğrulanır
+- [x] `documentPictureInPicture.requestWindow()` ile kontrolleri de taşıyan pencere
+- [x] Stil taşıma: sayfadaki tüm stil sayfaları (kural kopyası, olmuyorsa `<link>`) ve `--kui-*` tema değişkenleri yeni belgeye kopyalanır
+- [x] Olay/odak/klavye kısayolları yeni pencerede de çalışır. Mimari: oyuncu her zaman sahibi olduğumuz bir portal kapsayıcısında (`host`) çizilir, PiP'te bu kapsayıcı taşınır; boş bir portal veya elle taşınan düğüm React olaylarını çalıştırmıyordu (testle yakalandı). SSR: bu seçenek açıkken oyuncu yalnızca istemcide çizilir. Tam ekran düğmesi PiP penceresinde denenmedi
+- [x] **Özellik tespiti:** API yoksa (Safari, Firefox) mevcut video PiP'e düşer
+- [x] Pencere kapanınca oynatıcı sayfaya geri döner, durum (oynatma/zaman) korunur
+- [x] Mini oynatıcıyla ([9.2](#92--mini-oynatıcı--s)) çakışma kuralı: biri açıkken diğeri kapalı
+- [x] Test: API mock'u ile bileşen testleri + gerçek (headless) Chromium'da Playwright: pencere açılır, aynı `<video>` oynamaya devam eder, PiP penceresindeki Duraklat çalışır, pencere kapanınca oyuncu sayfaya döner. Headed Chrome'da elle bakılmadı
 
 ## 9.4 — Sesli betimleme ve işaret dili izi 🟡 M
 

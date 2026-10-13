@@ -58,6 +58,7 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  pipPlaying: string;
   audioDescription: string;
   on: string;
   signLanguageVideo: string;
@@ -188,6 +189,7 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  pipPlaying: "Playing in picture-in-picture",
   audioDescription: "Audio description",
   on: "On",
   signLanguageVideo: "Sign language video",

@@ -15,6 +15,8 @@ import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
 import { pickDescriptionTrack, pickMainTrack } from '../modules/videoplayer/videoplayer.audiokind.js';
+import { createPortal } from 'react-dom';
+import { useDocumentPip } from './hooks/useDocumentPip.js';
 import { adSpans } from '../modules/videoplayer/videoplayer.adbreaks.js';
 import { miniEnabled, type MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
 import { useMiniPlayer } from './hooks/useMiniPlayer.js';
@@ -114,6 +116,11 @@ export interface VideoPlayerChromeProps {
   audioDescription?: boolean;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
+  /**
+   * Picture-in-picture with the controls too (Chromium's Document PiP). Falls back
+   * to the plain video PiP where the API is missing. Off by default.
+   */
+  documentPictureInPicture?: boolean;
   /** Offer to skip intro/recap chapters (default on); `{ autoSkip: true }` skips them unasked. */
   skipSegments?: boolean | SkipOptions;
   /** Remap or disable keys: `{ seekForward: 'l' }`, `{ captions: false }`, or `false` for none. */
@@ -128,7 +135,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -221,10 +228,17 @@ export function VideoPlayerChrome({
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
   const secondaryText = useSecondaryCues({ videoRef, selectedSecondary: secondarySubtitle, subtitles });
-  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList });
+  const docPip = useDocumentPip({ enabled: documentPictureInPicture && !skin });
+  const { toggle: toggleDocPip, setAnchor: setPipAnchor, host: pipHost } = docPip;
+  const docPipSupported = docPip.supported;
+  const handleTogglePip = useCallback(() => {
+    if (docPipSupported) void toggleDocPip(); else void engine.togglePictureInPicture();
+  }, [engine, docPipSupported, toggleDocPip]);
+  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList, ownerDocument: docPip.pipDocument ?? undefined, onTogglePip: handleTogglePip });
   const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
-  const miniOn = miniEnabled(miniPlayer, touchDevice);
+  // One floating mode at a time: the mini player stands down while the PiP window is open.
+  const miniOn = miniEnabled(miniPlayer, touchDevice) && !docPip.active;
   const mini = useMiniPlayer({ enabled: miniOn, skin, playing, fullscreen: isFullscreen });
   const { setContainer: setMiniContainer, setPlaceholder: setMiniPlaceholder } = mini;
   const containerCallbackRef = useCallback((el: HTMLDivElement | null) => {
@@ -265,9 +279,10 @@ export function VideoPlayerChrome({
         setShowSettings(false); setSettingsView('main');
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showSettings, setShowSettings, setSettingsView]);
+    const doc = docPip.pipDocument ?? document;
+    doc.addEventListener('mousedown', handler);
+    return () => doc.removeEventListener('mousedown', handler);
+  }, [showSettings, setShowSettings, setSettingsView, docPip.pipDocument]);
 
   const closeSettings = useCallback(() => { setShowSettings(false); setSettingsView('main'); }, [setShowSettings, setSettingsView]);
 
@@ -413,7 +428,7 @@ export function VideoPlayerChrome({
     if (containerRef.current) engine.toggleFullscreen(containerRef.current);
   }, [onToggleFullscreen, engine]);
 
-  const handleTogglePip = useCallback(() => { void engine.togglePictureInPicture(); }, [engine]);
+
 
   // For a live stream the bar spans the DVR window, not 0…duration.
   const progress = isLive && dvrWindow > 0
@@ -425,11 +440,11 @@ export function VideoPlayerChrome({
   const adSpanList = adSpans(adBreaks, isLive && dvrWindow > 0 ? dvrStart : 0, isLive && dvrWindow > 0 ? dvrWindow : duration);
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
-  return (
-    <>
-    {mini.floating && (
-      <div ref={setMiniPlaceholder} className="kui-mini-placeholder" style={{ height: mini.placeholderHeight }} aria-hidden="true" />
-    )}
+  const pipEnabled = documentPictureInPicture && !skin;
+  const miniPlaceholder = mini.floating && (
+    <div ref={setMiniPlaceholder} className="kui-mini-placeholder" style={{ height: mini.placeholderHeight }} aria-hidden="true" />
+  );
+  const playerTree = (
     <div
       ref={containerCallbackRef}
       tabIndex={0}
@@ -613,8 +628,8 @@ export function VideoPlayerChrome({
             showSettings={showSettings}
             enableCast={enableCast}
             castState={castState}
-            showPip={enablePictureInPicture && pipSupported}
-            isPip={isPip}
+            showPip={enablePictureInPicture && (pipSupported || docPipSupported)}
+            isPip={isPip || docPip.active}
             onTogglePip={handleTogglePip}
             showAirPlay={airPlaySupported && airPlayAvailable}
             isAirPlaying={airPlaying}
@@ -658,6 +673,24 @@ export function VideoPlayerChrome({
         </Suspense>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {docPip.active && (
+        <div className="kui-pip-placeholder" style={{ height: docPip.placeholderHeight }} role="status">
+          {t('pipPlaying')}
+        </div>
+      )}
+      {miniPlaceholder}
+      {pipEnabled
+        ? (
+          <>
+            <div ref={setPipAnchor} style={{ display: 'contents' }} />
+            {pipHost && createPortal(playerTree, pipHost)}
+          </>
+        )
+        : playerTree}
     </>
   );
 }

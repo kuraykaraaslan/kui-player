@@ -48,6 +48,7 @@ export const fr: PartialDictionary = {
   resumeFrom: 'Reprendre à {time} ?',
   resume: 'Reprendre',
   dismiss: 'Ignorer',
+  pipPlaying: "Lecture en image dans l'image",
   audioDescription: "Audiodescription",
   on: "Activée",
   signLanguageVideo: "Vidéo en langue des signes",

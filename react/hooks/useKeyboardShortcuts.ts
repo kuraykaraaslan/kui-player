@@ -14,22 +14,26 @@ type Options = {
   onToggleHelp: () => void;
   onToggleStats: () => void;
   chapters: readonly Chapter[];
+  /** The document the player currently lives in (changes inside Document Picture-in-Picture). */
+  ownerDocument?: Document;
+  onTogglePip: () => void;
 };
 
 /** Frame length when the real rate is unknown — the video element does not expose it. */
 const FRAME_SECONDS = 1 / 30;
 
-export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp, onToggleStats, chapters }: Options) {
+export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp, onToggleStats, chapters, ownerDocument, onTogglePip }: Options) {
   // Latest-value ref so the listener is attached once and never goes stale.
-  const live = useRef({ keymap, subtitleCount, onToggleHelp, onToggleStats, chapters });
-  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp, onToggleStats, chapters }; });
+  const live = useRef({ keymap, subtitleCount, onToggleHelp, onToggleStats, chapters, onTogglePip });
+  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp, onToggleStats, chapters, onTogglePip }; });
+  const doc = ownerDocument ?? document;
   const lastCaption = useRef(0);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const c = containerRef.current;
       if (!c) return;
-      const focused = document.activeElement;
+      const focused = doc.activeElement;
       if (!c.contains(focused) && focused !== c) return;
 
       // A focused slider or text field owns its own arrow/space handling; the
@@ -50,7 +54,7 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
       // Modified keys belong to the browser and the screen reader (Ctrl+L, Alt+←…).
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList } = live.current;
+      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList, onTogglePip: togglePip } = live.current;
       const action = lookupShortcut(map, e.key, e.shiftKey);
       if (!action) return;
       e.preventDefault();
@@ -63,7 +67,7 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
         case 'volumeDown': engine.setVolume(s.volume - 0.1); break;
         case 'mute': engine.toggleMute(); break;
         case 'fullscreen': engine.toggleFullscreen(c); break;
-        case 'pip': void engine.togglePictureInPicture(); break;
+        case 'pip': togglePip(); break;
         case 'captions':
           if (tracks === 0) break;
           if (s.selectedSubtitle === null) s.setSelectedSubtitle(Math.min(lastCaption.current, tracks - 1));
@@ -93,7 +97,7 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
         }
       }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [containerRef, engine]);
+    doc.addEventListener('keydown', handler);
+    return () => doc.removeEventListener('keydown', handler);
+  }, [containerRef, engine, doc]);
 }

@@ -78,6 +78,11 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * main one. Both must share a timeline; drift beyond `maxDrift` is corrected.
    */
   signLanguage?: SignLanguageOptions;
+  /**
+   * Picture-in-picture with the controls too (Chromium's Document PiP). Falls back
+   * to the plain video PiP where the API is missing. Off by default.
+   */
+  documentPictureInPicture?: boolean;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -133,7 +138,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, audioDescription, signLanguage, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -214,6 +219,7 @@ function VideoPlayerInner({
       shortcuts={shortcuts}
       skipSegments={skipSegments}
       miniPlayer={miniPlayer}
+      documentPictureInPicture={documentPictureInPicture}
       audioDescription={audioDescription}
       src={effectiveSrc}
       poster={effectivePoster}

@@ -865,3 +865,16 @@
 .kui-sign[data-kui-corner="top-right"]    { inset-block-end: auto; inset-block-start: 1rem; inset-inline-start: auto; inset-inline-end: 1rem; }
 .kui-sign-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kui-sign-close { position: absolute; inset-block-start: 0.25rem; inset-inline-end: 0.25rem; }
+
+/* ── document picture-in-picture ─────────────────────────────────────────── */
+
+.kui-pip-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: #111;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  border-radius: var(--kui-radius, 12px);
+}

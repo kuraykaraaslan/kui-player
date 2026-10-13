@@ -48,6 +48,7 @@ export const de: PartialDictionary = {
   resumeFrom: 'Bei {time} fortsetzen?',
   resume: 'Fortsetzen',
   dismiss: 'Schließen',
+  pipPlaying: "Wiedergabe im Bild-in-Bild-Fenster",
   audioDescription: "Audiodeskription",
   on: "An",
   signLanguageVideo: "Gebärdensprachvideo",

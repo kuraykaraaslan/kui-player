@@ -560,3 +560,76 @@ describe('sign language video', () => {
     expect(container.querySelector('.kui-sign')).toBeNull();
   });
 });
+
+describe('document picture-in-picture', () => {
+  type FakePipWindow = EventTarget & { document: Document; closed: boolean; close(): void };
+  let pipWindow: FakePipWindow;
+  let requestWindow: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    const target = new EventTarget();
+    pipWindow = Object.assign(target, {
+      document: document.implementation.createHTMLDocument('pip'),
+      closed: false,
+      close() { this.closed = true; target.dispatchEvent(new Event('pagehide')); },
+    }) as FakePipWindow;
+    requestWindow = vi.fn(async () => pipWindow);
+    (window as unknown as { documentPictureInPicture: unknown }).documentPictureInPicture = { requestWindow, window: null };
+  });
+  afterEach(() => { delete (window as unknown as { documentPictureInPicture?: unknown }).documentPictureInPicture; });
+
+  it('moves the player (same video node) into the PiP window and back when it closes', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} documentPictureInPicture />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    const player = container.querySelector('.kui-player') as HTMLElement;
+
+    await user.click(screen.getByRole('button', { name: 'Picture-in-Picture' }));
+    await waitFor(() => expect(pipWindow.document.body.contains(player)).toBe(true));
+    expect(requestWindow).toHaveBeenCalledWith(expect.objectContaining({ width: expect.any(Number) }));
+    expect(player.querySelector('video')).toBe(video);                       // not re-created: playback continues
+    expect(container.querySelector('.kui-pip-placeholder')).toHaveTextContent('Playing in picture-in-picture');
+
+    act(() => { pipWindow.dispatchEvent(new Event('pagehide')); });
+    await waitFor(() => expect(container.contains(player)).toBe(true));
+    expect(container.querySelector('.kui-pip-placeholder')).toBeNull();
+  });
+
+  it('closing from the player button closes the window', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} documentPictureInPicture />);
+    const player = container.querySelector('.kui-player') as HTMLElement;
+    await user.click(screen.getByRole('button', { name: 'Picture-in-Picture' }));
+    await waitFor(() => expect(pipWindow.document.body.contains(player)).toBe(true));
+    // The PiP document has no window of its own to drive user-event with; a plain click event does the job.
+    const exit = pipWindow.document.body.querySelector('[aria-label="Exit Picture-in-Picture"]')!;
+    act(() => { exit.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await waitFor(() => expect(pipWindow.closed).toBe(true));
+    await waitFor(() => expect(container.contains(player)).toBe(true));
+  });
+
+  it('stays in the page when the browser refuses the window', async () => {
+    requestWindow.mockRejectedValueOnce(new Error('NotAllowedError'));
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} documentPictureInPicture />);
+    await user.click(screen.getByRole('button', { name: 'Picture-in-Picture' }));
+    await waitFor(() => expect(requestWindow).toHaveBeenCalled());
+    expect(container.querySelector('.kui-pip-placeholder')).toBeNull();
+    expect(container.querySelector('.kui-player')).not.toBeNull();
+  });
+
+  it('unmounting while open puts the node back first, so React can remove it', async () => {
+    const user = userEvent.setup();
+    const { container, unmount } = render(<VideoPlayer src={SRC} enableCast={false} documentPictureInPicture />);
+    const player = container.querySelector('.kui-player') as HTMLElement;
+    await user.click(screen.getByRole('button', { name: 'Picture-in-Picture' }));
+    await waitFor(() => expect(pipWindow.document.body.contains(player)).toBe(true));
+    expect(() => unmount()).not.toThrow();
+  });
+
+  it('is off unless asked for: the button uses the plain video PiP path', async () => {
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument());
+    expect(requestWindow).not.toHaveBeenCalled();
+  });
+});
