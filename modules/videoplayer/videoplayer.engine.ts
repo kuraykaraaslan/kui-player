@@ -4,6 +4,7 @@ import {
   PlayerEmitter, QuartileTracker,
   type PlayerEventHandler, type PlayerEventName,
 } from './videoplayer.events.js';
+import { QoeTracker, type QoeSummary } from './videoplayer.qoe.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
 } from './videoplayer.types.js';
@@ -63,6 +64,8 @@ export type VideoPlayerEngineOptions = {
    * Default `false` — the native player replaces our chrome entirely.
    */
   preferNativeIosFullscreen?: boolean;
+  /** Period of the `qoe` summary event while playing, ms (default 10000; `0` = off). */
+  qoeIntervalMs?: number;
 };
 
 /** State carried across a source swap so the viewer lands where they left off. */
@@ -120,6 +123,8 @@ export class VideoPlayerEngine {
 
   private readonly emitter = new PlayerEmitter();
   private readonly quartiles = new QuartileTracker();
+  private readonly qoe = new QoeTracker();
+  private qoeTimer: ReturnType<typeof setInterval> | null = null;
   private loadStartedAt = 0;
   private metadataAt = 0;
   private stallStartedAt = 0;
@@ -143,6 +148,8 @@ export class VideoPlayerEngine {
   keyboardFocus = false;
 
   readonly maxAutoRetries: number;
+  /** How often the `qoe` event fires while playing, ms. `0` disables the periodic summary. */
+  readonly qoeIntervalMs: number;
   readonly preferNativeIosFullscreen: boolean;
 
   // Set by useGoogleCast hook after Cast connects
@@ -157,6 +164,7 @@ export class VideoPlayerEngine {
     this.autoHideControls = opts.autoHideControls ?? true;
     this.controlsVisible = opts.controlsVisible;
     this.maxAutoRetries = opts.maxAutoRetries ?? 3;
+    this.qoeIntervalMs = opts.qoeIntervalMs ?? 10_000;
     this.preferNativeIosFullscreen = opts.preferNativeIosFullscreen ?? false;
     if (opts.adapters) this.adapters = [...opts.adapters];
   }
@@ -194,7 +202,11 @@ export class VideoPlayerEngine {
     const onWaiting = () => {
       s().setLoading(true);
       // A rebuffer starts here and is only measurable once playback resumes.
-      if (this.stallStartedAt === 0) this.stallStartedAt = Date.now();
+      if (this.stallStartedAt === 0) {
+        this.stallStartedAt = Date.now();
+        const count = this.qoe.stallStart(this.stallStartedAt);
+        this.emitter.emit('qoe:stall', { count, currentTime: video.currentTime });
+      }
     };
     const onStalled = () => onWaiting();
 
@@ -205,9 +217,11 @@ export class VideoPlayerEngine {
     const onPlaying = () => {
       s().setLoading(false);
       this.clearError();
+      this.setQoePlaying(true);
       if (this.stallStartedAt > 0) {
         const durationMs = Date.now() - this.stallStartedAt;
         this.stallStartedAt = 0;
+        this.qoe.stallEnd(Date.now());
         this.stallCount += 1;
         this.stallTotalMs += durationMs;
         this.emitter.emit('stall', { count: this.stallCount, durationMs, totalMs: this.stallTotalMs });
@@ -230,6 +244,8 @@ export class VideoPlayerEngine {
       this.stallTotalMs = 0;
       this.stallStartedAt = 0;
       this.quartiles.reset();
+      this.stopQoeTimer();
+      this.qoe.reset();
       this.emitter.emit('sourcechange', { src: video.currentSrc || video.src });
       // A retry re-runs load(); keep the error banner up until it actually recovers.
       if (!s().retrying) this.clearError();
@@ -288,11 +304,13 @@ export class VideoPlayerEngine {
     const onPause = () => {
       s().setPlaying(false);
       this.forceShow();
+      this.setQoePlaying(false);
       this.emitter.emit('pause', { currentTime: video.currentTime });
     };
     const onEnded = () => {
       s().setPlaying(false);
       this.forceShow();
+      this.setQoePlaying(false);
       for (const percent of this.quartiles.finish()) this.emitter.emit('quartile', { percent });
       this.emitter.emit('complete', { duration: video.duration || 0 });
     };
@@ -400,12 +418,42 @@ export class VideoPlayerEngine {
   detach(): void {
     this.exitFakeFullscreen();
     this.releaseAdapter();
+    this.stopQoeTimer();
     this.listeners?.();
     this.listeners = null;
     this.video = null;
     this.restorePoint = null;
     if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
     this.cancelAutoRetry();
+  }
+
+  // ── QoE ────────────────────────────────────────────────────────────────────
+
+  /** Current quality-of-experience numbers for this source — also what the `qoe` event carries. */
+  getQoe(): QoeSummary {
+    const v = this.video as (HTMLVideoElement & { getVideoPlaybackQuality?: () => VideoPlaybackQuality }) | null;
+    const q = v?.getVideoPlaybackQuality?.();
+    return this.qoe.snapshot(
+      Date.now(),
+      q ? { dropped: q.droppedVideoFrames, total: q.totalVideoFrames } : null,
+      this.activeAdapter?.getBandwidth?.() ?? null,
+    );
+  }
+
+  private setQoePlaying(playing: boolean): void {
+    this.qoe.setPlaying(playing, Date.now());
+    if (playing) {
+      if (this.qoeTimer === null && this.qoeIntervalMs > 0) {
+        this.qoeTimer = setInterval(() => this.emitter.emit('qoe', this.getQoe()), this.qoeIntervalMs);
+      }
+    } else if (this.qoeTimer !== null) {
+      this.stopQoeTimer();
+      this.emitter.emit('qoe', this.getQoe());   // a final summary at the pause/end boundary
+    }
+  }
+
+  private stopQoeTimer(): void {
+    if (this.qoeTimer !== null) { clearInterval(this.qoeTimer); this.qoeTimer = null; }
   }
 
   // ── Errors & retry ─────────────────────────────────────────────────────────
@@ -617,6 +665,9 @@ export class VideoPlayerEngine {
       s.setQualityAuto(auto);
       s.setActiveQualityLabel(qualities[activeIndex]?.label ?? null);
       s.setSelectedQuality(auto ? AUTO_QUALITY_VALUE : String(activeIndex));
+    },
+    updateRendition: (rendition) => {
+      this.qoe.setRendition(rendition, Date.now());
     },
     updateAudioTracks: (tracks, activeIndex) => {
       const s = this.store.getState();

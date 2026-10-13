@@ -14,16 +14,16 @@
 
 Event API'si (`engine.on()`) ve CMCD var; ölçülen kalite verisi yok.
 
-- [ ] Başlangıç süresi (play → ilk kare), yeniden yükleme (rebuffer) sayısı ve süresi
-- [ ] Ortalama / anlık bitrate, kalite geçiş sayısı, düşen kare (`getVideoPlaybackQuality`)
-- [ ] Yeni event: `qoe` (periyodik özet) ve `qoe:stall`; mevcut `docs/` ve
+- [x] Başlangıç süresi (play → ilk kare), yeniden yükleme (rebuffer) sayısı ve süresi
+- [x] Ortalama / anlık bitrate, kalite geçiş sayısı, düşen kare (`getVideoPlaybackQuality`)
+- [x] Yeni event: `qoe` (periyodik özet) ve `qoe:stall`; mevcut `docs/` ve
       `recipes/analytics.md` ile tutarlı
-- [ ] hls.js / dash.js adapter'larından rendition + bant genişliği bilgisini `MediaAdapterHost` üzerinden al
-- [ ] **Telemetri varsayılan kapalı:** metrik yalnızca dışarıya event olarak verilir,
+- [x] hls.js / dash.js adapter'larından rendition + bant genişliği bilgisini `MediaAdapterHost` üzerinden al
+- [x] **Telemetri varsayılan kapalı:** metrik yalnızca dışarıya event olarak verilir,
       kütüphane hiçbir yere göndermez (Faz 5.4 gizlilik kuralı, CI testiyle korunuyor)
-- [ ] Unit test: sahte zaman çizelgesiyle stall/başlangıç süresi hesabı
+- [x] Unit test: sahte zaman çizelgesiyle stall/başlangıç süresi hesabı
 
-**Çıkış:** Cloudflare ve AWS aynı video için karşılaştırılabilir sayılar veriyor (Faz 7.6'ya girdi).
+**Çıkış:** Cloudflare ve AWS aynı video için karşılaştırılabilir sayılar veriyor (Faz 7.6'ya girdi). *Oynatıcı tarafı hazır; gerçek Cloudflare/AWS karşılaştırması için o hesaplar gerekiyor ve yapılmadı.*
 
 ## 8.2 — Düşük gecikmeli HLS (LL-HLS) 🟡 S
 

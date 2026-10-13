@@ -3,7 +3,7 @@ import { AUTO_QUALITY, heightLabel, type MediaAdapter, type MediaAdapterHost } f
 
 // ─── the slice of the hls.js surface we actually touch ───────────────────────
 
-type HlsLevel = { height?: number; width?: number; bitrate?: number; name?: string };
+type HlsLevel = { height?: number; width?: number; bitrate?: number; name?: string; videoCodec?: string };
 type HlsAudioTrack = { name?: string; lang?: string; language?: string };
 
 type HlsInstance = {
@@ -12,6 +12,7 @@ type HlsInstance = {
   autoLevelEnabled: boolean;
   audioTracks: HlsAudioTrack[];
   audioTrack: number;
+  bandwidthEstimate?: number;
   loadSource(src: string): void;
   attachMedia(video: HTMLMediaElement): void;
   destroy(): void;
@@ -145,7 +146,12 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         qualities = levelsToQualities(instance.levels);
         host.updateQualities(qualities, instance.currentLevel, instance.autoLevelEnabled);
       });
-      instance.on(ctor.Events.LEVEL_SWITCHED, () => {
+      instance.on(ctor.Events.LEVEL_SWITCHED, (_e, data) => {
+        const index = (data as { level?: number } | undefined)?.level ?? instance.currentLevel;
+        const level = instance.levels[index];
+        host.updateRendition(level
+          ? { bitrate: level.bitrate, width: level.width, height: level.height, codec: level.videoCodec }
+          : null);
         if (qualities.length === 0) qualities = levelsToQualities(instance.levels);
         host.updateQualities(qualities, instance.currentLevel, instance.autoLevelEnabled);
       });
@@ -175,6 +181,8 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
     },
 
     getQualities() { return qualities; },
+
+    getBandwidth() { return hls?.bandwidthEstimate; },
 
     setQuality(index) {
       if (!hls) return;

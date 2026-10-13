@@ -22,6 +22,8 @@ type DashPlayer = {
   getRepresentationsByType?(type: string): DashRepresentation[];
   setRepresentationForTypeByIndex?(type: string, index: number, forceReplace?: boolean): void;
   getCurrentRepresentationForType?(type: string): DashRepresentation | null;
+  /** kbit/s */
+  getAverageThroughput?(type: string): number;
 };
 
 export type DashJsNs = {
@@ -103,6 +105,11 @@ export function createDashAdapter(opts: DashAdapterOptions = {}): MediaAdapter {
         const { list, active } = readQualities(p);
         qualities = list;
         host.updateQualities(list, active, true);
+        const info = p.getBitrateInfoListFor?.('video')?.[active];
+        const rep = p.getCurrentRepresentationForType?.('video');
+        host.updateRendition(info
+          ? { bitrate: info.bitrate, width: info.width, height: info.height }
+          : rep ? { bitrate: rep.bandwidth, width: rep.width, height: rep.height } : null);
       };
       const publishAudio = () => {
         dashTracks = p.getTracksFor('audio') ?? [];
@@ -135,6 +142,11 @@ export function createDashAdapter(opts: DashAdapterOptions = {}): MediaAdapter {
     },
 
     getQualities() { return qualities; },
+
+    getBandwidth() {
+      const kbps = player?.getAverageThroughput?.('video');
+      return kbps ? Math.round(kbps * 1000) : undefined;
+    },
 
     setQuality(index) {
       const p = player;

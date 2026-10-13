@@ -1,4 +1,5 @@
 import type { AudioTrackOption, PlayerError, QualityOption } from '../videoplayer.types.js';
+import type { Rendition } from '../videoplayer.qoe.js';
 
 /**
  * What an adapter may push back into the player while it is attached — level
@@ -10,6 +11,8 @@ export interface MediaAdapterHost {
    * (`-1` when unknown); `auto` reports whether ABR is picking it.
    */
   updateQualities(qualities: QualityOption[], activeIndex: number, auto: boolean): void;
+  /** Publish the rendition now playing (bitrate, size, codec) for QoE accounting. */
+  updateRendition(rendition: Rendition | null): void;
   /** Publish the selectable audio renditions and which one is live. */
   updateAudioTracks(tracks: AudioTrackOption[], activeIndex: number): void;
   /** Surface a fatal streaming error through the player's normal error UI. */
@@ -40,6 +43,8 @@ export interface MediaAdapter {
   getAudioTracks?(): AudioTrackOption[];
   /** Switch audio rendition by index. */
   setAudioTrack?(index: number): void;
+  /** The streaming engine's own throughput estimate, bits/s, when it keeps one. */
+  getBandwidth?(): number | undefined;
   /** Release the streaming engine and any listeners. Must be idempotent. */
   detach(): void;
 }

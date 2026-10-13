@@ -61,6 +61,32 @@ describe('engine events', () => {
     engine.dispose();
   });
 
+  it('emits qoe:stall at the start of a rebuffer and periodic qoe summaries', () => {
+    vi.useFakeTimers();
+    const { engine, video } = setup();
+    const starts: { count: number }[] = [];
+    const summaries: { playingMs: number; stallCount: number; stallMs: number }[] = [];
+    engine.on('qoe:stall', (p) => starts.push(p));
+    engine.on('qoe', (p) => summaries.push(p));
+
+    emit(video, 'playing', { paused: false });
+    vi.advanceTimersByTime(4000);
+    emit(video, 'waiting');
+    expect(starts).toEqual([expect.objectContaining({ count: 1 })]);
+    vi.advanceTimersByTime(1000);
+    emit(video, 'playing');
+    vi.advanceTimersByTime(5000);          // crosses the 10 s mark
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toMatchObject({ playingMs: 9000, stallCount: 1, stallMs: 1000 });
+
+    emit(video, 'pause', { paused: true });  // a final summary on pause
+    expect(summaries).toHaveLength(2);
+    vi.advanceTimersByTime(30_000);
+    expect(summaries).toHaveLength(2);       // timer stopped
+    vi.useRealTimers();
+    engine.dispose();
+  });
+
   it('measures rebuffers', () => {
     vi.useFakeTimers();
     const { engine, video } = setup();

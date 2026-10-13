@@ -6,6 +6,8 @@ import { bitrateLabel, heightLabel } from '../../modules/videoplayer/adapters/ad
 const host = () => ({
   qualities: [] as unknown[], audio: [] as unknown[], errors: [] as unknown[],
   updateQualities(q: unknown[], active: number, auto: boolean) { this.qualities = [q, active, auto]; },
+  rendition: null as unknown,
+  updateRendition(r: unknown) { this.rendition = r; },
   updateAudioTracks(t: unknown[], active: number) { this.audio = [t, active]; },
   reportError(e: unknown) { this.errors.push(e); },
 });

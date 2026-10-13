@@ -47,6 +47,8 @@ engine.on("quartile", ({ percent }) => beacon(percent));
 |---|---|---|
 | `ready` | `startupMs`, `timeToFirstFrameMs` | the two numbers that decide whether a player feels fast |
 | `stall` | `count`, `durationMs`, `totalMs` | rebuffering — the main QoE metric |
+| `qoe:stall` | `count`, `currentTime` | a rebuffer just *began* (`stall` fires when it ends) |
+| `qoe` | `playingMs`, `stallCount/Ms/Ratio`, `switches`, `rendition`, `avgBitrate`, `droppedFrames`, `bandwidthBps` | periodic summary every `qoeIntervalMs` (default 10 s) while playing, plus one on pause/end. `engine.getQoe()` returns the same on demand |
 | `quartile` | `percent` (25/50/75/100) | the engagement standard; each fires once per source |
 | `complete` | `duration` | reached the end |
 | `error` | the `PlayerError` | `name` is stable and safe to group by |

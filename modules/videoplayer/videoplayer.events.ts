@@ -1,4 +1,5 @@
 import type { PlayerError } from './videoplayer.types.js';
+import type { QoeSummary } from './videoplayer.qoe.js';
 
 /**
  * Everything the player reports about a playback session. This is a local API:
@@ -17,6 +18,10 @@ export type PlayerEventMap = {
   error: PlayerError;
   /** A rebuffer ended. `count` is how many have happened for this source. */
   stall: { count: number; durationMs: number; totalMs: number };
+  /** A rebuffer just began (`stall` reports it once it has ended). */
+  'qoe:stall': { count: number; currentTime: number };
+  /** Periodic QoE summary while playing, plus once on pause/end. Interval: `qoeIntervalMs`. */
+  qoe: QoeSummary;
   /** Fired once each per source, at 25/50/75/100% watched. */
   quartile: { percent: 25 | 50 | 75 | 100 };
   complete: { duration: number };
