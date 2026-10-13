@@ -460,6 +460,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `playlist` / `playlistIndex` / `onPlaylistIndexChange` / `playlistCountdown` | — | play through a list |
 | `persist` | `boolean \| PersistOptions` | remember position and preferences; **off by default** |
 | `watermark` | `{ text, opacity?, intervalMs?, pauseOnTamper? }` | visible moving text mark (user id / e-mail), kept in fullscreen. Deters leaks; cannot stop screen recording |
+| `VideoPlayerFacade` | `import … from '@kuraykaraaslan/kui-player/facade'` | poster + play button, ~1 kB; the player loads on click. See [recipes/facade.md](recipes/facade.md) |
 | `skipSegments` | `boolean \| { autoSkip? }` | "Skip intro / recap" button for chapters of that kind (default on); `autoSkip` skips unasked. Chapters get a `kind` (`intro` `recap` `credits`), or it is guessed from the title ("Intro", "Recap", "Credits"…) |
 | `shortcuts` | `{ [action]: key \| key[] \| false } \| false` | remap or disable keyboard shortcuts |
 | `share` | `boolean \| { param?, onShare? }` | start at `?t=90` / `#t=1m30s` and show a "Share from here" button; **off by default** |

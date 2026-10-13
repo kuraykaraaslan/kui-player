@@ -55,6 +55,10 @@
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.js"
     },
+    "./facade": {
+      "types": "./dist/react/facade.d.ts",
+      "import": "./dist/react/facade.js"
+    },
     "./skin": {
       "types": "./dist/embed/skin.d.ts",
       "import": "./dist/skin/index.js"
@@ -85,7 +89,7 @@
     {
       "name": "core (vanilla engine)",
       "path": "dist/index.js",
-      "limit": "12.5 kB"
+      "limit": "13.5 kB"
     },
     {
       "name": "react subpath",
@@ -93,7 +97,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "27 kB"
+      "limit": "28 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -105,12 +109,17 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "34 kB"
+      "limit": "36 kB"
+    },
+    {
+      "name": "facade (click-to-load cover)",
+      "path": "dist/react/facade.js",
+      "limit": "1.5 kB"
     },
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "39 kB"
+      "limit": "43 kB"
     },
     {
       "name": "stylesheet",
@@ -130,7 +139,7 @@
       "path": [
         "dist/locales/index.js"
       ],
-      "limit": "6 kB"
+      "limit": "6.5 kB"
     }
   ],
   "peerDependencies": {
@@ -180,7 +189,7 @@
   },
   "scripts": {
     "dev": "vite --config vite.config.demo.ts",
-    "build:js": "vite build && vite build --config vite.config.react.ts && vite build --config vite.config.skin.ts && vite build --config vite.config.locales.ts && vite build --config vite.config.wrappers.ts",
+    "build:js": "vite build && vite build --config vite.config.react.ts && vite build --config vite.config.facade.ts && vite build --config vite.config.skin.ts && vite build --config vite.config.locales.ts && vite build --config vite.config.wrappers.ts",
     "build:types": "tsc -p tsconfig.lib.json",
     "build:css": "node scripts/build-css.mjs",
     "build:embed": "vite build --config vite.config.embed.ts",

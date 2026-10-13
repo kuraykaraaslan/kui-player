@@ -49,6 +49,12 @@ check('react entry declares the client boundary',
   readFileSync(resolve(root, 'dist/react/index.js'), 'utf8').startsWith('"use client"'));
 
 // ── skin mode, locales, wrappers ─────────────────────────────────────────────
+const facade = await load('dist/react/facade.js');
+check('facade entry exports the cover', typeof facade.VideoPlayerFacade === 'function');
+check('facade entry does not bundle the player',
+  readFileSync(resolve(root, 'dist/react/facade.js'), 'utf8').includes('import("@kuraykaraaslan/kui-player/react")')
+  && !readFileSync(resolve(root, 'dist/react/facade.js'), 'utf8').includes('kui-player--embedded'));
+
 const skin = await load('dist/skin/index.js');
 check('skin exports mountSkin and skinAll', typeof skin.mountSkin === 'function' && typeof skin.skinAll === 'function');
 check('skin exports the custom element', typeof skin.defineKuiPlayer === 'function');

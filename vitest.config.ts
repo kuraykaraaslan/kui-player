@@ -10,7 +10,12 @@ export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   // Same stylesheet transform the shipped bundles get, so tests see what users do.
   plugins: [react(), minifiedCssRaw()],
-  resolve: { alias: { '@': resolve(import.meta.dirname, '.') } },
+  resolve: {
+    alias: {
+      '@kuraykaraaslan/kui-player/react': resolve(import.meta.dirname, 'react/index.ts'),
+      '@': resolve(import.meta.dirname, '.'),
+    },
+  },
   test: {
     environment: 'jsdom',
     // Without this, Vitest stubs CSS imports — including the `?raw` import that

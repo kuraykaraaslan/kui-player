@@ -14,7 +14,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "paths": { "@/*": ["./*"] }
+    "paths": {
+      "@/*": ["./*"],
+      "@kuraykaraaslan/kui-player/react": ["./react/index.ts"]
+    }
   },
   "include": ["modules/**/*", "react/**/*", "libs/**/*", "src/**/*"],
   "exclude": ["node_modules", "dist", "coverage"]

@@ -112,6 +112,11 @@ export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   root: resolve(import.meta.dirname, 'tests/e2e/app'),
   plugins: [react(), mediaFixtures()],
-  resolve: { alias: { '@': resolve(import.meta.dirname, '.') } },
+  resolve: {
+    alias: {
+      '@kuraykaraaslan/kui-player/react': resolve(import.meta.dirname, 'react/index.ts'),
+      '@': resolve(import.meta.dirname, '.'),
+    },
+  },
   server: { port: 5174, strictPort: true },
 });

@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { VideoPlayer } from '../../../react';
+import { VideoPlayerFacade } from '../../../react/facade';
 import { tr } from '../../../react/i18n/locales/tr';
 import { ar } from '../../../react/i18n/locales/ar';
 import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter.types';
@@ -19,6 +19,7 @@ import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter
  *   ?persist=1    remember position and preferences
  *   ?playlist=1   play through a two-item playlist
  *   ?theme=cinema apply a theme preset
+ *   ?facade=1     show only a poster and a play button until clicked
  */
 const params = new URLSearchParams(location.search);
 
@@ -60,8 +61,13 @@ const playlist = params.get('playlist')
     ]
   : undefined;
 
+// Imported on demand so that facade mode really does start without the player.
+const Component = params.get('facade') ? VideoPlayerFacade : (await import('../../../react')).VideoPlayer;
+const facadeProps = params.get('facade') ? { prefetch: params.get('prefetch') !== '0' } : {};
+
 createRoot(document.getElementById('stage')!).render(
-  <VideoPlayer
+  <Component
+    {...facadeProps}
     src={playlist ? undefined : src}
     playlist={playlist}
     playlistCountdown={params.get('countdown') ? Number(params.get('countdown')) : 3}

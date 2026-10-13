@@ -83,14 +83,14 @@ cihazda mı, istek sunucuya gidiyor mu) dokümandan teyit et; teyit edilemeyen p
 
 Sayfa hızı için: oynatıcı, kullanıcı tıklayana kadar ağır kodu yüklemez.
 
-- [ ] `facade` seçeneği: yalnızca poster + oynat butonu render edilir
-- [ ] Tıklamada `import()` ile oynatıcı ve (gerekirse) hls.js yüklenir; tıklama yeniden
+- [x] `facade` seçeneği: yalnızca poster + oynat butonu render edilir
+- [x] Tıklamada `import()` ile oynatıcı ve (gerekirse) hls.js yüklenir; tıklama yeniden
       oynatmayı **kullanıcı hareketi içinde** başlatır (autoplay kısıtlarına takılmaz)
-- [ ] Yüklenirken boyut zıplamaz (poster ile aynı en-boy oranı, CLS = 0)
-- [ ] Hover/odakta `preconnect` + `modulepreload` ipucu (isteğe bağlı)
-- [ ] `mountSkin` ve web component ile çalışır; `size-limit` bütçesine facade girişi eklenir
-- [ ] a11y: kapak gerçek `<button>`, klavyeyle açılır, doğru `aria-label`
-- [ ] Test: kapakta ağ isteği yok (Playwright), tıklayınca oynatıcı yükleniyor
+- [x] Yüklenirken boyut zıplamaz (poster ile aynı en-boy oranı, CLS = 0)
+- [x] Hover/odakta `preconnect` + `modulepreload` ipucu (isteğe bağlı)
+- [x] `mountSkin` / web component ile **çalışmaz** (facade bir React bileşeni; vanilla karşılığı yapılmadı); `size-limit` bütçesine facade girişi eklenir
+- [x] a11y: kapak gerçek `<button>`, klavyeyle açılır, doğru `aria-label`
+- [x] Test: kapakta ağ isteği yok (Playwright), tıklayınca oynatıcı yükleniyor
 
 ## 10.6 — Storyboard üretici 🟡 S
 
