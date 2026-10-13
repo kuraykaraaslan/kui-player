@@ -457,6 +457,10 @@ export function VideoPlayerChrome({
     ? Math.max(0, dvrWindow - (currentTime - dvrStart)) : null;
   const adBreaks = useVideoPlayerStore(s => s.adBreaks);
   const adSpanList = adSpans(adBreaks, isLive && dvrWindow > 0 ? dvrStart : 0, isLive && dvrWindow > 0 ? dvrWindow : duration);
+  const loopRange = useVideoPlayerStore(s => s.loopRange);
+  const loopSpan = loopRange && duration > 0
+    ? adSpans([{ id: 'loop', start: loopRange.a, end: loopRange.b, duration: null, source: 'cue-out' }], 0, duration)[0] ?? null
+    : null;
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   const pipEnabled = documentPictureInPicture && !skin;
@@ -631,6 +635,7 @@ export function VideoPlayerChrome({
               : (isLive && dvrWindow > 0 ? dvrStart + seekHoverRatio * dvrWindow : seekHoverRatio * duration)}
             chapters={chapterList}
             adSpans={adSpanList}
+            loopSpan={loopSpan}
             tiles={tiles}
             valueText={isLive
               ? (atLiveEdge

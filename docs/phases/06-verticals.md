@@ -126,3 +126,25 @@ IMA SDK ~100 KB ve Google'a telemetri gönderiyor; ayrı bir paket olmadan Faz 5
 
 **Bir sonraki adım Kuray'ın:** `0.1.0` yayınlansın, geri bildirim toplansın, sonra
 buradan **en fazla bir** madde seçilsin.
+
+---
+
+## Uygulama notu (Ekim 2026): 6.3 ve 6.4 yapıldı — talep olmadan
+
+Yukarıdaki karar kriterinin **birincisi (gerçek talep) sağlanmadı**; bu iki madde Kuray'ın
+açık talimatıyla ("fazları kapat, tam izinlisin") yapıldı, kural bilerek esnetildi. Üçüncü
+kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında, ayrı bir lazy chunk'ta
+(`FrameTools`) ve varsayılan **kapalı**; kapalıyken yalnızca ~1 kB'lık `timecode` yardımcısı
+çekirdekte kalıyor (kare adımı artık gerçek kare hızını kullanıyor).
+
+- **6.3** — `,` / `.` kare adımı (kare ortasına iner), SMPTE timecode (drop-frame dahil, 29.97
+  için birim testle doğrulandı), kareye/timecode'a git, timecode kopyala, fps prop'u veya
+  ölçüm + standart orana yuvarlama. *Yapılmadı:* kare numarası için ayrı bir görünüm
+  (zaman kodunun yanında `#N` olarak gösteriliyor).
+- **6.4** — `a` tuşu veya düğme ile A / B / temizle, seek bar'da vurgulu aralık, sonsuz ya da
+  1/2/3/5/10 tekrar, aralık başına hız hafızası.
+- **Doğrulanmadı:** gerçek `requestVideoFrameCallback` yolu tarayıcıda denenmedi (testler
+  `timeupdate` yedeğini sürüyor); kare hızı ölçümü gerçek bir videoyla doğrulanmadı.
+- **6.1, 6.2, 6.5, 6.6 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
+  ürün kararları.
+

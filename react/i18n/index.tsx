@@ -58,6 +58,16 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  frameTools: string;
+  goToFrame: string;
+  frame: string;
+  copyTimecode: string;
+  loopA: string;
+  loopB: string;
+  loopClear: string;
+  loopRepeat: string;
+  loopForever: string;
+  loopTimes: string;
   translateTo: string;
   autoTranslation: string;
   translationDownloading: string;
@@ -193,6 +203,16 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  frameTools: "Frame tools",
+  goToFrame: "Go to frame or timecode",
+  frame: "Frame",
+  copyTimecode: "Copy timecode",
+  loopA: "Set loop start (A)",
+  loopB: "Set loop end (B)",
+  loopClear: "Clear loop",
+  loopRepeat: "Repeat",
+  loopForever: "Forever",
+  loopTimes: "{n}×",
   translateTo: "Translate to {language}",
   autoTranslation: "Automatic translation",
   translationDownloading: "Downloading language model… {percent}%",

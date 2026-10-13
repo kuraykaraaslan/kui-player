@@ -28,6 +28,8 @@ type ProgressBarProps = {
   chapters: Chapter[];
   /** Ad-break spans as percentages of the bar. */
   adSpans?: AdSpan[];
+  /** The A-B loop range as a percentage span. */
+  loopSpan?: { left: number; width: number } | null;
   tiles: StoryboardTile[];
 };
 
@@ -42,7 +44,7 @@ const PAGE_STEP_RATIO = 0.1;
 export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function ProgressBar(
   {
     progress, buffered, seekHoverRatio, hoverTime, valueText, duration,
-    hoverSeconds, chapters, tiles, adSpans,
+    hoverSeconds, chapters, tiles, adSpans, loopSpan,
     onSeek, onSeekMouseMove, onSeekLeave, onScrubStart, onScrubMove, onScrubEnd,
     onSeekBy, onSeekToRatio,
   },
@@ -86,6 +88,9 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
       <div ref={ref} className="kui-seek-track">
         <div className="kui-seek-buffered" style={{ width: `${buffered}%` }} />
         <ChapterTrack chapters={chapters} duration={duration} progress={progress} />
+        {loopSpan && (
+          <div className="kui-loop-range" style={{ insetInlineStart: `${loopSpan.left}%`, width: `${loopSpan.width}%` }} aria-hidden="true" />
+        )}
         {adSpans?.map((a) => (
           <div key={a.id} className="kui-adbreak" style={{ insetInlineStart: `${a.left}%`, width: `${a.width}%` }} aria-hidden="true" />
         ))}

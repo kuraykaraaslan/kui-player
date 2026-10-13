@@ -19,9 +19,6 @@ type Options = {
   onTogglePip: () => void;
 };
 
-/** Frame length when the real rate is unknown — the video element does not expose it. */
-const FRAME_SECONDS = 1 / 30;
-
 export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp, onToggleStats, chapters, ownerDocument, onTogglePip }: Options) {
   // Latest-value ref so the listener is attached once and never goes stale.
   const live = useRef({ keymap, subtitleCount, onToggleHelp, onToggleStats, chapters, onTogglePip });
@@ -77,8 +74,8 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
           if (s.duration > 0 && !s.isLive) engine.seek((Number(e.key) / 10) * s.duration);
           break;
         // Frame stepping only makes sense paused; while playing it would be a surprise nudge.
-        case 'frameBack': if (!s.playing) engine.seekBy(-FRAME_SECONDS); break;
-        case 'frameForward': if (!s.playing) engine.seekBy(FRAME_SECONDS); break;
+        case 'frameBack': if (!s.playing) engine.stepFrame(-1); break;
+        case 'frameForward': if (!s.playing) engine.stepFrame(1); break;
         case 'faster': engine.setSpeed(SPEEDS.find((v) => v > s.speed) ?? SPEEDS[SPEEDS.length - 1]!); break;
         case 'slower': engine.setSpeed([...SPEEDS].reverse().find((v) => v < s.speed) ?? SPEEDS[0]!); break;
         case 'start': engine.seek(0); break;

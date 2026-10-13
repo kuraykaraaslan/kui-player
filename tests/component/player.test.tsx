@@ -187,8 +187,8 @@ describe('keyboard shortcuts', () => {
     await user.keyboard('<');
     expect(video.playbackRate).toBe(1);
 
-    await user.keyboard('.');            // paused, so it steps one frame
-    expect(video.currentTime).toBeCloseTo(1 / 30);
+    await user.keyboard('.');            // paused, so it steps one frame (default 30 fps)
+    expect(video.currentTime).toBeCloseTo(1.5 / 30);   // lands mid-way through frame 1
   });
 
   it('remaps and disables keys through the shortcuts option', async () => {

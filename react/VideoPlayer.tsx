@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { FrameToolsOptions } from './parts/FrameTools.js';
 import type { SignLanguageOptions } from './parts/SignLanguageVideo.js';
 import type { MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
 import type { SkipOptions } from './parts/SkipController.js';
@@ -23,6 +24,7 @@ import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
 const MediaSessionController = lazy(() => import('./parts/MediaSessionController.js'));
+const FrameTools = lazy(() => import('./parts/FrameTools.js'));
 const SignLanguageVideo = lazy(() => import('./parts/SignLanguageVideo.js'));
 const Watermark = lazy(() => import('./parts/Watermark.js'));
 const ShareController = lazy(() => import('./parts/ShareController.js'));
@@ -89,6 +91,11 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * the browser has the `Translator` API (Chromium desktop); otherwise nothing is offered.
    */
   translation?: { targets: string[] };
+  /**
+   * Review tools: SMPTE timecode, go-to-frame, copy timecode and an A-B loop
+   * (press `a` to mark A, B, then clear). Off by default; loaded on demand.
+   */
+  frameTools?: boolean | FrameToolsOptions;
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -102,6 +109,7 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
 const NO_ICON_OVERRIDES: IconOverrides = {};
 const EMPTY_PERSIST: PersistOptions = {};
 const EMPTY_SHARE: ShareOptions = {};
+const NO_FRAME_OPTIONS: FrameToolsOptions = {};
 
 export function VideoPlayer(props: VideoPlayerComponentProps) {
   usePlayerStyles(props.injectStyles ?? true);
@@ -144,7 +152,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, audioDescription, signLanguage, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -297,6 +305,12 @@ function VideoPlayerInner({
             subtitles={effectiveSubtitles}
             skipResume={urlTime !== null}
           />
+        </Suspense>
+      )}
+
+      {frameTools && (
+        <Suspense fallback={null}>
+          <FrameTools options={frameTools === true ? NO_FRAME_OPTIONS : frameTools} />
         </Suspense>
       )}
 

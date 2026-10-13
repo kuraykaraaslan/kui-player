@@ -5,6 +5,7 @@ import {
   type PlayerEventHandler, type PlayerEventName,
 } from './videoplayer.events.js';
 import { QoeTracker, type QoeSummary } from './videoplayer.qoe.js';
+import { frameAt, timeOfFrame } from './videoplayer.timecode.js';
 import { audioKind } from './videoplayer.audiokind.js';
 import { chapterIndexAt, chapterKind } from './videoplayer.chapters.js';
 import type { Chapter } from './videoplayer.vtt.js';
@@ -159,6 +160,9 @@ export class VideoPlayerEngine {
 
   /** Ignore seeks while the playhead is inside a stream-marked ad break. */
   seekLockInAds = false;
+
+  /** Frames per second used for frame stepping (a `<video>` does not expose it). */
+  frameRate = 30;
 
   readonly maxAutoRetries: number;
   /** How often the `qoe` event fires while playing, ms. `0` disables the periodic summary. */
@@ -929,6 +933,16 @@ export class VideoPlayerEngine {
     if (!this.video) return;
     if (this.seekLockInAds && this.store.getState().inAdBreak) return;
     this.video.currentTime = Math.max(0, Math.min(this.video.duration || 0, seconds));
+  }
+
+  setFrameRate(fps: number): void {
+    if (Number.isFinite(fps) && fps > 0) this.frameRate = fps;
+  }
+
+  /** Step one frame forward or back, landing mid-frame so the displayed frame is the intended one. */
+  stepFrame(direction: 1 | -1): void {
+    if (!this.video) return;
+    this.seek(timeOfFrame(frameAt(this.video.currentTime, this.frameRate) + direction, this.frameRate));
   }
 
   seekBy(delta: number): void {

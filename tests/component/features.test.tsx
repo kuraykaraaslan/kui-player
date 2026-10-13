@@ -724,3 +724,114 @@ describe('on-device subtitle translation', () => {
     expect(screen.queryByRole('menuitemradio', { name: /Translate to/ })).not.toBeInTheDocument();
   });
 });
+
+describe('frame tools and A-B loop', () => {
+  async function setup(props: Partial<React.ComponentProps<typeof VideoPlayer>> = {}) {
+    const user = userEvent.setup();
+    const utils = render(<VideoPlayer src={SRC} enableCast={false} frameTools={{ fps: 25 }} {...props} />);
+    const video = utils.container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 120 });
+    await screen.findByRole('group', { name: 'Frame tools' }, { timeout: 4000 });
+    return { user, video, ...utils };
+  }
+  const tick = (video: HTMLVideoElement, t: number) => act(() => { emit(video, 'timeupdate', { currentTime: t }); });
+
+  it('is off unless asked for', async () => {
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument());
+    expect(screen.queryByRole('group', { name: 'Frame tools' })).not.toBeInTheDocument();
+  });
+
+  it('shows the SMPTE timecode and frame number of the playhead', async () => {
+    const { video } = await setup();
+    tick(video, 61.52);
+    await waitFor(() => expect(screen.getByLabelText('Go to frame or timecode')).toHaveValue('00:01:01:13'));
+    expect(screen.getByTitle('Frame')).toHaveTextContent('#1538');
+  });
+
+  it('goes to a frame number or a timecode', async () => {
+    const { user, video } = await setup();
+    const input = screen.getByLabelText('Go to frame or timecode');
+    await user.clear(input);
+    await user.type(input, '50{Enter}');
+    expect(video.currentTime).toBeCloseTo(2.02);
+    await user.clear(input);
+    await user.type(input, '00:00:10:00{Enter}');
+    expect(video.currentTime).toBe(10);
+    await user.clear(input);
+    await user.type(input, 'garbage{Enter}');
+    expect(video.currentTime).toBe(10);   // unchanged
+  });
+
+  it('steps exactly one frame at the configured rate', async () => {
+    const { user, video, container } = await setup();
+    tick(video, 10.02);   // inside frame 250
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('.');
+    expect(video.currentTime).toBeCloseTo(251.5 / 25);
+    await user.keyboard(',');
+    await user.keyboard(',');
+    expect(video.currentTime).toBeCloseTo(249.5 / 25);
+  });
+
+  it('loops A to B, forever by default, and marks the range on the seek bar', async () => {
+    const { user, video, container } = await setup();
+    tick(video, 10);
+    await user.click(screen.getByRole('button', { name: 'Set loop start (A)' }));
+    tick(video, 20);
+    await user.click(screen.getByRole('button', { name: 'Set loop end (B)' }));
+    expect(screen.getByRole('button', { name: 'Clear loop' })).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.kui-loop-range')).not.toBeNull());
+
+    tick(video, 20.05);
+    expect(video.currentTime).toBe(10);
+    tick(video, 20.05);
+    expect(video.currentTime).toBe(10);
+  });
+
+  it('stops looping after the chosen number of passes', async () => {
+    const { user, video } = await setup();
+    tick(video, 10);
+    await user.click(screen.getByRole('button', { name: 'Set loop start (A)' }));
+    tick(video, 20);
+    await user.click(screen.getByRole('button', { name: 'Set loop end (B)' }));
+    await user.selectOptions(screen.getByLabelText('Repeat'), '2');
+
+    tick(video, 20.05);
+    expect(video.currentTime).toBe(10);        // pass 1 → back to A
+    video.currentTime = 20.05;
+    tick(video, 20.05);
+    expect(video.currentTime).toBe(20.05);     // pass 2 is the last: plays on
+  });
+
+  it('clears with the third press, and the `a` key does the same job', async () => {
+    const { user, video, container } = await setup();
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    tick(video, 5);
+    await user.keyboard('a');
+    expect(screen.getByRole('button', { name: 'Set loop end (B)' })).toBeInTheDocument();
+    tick(video, 9);
+    await user.keyboard('a');
+    expect(screen.getByRole('button', { name: 'Clear loop' })).toBeInTheDocument();
+    await user.keyboard('a');
+    expect(screen.getByRole('button', { name: 'Set loop start (A)' })).toBeInTheDocument();
+  });
+
+  it('remembers the playback speed chosen for a range', async () => {
+    const { user, video } = await setup();
+    const speed = (v: number) => act(() => { video.playbackRate = v; emit(video, 'ratechange'); });
+    tick(video, 10);
+    await user.click(screen.getByRole('button', { name: 'Set loop start (A)' }));
+    tick(video, 20);
+    await user.click(screen.getByRole('button', { name: 'Set loop end (B)' }));
+    speed(0.5);                                   // slow down while practising this phrase
+    await user.click(screen.getByRole('button', { name: 'Clear loop' }));
+    speed(1);
+
+    tick(video, 10);
+    await user.click(screen.getByRole('button', { name: 'Set loop start (A)' }));
+    tick(video, 20);
+    await user.click(screen.getByRole('button', { name: 'Set loop end (B)' }));   // the same range again
+    await waitFor(() => expect(video.playbackRate).toBe(0.5));
+  });
+});
