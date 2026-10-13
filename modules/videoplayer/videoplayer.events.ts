@@ -22,6 +22,8 @@ export type PlayerEventMap = {
   'qoe:stall': { count: number; currentTime: number };
   /** Periodic QoE summary while playing, plus once on pause/end. Interval: `qoeIntervalMs`. */
   qoe: QoeSummary;
+  /** The playhead entered a chapter (play-through or seek). */
+  chapter: { index: number; title: string; kind: 'intro' | 'recap' | 'credits' | 'content' };
   /** Fired once each per source, at 25/50/75/100% watched. */
   quartile: { percent: 25 | 50 | 75 | 100 };
   complete: { duration: number };

@@ -21,10 +21,14 @@ export default function PlaylistController({ playlist, index, onSelect, countdow
   const t = useTranslate();
   const [remaining, setRemaining] = useState<number | null>(null);
   const [lastIndex, setLastIndex] = useState(index);
+  // Set once the credits have started (or been dismissed) for this item, so the
+  // end of the video does not restart a countdown the viewer cancelled.
+  const [creditsHandled, setCreditsHandled] = useState(false);
 
   // A new item cancels any pending countdown, adjusted during render.
   if (lastIndex !== index) {
     setLastIndex(index);
+    setCreditsHandled(false);
     if (remaining !== null) setRemaining(null);
   }
 
@@ -32,11 +36,21 @@ export default function PlaylistController({ playlist, index, onSelect, countdow
 
   useEffect(() => {
     return engine.on('complete', () => {
-      if (!next) return;
+      if (!next || creditsHandled) return;
       if (countdown <= 0) { onSelect(index + 1); return; }
       setRemaining(countdown);
     });
-  }, [engine, next, index, onSelect, countdown]);
+  }, [engine, next, index, onSelect, countdown, creditsHandled]);
+
+  // Reaching the credits starts the same countdown early — one timer, not two.
+  useEffect(() => {
+    return engine.on('chapter', ({ kind }) => {
+      if (kind !== 'credits' || !next || creditsHandled) return;
+      setCreditsHandled(true);
+      if (countdown <= 0) onSelect(index + 1);
+      else setRemaining(countdown);
+    });
+  }, [engine, next, index, onSelect, countdown, creditsHandled]);
 
   useEffect(() => {
     if (remaining === null) return;

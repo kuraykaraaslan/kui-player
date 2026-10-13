@@ -387,6 +387,8 @@ Active while the player container is focused:
 | `<` / `>` | slower / faster |
 | `Home` / `End` | start / end |
 | `?` | open the shortcut list |
+| `s` | skip the intro / recap chapter you are in |
+| `[` / `]` | previous / next chapter (`[` restarts the chapter when more than 3 s in) |
 | `Shift`+`I` | technical info panel (resolution, bitrate, buffer, dropped frames, stalls; copyable) |
 | `Esc` | close the settings panel, or leave emulated fullscreen |
 
@@ -458,6 +460,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `playlist` / `playlistIndex` / `onPlaylistIndexChange` / `playlistCountdown` | — | play through a list |
 | `persist` | `boolean \| PersistOptions` | remember position and preferences; **off by default** |
 | `watermark` | `{ text, opacity?, intervalMs?, pauseOnTamper? }` | visible moving text mark (user id / e-mail), kept in fullscreen. Deters leaks; cannot stop screen recording |
+| `skipSegments` | `boolean \| { autoSkip? }` | "Skip intro / recap" button for chapters of that kind (default on); `autoSkip` skips unasked. Chapters get a `kind` (`intro` `recap` `credits`), or it is guessed from the title ("Intro", "Recap", "Credits"…) |
 | `shortcuts` | `{ [action]: key \| key[] \| false } \| false` | remap or disable keyboard shortcuts |
 | `share` | `boolean \| { param?, onShare? }` | start at `?t=90` / `#t=1m30s` and show a "Share from here" button; **off by default** |
 | `mediaSession` | `boolean` | OS media controls, default `true` |

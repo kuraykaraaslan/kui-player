@@ -58,6 +58,11 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  skipIntro: string;
+  skipRecap: string;
+  'shortcut.skip': string;
+  'shortcut.prevChapter': string;
+  'shortcut.nextChapter': string;
   stats: string;
   copy: string;
   copied: string;
@@ -177,6 +182,11 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  skipIntro: "Skip intro",
+  skipRecap: "Skip recap",
+  'shortcut.skip': "Skip intro / recap",
+  'shortcut.prevChapter': "Previous chapter",
+  'shortcut.nextChapter': "Next chapter",
   stats: "Technical info",
   copy: "Copy",
   copied: "Copied",

@@ -241,3 +241,88 @@ describe('watermark', () => {
     await waitFor(() => expect(pause).toHaveBeenCalled());
   });
 });
+
+describe('skippable chapters', () => {
+  const chapters = [
+    { start: 0, end: 20, title: 'Intro' },
+    { start: 20, end: 90, title: 'Episode' },
+    { start: 90, end: 100, title: 'Credits' },
+  ];
+
+  it('offers "Skip intro" inside the intro, seeks past it, and goes away after', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} chapters={chapters} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    emit(video, 'timeupdate', { currentTime: 5 });
+
+    await user.click(await screen.findByRole('button', { name: 'Skip intro' }));
+    expect(video.currentTime).toBe(20);
+    emit(video, 'timeupdate', { currentTime: 20 });
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Skip intro' })).not.toBeInTheDocument());
+  });
+
+  it('skips on its own with autoSkip', async () => {
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} chapters={chapters} skipSegments={{ autoSkip: true }} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    emit(video, 'timeupdate', { currentTime: 3 });
+    await waitFor(() => expect(video.currentTime).toBe(20), { timeout: 4000 });
+  });
+
+  it('can be turned off', async () => {
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} chapters={chapters} skipSegments={false} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    emit(video, 'timeupdate', { currentTime: 5 });
+    await waitFor(() => expect(container.querySelectorAll('.kui-chapter')).toHaveLength(3));
+    expect(screen.queryByRole('button', { name: 'Skip intro' })).not.toBeInTheDocument();
+  });
+
+  it('jumps between chapters with ] and [ and skips with s', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} chapters={chapters} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    emit(video, 'timeupdate', { currentTime: 5 });
+    await waitFor(() => expect(container.querySelectorAll('.kui-chapter')).toHaveLength(3));
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+
+    await user.keyboard('s');
+    expect(video.currentTime).toBe(20);
+    emit(video, 'timeupdate', { currentTime: 30 });
+    await user.keyboard(']');
+    expect(video.currentTime).toBe(90);
+    emit(video, 'timeupdate', { currentTime: 91 });
+    await user.keyboard('[[');
+    expect(video.currentTime).toBe(20);   // 1 s into Credits: close to the start, so go to the previous chapter
+  });
+});
+
+describe('credits start the playlist countdown early', () => {
+  const playlist = [
+    { src: 'https://example.com/one.mp4', title: 'One', chapters: [
+      { start: 0, end: 50, title: 'Episode' }, { start: 50, end: 60, title: 'Credits' },
+    ] },
+    { src: 'https://example.com/two.mp4', title: 'Two' },
+  ];
+
+  it('moves on from the credits without waiting for the end', async () => {
+    const onIndex = vi.fn();
+    const { container } = render(
+      <VideoPlayer playlist={playlist} enableCast={false} playlistCountdown={0} onPlaylistIndexChange={onIndex} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 60 });
+    emit(video, 'timeupdate', { currentTime: 10 });
+    // The credits listener is mounted lazily: keep nudging the playhead until it hears us.
+    await waitFor(() => {
+      emit(video, 'timeupdate', { currentTime: 52 });
+      expect(onIndex).toHaveBeenCalledWith(1);
+    });
+  });
+});

@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { SkipOptions } from './parts/SkipController.js';
 import type { WatermarkOptions } from '../modules/videoplayer/videoplayer.watermark.js';
 import type { ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { readUrlTime } from '../modules/videoplayer/videoplayer.share.js';
@@ -61,6 +62,8 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * Deters leaks; it cannot stop screen recording.
    */
   watermark?: WatermarkOptions;
+  /** Skip-intro / skip-recap button for chapters of that kind (default on). */
+  skipSegments?: boolean | SkipOptions;
   /** Remap or disable keyboard shortcuts; `?` opens the key list. */
   shortcuts?: ShortcutOverrides | false;
   /** Your own nodes in named positions of the chrome. */
@@ -110,7 +113,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -189,6 +192,7 @@ function VideoPlayerInner({
       theme={theme}
       slots={slots}
       shortcuts={shortcuts}
+      skipSegments={skipSegments}
       src={effectiveSrc}
       poster={effectivePoster}
       title={effectiveTitle}

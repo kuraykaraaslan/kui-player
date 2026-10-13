@@ -1,6 +1,8 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine.js';
 import { SPEEDS } from '../../modules/videoplayer/videoplayer.constants.js';
+import { chapterJumpTarget, skippableAt } from '../../modules/videoplayer/videoplayer.chapters.js';
+import type { Chapter } from '../../modules/videoplayer/videoplayer.vtt.js';
 import { lookupShortcut, type Keymap } from '../../modules/videoplayer/videoplayer.shortcuts.js';
 
 type Options = {
@@ -11,15 +13,16 @@ type Options = {
   subtitleCount: number;
   onToggleHelp: () => void;
   onToggleStats: () => void;
+  chapters: readonly Chapter[];
 };
 
 /** Frame length when the real rate is unknown — the video element does not expose it. */
 const FRAME_SECONDS = 1 / 30;
 
-export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp, onToggleStats }: Options) {
+export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp, onToggleStats, chapters }: Options) {
   // Latest-value ref so the listener is attached once and never goes stale.
-  const live = useRef({ keymap, subtitleCount, onToggleHelp, onToggleStats });
-  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp, onToggleStats }; });
+  const live = useRef({ keymap, subtitleCount, onToggleHelp, onToggleStats, chapters });
+  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp, onToggleStats, chapters }; });
   const lastCaption = useRef(0);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
       // Modified keys belong to the browser and the screen reader (Ctrl+L, Alt+←…).
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp, onToggleStats: toggleStats } = live.current;
+      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList } = live.current;
       const action = lookupShortcut(map, e.key, e.shiftKey);
       if (!action) return;
       e.preventDefault();
@@ -78,6 +81,16 @@ export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCou
         case 'end': if (s.duration > 0) engine.seek(s.duration); break;
         case 'help': toggleHelp(); break;
         case 'stats': toggleStats(); break;
+        case 'skip': {
+          const skippable = skippableAt(chapterList, s.currentTime);
+          if (skippable) engine.seek(skippable.to);
+          break;
+        }
+        case 'prevChapter': case 'nextChapter': {
+          const to = chapterJumpTarget(chapterList, s.currentTime, action === 'nextChapter' ? 'next' : 'previous');
+          if (to !== null) engine.seek(to);
+          break;
+        }
       }
     };
     document.addEventListener('keydown', handler);

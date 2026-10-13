@@ -34,16 +34,16 @@ kullanıcılarının beklediği çoğu tuş yok, ve kullanıcı hangi tuşların
 Chapters ([4.4](./04-expected-features.md)) ve playlist geri sayımı (`playlistCountdown`)
 zaten var. Eksik olan: bölümlere **anlam** vermek ve onlara klavye/buton ile gitmek.
 
-- [ ] Chapter'a isteğe bağlı `kind`: `intro` | `recap` | `credits` | `content`
+- [x] Chapter'a isteğe bağlı `kind`: `intro` | `recap` | `credits` | `content`
       (WebVTT chapters başlığından ya da açıkça verilen `Chapter[]`'den)
-- [ ] **"İntroyu atla" / "Özeti atla" butonu:** ilgili bölümün içindeyken belirir,
+- [x] **"İntroyu atla" / "Özeti atla" butonu:** ilgili bölümün içindeyken belirir,
       birkaç saniye sonra kaybolur; `autoSkip` seçeneği ile otomatik atlama (varsayılan kapalı)
-- [ ] **"Jenerik" bölümünde** sıradaki öğeye hemen geç / geri sayımı başlat
-      (mevcut `playlistCountdown` ile birleşir, ikinci bir sayaç yazılmaz)
-- [ ] Bölümler arası gezinme: `[` / `]` ile önceki/sonraki bölüm (10.1 ile aynı eşleme sistemi)
-- [ ] Bölüm listesi paneli (başlık + başlangıç zamanı), geçerli bölüm vurgulu
-- [ ] a11y: buton `aria-live` ile duyurulur, odak çalmaz; kısayol: `s` ile atla
-- [ ] Test: bölüm sınırında buton görünürlüğü, `autoSkip`, jenerik → playlist geçişi
+- [x] **"Jenerik" bölümünde** sıradaki öğeye hemen geç / geri sayımı başlat
+      (mevcut `playlistCountdown` ile birleşir, ikinci bir sayaç yazılmaz). Yeni `chapter` olayı kredilere girişi bildirir
+- [x] Bölümler arası gezinme: `[` / `]` ile önceki/sonraki bölüm (10.1 ile aynı eşleme sistemi)
+- [x] Bölüm listesi paneli: ayarlar menüsündeki mevcut *Chapters* alt menüsü (zaten vardı), yeni panel yazılmadı
+- [x] a11y: buton `aria-live` ile duyurulur, odak çalmaz; kısayol: `s` ile atla
+- [x] Test: bölüm sınırında buton görünürlüğü, `autoSkip`, jenerik → playlist geçişi
 
 ## 10.3 — Cihaz içi çeviri 🟡 L · deneysel
 

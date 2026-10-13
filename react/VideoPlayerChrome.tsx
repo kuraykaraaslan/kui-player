@@ -14,6 +14,7 @@ import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.type
 import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
+import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { useFocusTrap } from './hooks/useFocusTrap.js';
@@ -24,6 +25,7 @@ import type { CastApi } from './parts/CastController.js';
 // reachable after a click, and the Cast SDK plumbing never loads at all unless
 // `enableCast` is on.
 const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => ({ default: m.SettingsPanel })));
+const SkipController = lazy(() => import('./parts/SkipController.js'));
 const StatsPanel = lazy(() => import('./parts/StatsPanel.js'));
 const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
 const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
@@ -32,6 +34,7 @@ const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
 const VttLoader = lazy(() => import('./parts/VttLoader.js'));
 
 /** Stable empties, so the fetch hook's identity checks hold. */
+const NO_SKIP_OPTIONS: SkipOptions = {};
 const NO_CHAPTERS: Chapter[] = [];
 const NO_TILES: StoryboardTile[] = [];
 
@@ -101,6 +104,8 @@ export interface VideoPlayerChromeProps {
   gestures?: boolean | GestureOptions;
   /** Enter fullscreen when a phone rotates to landscape while playing. Default `false`. */
   autoFullscreenOnLandscape?: boolean;
+  /** Offer to skip intro/recap chapters (default on); `{ autoSkip: true }` skips them unasked. */
+  skipSegments?: boolean | SkipOptions;
   /** Remap or disable keys: `{ seekForward: 'l' }`, `{ captions: false }`, or `false` for none. */
   shortcuts?: ShortcutOverrides | false;
   onCastStateChange?: (state: CastState) => void;
@@ -113,7 +118,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, shortcuts, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -189,6 +194,8 @@ export function VideoPlayerChrome({
   const [tiles, setTiles] = useState<StoryboardTile[]>(NO_TILES);
   const chapterList = Array.isArray(chapters) ? chapters : fetchedChapters;
 
+  useEffect(() => { engine.setChapters(chapterList); }, [engine, chapterList]);
+
   const effectiveControls = isCasting
     ? true
     : engine.controlsVisible !== undefined
@@ -201,7 +208,7 @@ export function VideoPlayerChrome({
   const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
-  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats });
+  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList });
   const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
   const suppressRef = useRef<() => boolean>(() => false);
@@ -532,6 +539,12 @@ export function VideoPlayerChrome({
           />
         </div>
       </div>
+
+      {skipSegments && chapterList.length > 0 && (
+        <Suspense fallback={null}>
+          <SkipController chapters={chapterList} options={skipSegments === true ? NO_SKIP_OPTIONS : skipSegments} />
+        </Suspense>
+      )}
 
       {showStats && (
         <Suspense fallback={null}>

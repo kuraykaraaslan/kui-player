@@ -18,6 +18,8 @@ export { QoeTracker } from './videoplayer/videoplayer.qoe.js';
 export type { QoeSummary, Rendition } from './videoplayer/videoplayer.qoe.js';
 export { diagnosticRows, diagnosticsText, formatBitrate } from './videoplayer/videoplayer.diagnostics.js';
 export type { Diagnostics } from './videoplayer/videoplayer.diagnostics.js';
+export { chapterKind, chapterIndexAt, skippableAt, creditsAt, chapterJumpTarget } from './videoplayer/videoplayer.chapters.js';
+export type { ChapterKind } from './videoplayer/videoplayer.chapters.js';
 export { findAt } from './videoplayer/videoplayer.timeline.js';
 export type { VttCue, Chapter, StoryboardTile } from './videoplayer/videoplayer.vtt.js';
 export { detectFormat } from './videoplayer/videoplayer.subtitles.js';

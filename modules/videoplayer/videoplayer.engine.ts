@@ -5,6 +5,8 @@ import {
   type PlayerEventHandler, type PlayerEventName,
 } from './videoplayer.events.js';
 import { QoeTracker, type QoeSummary } from './videoplayer.qoe.js';
+import { chapterIndexAt, chapterKind } from './videoplayer.chapters.js';
+import type { Chapter } from './videoplayer.vtt.js';
 import type { Diagnostics } from './videoplayer.diagnostics.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
@@ -125,6 +127,8 @@ export class VideoPlayerEngine {
   private readonly emitter = new PlayerEmitter();
   private readonly quartiles = new QuartileTracker();
   private readonly qoe = new QoeTracker();
+  private chapters: readonly Chapter[] = [];
+  private chapterIndex = -1;
   private qoeTimer: ReturnType<typeof setInterval> | null = null;
   private loadStartedAt = 0;
   private metadataAt = 0;
@@ -194,6 +198,7 @@ export class VideoPlayerEngine {
     const onTimeUpdate = () => {
       s().setCurrentTime(video.currentTime);
       this.syncLive(video);
+      this.syncChapter(video.currentTime);
       for (const percent of this.quartiles.update(video.currentTime, video.duration)) {
         this.emitter.emit('quartile', { percent });
       }
@@ -426,6 +431,23 @@ export class VideoPlayerEngine {
     this.restorePoint = null;
     if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
     this.cancelAutoRetry();
+  }
+
+  // ── Chapters ───────────────────────────────────────────────────────────────
+
+  /** Give the engine the chapter list so it can report `chapter` events. */
+  setChapters(chapters: readonly Chapter[]): void {
+    this.chapters = chapters;
+    this.chapterIndex = -1;
+  }
+
+  private syncChapter(time: number): void {
+    if (this.chapters.length === 0) return;
+    const index = chapterIndexAt(this.chapters, time);
+    if (index === this.chapterIndex) return;
+    this.chapterIndex = index;
+    const chapter = this.chapters[index];
+    if (chapter) this.emitter.emit('chapter', { index, title: chapter.title, kind: chapterKind(chapter) });
   }
 
   // ── QoE ────────────────────────────────────────────────────────────────────

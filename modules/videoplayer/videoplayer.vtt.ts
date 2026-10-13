@@ -16,7 +16,13 @@ export type VttCue = {
   id?: string;
 };
 
-export type Chapter = { start: number; end: number; title: string };
+export type Chapter = {
+  start: number;
+  end: number;
+  title: string;
+  /** What the chapter is; guessed from the title when omitted (see `chapterKind`). */
+  kind?: 'intro' | 'recap' | 'credits' | 'content';
+};
 
 export type StoryboardTile = {
   start: number;
