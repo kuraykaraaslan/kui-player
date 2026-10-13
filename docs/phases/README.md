@@ -28,6 +28,7 @@ yarışına girerse kaybeder. Strateji:
 | [4](./04-expected-features.md) | Beklenen özellikler | 🟡 Olsa iyi | ~4 hafta | ✅ |
 | [5](./05-differentiation.md) | Niş farklılaşma | 🟣 Stratejik | ~3 hafta | ✅ |
 | [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | ⏸️ talep bekliyor |
+| [7](./07-drm-streaming.md) | DRM ve yayın altyapısı (Cloudflare + AWS) | 🟣 Keşif | ~3–4 hafta | 📋 planlandı |
 
 **Faz 0–3 "gereken"dir** — bunlar bitmeden `0.1.0` etiketi atılmamalı.
 **Faz 0–5 tamamlandı: `0.1.0` yayınlanabilir.**
