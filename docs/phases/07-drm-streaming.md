@@ -12,10 +12,14 @@
 
 ## Kararlar
 
-- **Tek biçim:** CMAF (fMP4) + `cbcs` şifreleme + **HLS manifesti**. `cbcs` Widevine,
-  PlayReady ve FairPlay'de ortak çalışır, yani tek paketleme çıktısı yeter.
-- **Tek paket:** Chrome/Firefox/Edge için `hls.js`. Safari/iOS HLS ve FairPlay'i
-  kendi çözer. `dash.js` yalnızca `.mpd` oynatılacaksa gerekir; bu fazda **eklenmez**.
+- **Tek biçim:** CMAF (fMP4) + `cbcs` şifreleme + **HLS manifesti**. `cbcs` Widevine
+  ve PlayReady'de çalışır, yani tek paketleme çıktısı yeter. (Safari'yi sonradan
+  eklemek gerekirse aynı çıktı FairPlay ile de kullanılabilir.)
+- **Safari/iOS hedeflenmiyor.** FairPlay (Apple hesabı, sertifika, `encrypted`
+  olayları) kapsam dışı; Widevine + PlayReady yeter. Tarayıcı hedefi Chrome,
+  Firefox, Edge.
+- **Tek paket:** `hls.js`. `dash.js` yalnızca `.mpd` oynatılacaksa gerekir; bu fazda
+  **eklenmez**.
 - **Lisans sunucusu yazılmaz.** MediaConvert yalnızca şifreler (SPEKE); lisansı bir
   DRM sağlayıcı (EZDRM, BuyDRM, Axinom, PallyCon vb.) verir. Deneme hesabı yeterli.
 - **Cloudflare Stream'in yerleşik DRM'i doğrulanmadı.** Faz 7.1'in ilk işi
@@ -56,7 +60,7 @@ DRM eklemeden önce hattın kendisini kurmak.
 Kod fazı. Hizmetlerden bağımsız yazılır, mock'la test edilir.
 
 - [ ] Ortak `DrmOptions` tipi (`modules/videoplayer/adapters/adapter.types.ts`):
-      `widevine` / `playready` / `fairplay` için `licenseUrl`, `headers: () => Promise<Record<string,string>>`
+      `widevine` / `playready` için `licenseUrl`, `headers: () => Promise<Record<string,string>>`
       (token kısa ömürlü olduğu için callback)
 - [ ] `hls.adapter.ts`: `drm` → hls.js `emeEnabled` + `drmSystems` eşlemesi
 - [ ] Hata eşleme: "tarayıcı DRM desteklemiyor", "lisans reddedildi", "ağ hatası"
@@ -84,20 +88,7 @@ yoktur; gerçek oynatma e2e'ye girmez, elle doğrulanır.
 
 **Çıkış:** Şifreli akış yalnızca geçerli token'la oynuyor.
 
-## 7.5 — FairPlay (Safari / iOS) 🟡 M · opsiyonel
-
-En zor ve en çok dış bağımlılığı olan parça; geri kalanı etkilemez.
-
-- [ ] Apple Developer hesabı, FairPlay Streaming deployment paketi (onay gerekir)
-- [ ] Sağlayıcıda FairPlay sertifikası + lisans URL'i
-- [ ] MediaConvert çıktısına FairPlay ekle (HLS `cbcs`)
-- [ ] `hls.adapter.ts`: Safari native yolunda `encrypted` / `webkitneedkey` olaylarını
-      yakalayıp sertifika + lisans akışını bağla (şu an `video.src = src` ile geçiyor)
-- [ ] Gerçek iPhone/Mac'te test
-
-**Karar noktası:** Hedef kitle Safari'yi gerektirmiyorsa bu faz atlanır.
-
-## 7.6 — Karşılaştırma ve karar 🟣 XS
+## 7.5 — Karşılaştırma ve karar 🟣 XS
 
 - [ ] Cloudflare Stream vs AWS: kurulum süresi, maliyet, DRM kapsamı, kontrol
 - [ ] Sonucu `recipes/` altına kısa bir "hangisi ne zaman" notu olarak yaz
@@ -109,13 +100,13 @@ En zor ve en çok dış bağımlılığı olan parça; geri kalanı etkilemez.
 
 `7.1` ve `7.2` birbirinden bağımsız, paralel yapılabilir. `7.3` kod fazıdır ve
 hizmetlere bağlı değildir; ikisiyle beraber ilerleyebilir. `7.4`, `7.2` + `7.3`'ü
-bekler. `7.5` ve `7.6` en sona kalır.
+bekler. `7.5` en sona kalır.
 
 ## Dürüst notlar
 
 - DRM korsan indirmeyi **zorlaştırır, engellemez**: düşük güvenlik seviyeli (L3)
   cihazlardan ekran yakalama mümkündür.
 - Bu faz bir öğrenme projesi. Lisans sunucusu, sözleşmeler ve cihaz sertifikasyonu
-  (özellikle Widevine L1, FairPlay) üretim için ayrıca değerlendirilmelidir.
+  (özellikle Widevine L1) üretim için ayrıca değerlendirilmelidir.
 - AWS'de MediaConvert ve CloudFront kullanıma göre faturalanır. 7.2'ye başlamadan
   **bütçe alarmı** kur ve test dosyalarını kısa tut.
