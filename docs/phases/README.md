@@ -29,6 +29,8 @@ yarışına girerse kaybeder. Strateji:
 | [5](./05-differentiation.md) | Niş farklılaşma | 🟣 Stratejik | ~3 hafta | ✅ |
 | [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | ⏸️ talep bekliyor |
 | [7](./07-drm-streaming.md) | DRM ve yayın altyapısı (Cloudflare + AWS) | 🟣 Keşif | ~3–4 hafta | 📋 planlandı |
+| [8](./08-streaming-ops.md) | Yayın kalitesi ve operasyon | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
+| [9](./09-ux-accessibility.md) | Kullanıcı deneyimi ve erişilebilirlik | 🟡 Olsa iyi | ~3–4 hafta | 📋 planlandı |
 
 **Faz 0–3 "gereken"dir** — bunlar bitmeden `0.1.0` etiketi atılmamalı.
 **Faz 0–5 tamamlandı: `0.1.0` yayınlanabilir.**
@@ -106,6 +108,21 @@ Bugünkü durum ve öneri: [Faz 6](./06-verticals.md#durum-neden-hiçbiri-yapıl
 | 6.4 | A-B loop & bölüm tekrarı | S |
 | 6.5 | Eğitim modu (transkript, zaman damgalı not) | L |
 | 6.6 | Ses dalga formu / audio-only mod | M |
+
+### 🟡 Yayın ve deneyim — Faz 8–9
+
+| Faz | # | Madde | Efor |
+|---|---|---|---|
+| 8 | 8.1 | QoE metrikleri (başlangıç süresi, stall, bitrate, düşen kare) | M |
+| 8 | 8.2 | Düşük gecikmeli HLS + canlı kenara yetişme | S |
+| 8 | 8.3 | SSAI işaretleri (`DATERANGE`, `CUE-OUT`, ID3) → event | M |
+| 8 | 8.4 | Görünür filigran | S |
+| 8 | 8.5 | Çevrimdışı izleme — *opsiyonel, DRM'siz önce* | L |
+| 9 | 9.1 | Zaman damgalı paylaşım linki (`?t=90`) + "buradan paylaş" | S |
+| 9 | 9.2 | Mini oynatıcı | S |
+| 9 | 9.3 | Document Picture-in-Picture | M |
+| 9 | 9.4 | Sesli betimleme + işaret dili izi | M |
+| 9 | 9.5 | Çift dil altyazı | M |
 
 ---
 
