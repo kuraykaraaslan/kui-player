@@ -1,4 +1,5 @@
 import type { AudioTrackOption, QualityOption } from '../videoplayer.types.js';
+import type { DrmOptions } from './drm.js';
 import { audioKind } from '../videoplayer.audiokind.js';
 import { extractAdBreaks, type TaggedFragment } from '../videoplayer.adbreaks.js';
 import { AUTO_QUALITY, heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types.js';
@@ -56,6 +57,12 @@ export type HlsAdapterOptions = {
    * The source must publish partial segments (`EXT-X-PART`) to benefit.
    */
   lowLatency?: boolean | LowLatencyOptions;
+  /**
+   * Widevine / PlayReady license settings for protected (CMAF `cbcs`) streams.
+   * Needs hls.js; Safari and iOS (FairPlay) are not supported and get a clear
+   * error. The DRM code loads only when this is set.
+   */
+  drm?: DrmOptions;
   /**
    * Prefer the browser's own HLS support when it has any (Safari / iOS), where
    * native playback gets hardware decoding and AirPlay for free. Default `true`.
@@ -142,8 +149,24 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
     async attach(video, src, host: MediaAdapterHost) {
       this.detach();
 
-      const nativeOk = preferNative && video.canPlayType(NATIVE_HLS_MIME) !== '';
       const ctor = resolveCtor(opts.Hls);
+      let drmModule: typeof import('./drm.js') | null = null;
+
+      if (opts.drm) {
+        // The native path cannot do Widevine/PlayReady and would stall on
+        // encrypted segments without a word — so protected content either goes
+        // through hls.js's EME support or fails here, loudly.
+        drmModule = await import('./drm.js');
+        if (!ctor?.isSupported()) {
+          host.reportError(drmModule.drmError(
+            'DRM_UNSUPPORTED', 'This browser cannot play protected video here (no Media Source Extensions).', false));
+          return;
+        }
+        const unsupported = await drmModule.probeKeySystems(opts.drm);
+        if (unsupported) { host.reportError(unsupported); return; }
+      }
+
+      const nativeOk = !opts.drm && preferNative && video.canPlayType(NATIVE_HLS_MIME) !== '';
 
       if (nativeOk || !ctor?.isSupported()) {
         // Safari / iOS: the element decodes the manifest itself. Renditions are
@@ -153,7 +176,11 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         return;
       }
 
-      const instance = new ctor({ ...lowLatencyConfig(opts.lowLatency), ...opts.config });
+      const instance = new ctor({
+        ...lowLatencyConfig(opts.lowLatency),
+        ...(opts.drm && drmModule ? drmModule.buildDrmConfig(opts.drm) : {}),
+        ...opts.config,
+      });
       hls = instance;
 
       instance.on(ctor.Events.MANIFEST_PARSED, () => {
@@ -184,8 +211,10 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         host.updateAudioTracks(audioTracks, instance.audioTrack);
       });
       instance.on(ctor.Events.ERROR, (_e, data) => {
-        const d = data as { fatal?: boolean; type?: string; details?: string } | undefined;
+        const d = data as { fatal?: boolean; type?: string; details?: string; response?: { code?: number } } | undefined;
         if (!d?.fatal) return; // hls.js recovers from non-fatal errors on its own
+        const drmError = drmModule?.mapDrmError(d);
+        if (drmError) { host.reportError(drmError); return; }
         const network = d.type === 'networkError';
         host.reportError({
           code: network ? 2 : 3,

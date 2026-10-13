@@ -139,7 +139,7 @@
       "path": [
         "dist/locales/index.js"
       ],
-      "limit": "7.5 kB"
+      "limit": "8.5 kB"
     }
   ],
   "peerDependencies": {

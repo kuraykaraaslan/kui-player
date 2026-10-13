@@ -129,6 +129,10 @@ export type Dictionary = {
   'error.MEDIA_ERR_DECODE': string;
   'error.MEDIA_ERR_SRC_NOT_SUPPORTED': string;
   'error.MEDIA_ERR_UNKNOWN': string;
+  'error.DRM_UNSUPPORTED': string;
+  'error.DRM_LICENSE_DENIED': string;
+  'error.DRM_LICENSE_NETWORK': string;
+  'error.DRM_OUTPUT_RESTRICTED': string;
 
   /** Announcements for the live region. */
   'state.playing': string;
@@ -273,6 +277,10 @@ export const en: Dictionary = {
   'error.MEDIA_ERR_DECODE': 'The video could not be decoded — the file may be corrupt.',
   'error.MEDIA_ERR_SRC_NOT_SUPPORTED': 'This video is unavailable or its format is not supported.',
   'error.MEDIA_ERR_UNKNOWN': 'The video could not be played.',
+  'error.DRM_UNSUPPORTED': "This browser can't play protected video. Try Chrome, Edge or Firefox on a computer or Android device.",
+  'error.DRM_LICENSE_DENIED': "You don't have access to this video, or your access has expired.",
+  'error.DRM_LICENSE_NETWORK': "The license for this video could not be fetched. Check your connection and try again.",
+  'error.DRM_OUTPUT_RESTRICTED': "This video can't play on the connected display (output protection).",
 
   'state.playing': 'Playing',
   'state.paused': 'Paused',

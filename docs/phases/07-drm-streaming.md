@@ -59,23 +59,26 @@ DRM eklemeden önce hattın kendisini kurmak.
 
 Kod fazı. Hizmetlerden bağımsız yazılır, mock'la test edilir.
 
-- [ ] Ortak `DrmOptions` tipi (`modules/videoplayer/adapters/adapter.types.ts`):
+- [x] Ortak `DrmOptions` tipi (`modules/videoplayer/adapters/drm.ts`, tipler çekirdekten dışa aktarılır):
       `widevine` / `playready` için `licenseUrl`, `headers: () => Promise<Record<string,string>>`
       (token kısa ömürlü olduğu için callback)
-- [ ] `hls.adapter.ts`: `drm` → hls.js `emeEnabled` + `drmSystems` eşlemesi
-- [ ] Hata eşleme: "tarayıcı DRM desteklemiyor", "lisans reddedildi", "ağ hatası"
+- [x] `hls.adapter.ts`: `drm` → hls.js `emeEnabled` + `drmSystems` eşlemesi
+- [x] Hata eşleme: "tarayıcı DRM desteklemiyor", "lisans reddedildi", "ağ hatası"
       ayrı `PlayerError` kodları (bugün hepsi jenerik)
-- [ ] **Safari/iOS'ta `drm` verilmişse net hata ver:** native yol (`video.src = src`) DRM'li
+- [x] **Safari/iOS'ta `drm` verilmişse net hata ver:** native yol (`video.src = src`) DRM'li
       içerikte sessizce takılır. `drm` seçeneği varken native yola düşülecekse oynatma
       denenmez, "bu tarayıcı desteklenmiyor" hatası (ayrı `PlayerError` kodu) gösterilir
-- [ ] `canPlay` / başlangıçta `requestMediaKeySystemAccess` ile desteği yokla,
+- [x] `canPlay` / başlangıçta `requestMediaKeySystemAccess` ile desteği yokla,
       kullanıcıya anlaşılır mesaj göster
-- [ ] Unit test: doğru `drmSystems` kuruluyor, header callback'i her lisansta çağrılıyor
-- [ ] `recipes/drm.md`; `llms.txt` / `llms-full.txt` güncelle
-- [ ] Bundle bütçesi: `drm` kullanılmıyorsa bundle'a bir şey eklememeli (`size-limit`)
+- [x] Unit test: doğru `drmSystems` kuruluyor, header callback'i her lisansta çağrılıyor
+- [x] `recipes/drm.md`; `llms.txt` / `llms-full.txt` güncelle
+- [x] Bundle: DRM kodu ayrı bir chunk (~1,3 kB gzip), yalnızca `drm` verilince yüklenir; kullanılmadığında çekirdeğe ~0,2 kB (dinamik import) ekliyor — 'hiçbir şey' değil. Chunk adı hash'li olduğu için `size-limit` satırı yok
 
 **Not:** EME yalnızca HTTPS veya `localhost`'ta çalışır. Headless Chromium'da CDM
 yoktur; gerçek oynatma e2e'ye girmez, elle doğrulanır.
+
+
+**Durum (Ekim 2026):** kod ve mock testleri tamam. **Gerçek lisans sunucusu / CDM ile oynatma denenmedi** (hesap yok, headless Chromium'da CDM yok); Chrome (Widevine) ve Edge (PlayReady) üzerinde elle doğrulanmalı. `licenseXhrSetup`'ın asenkron kullanımı hls.js ≥1.5 davranışına dayanıyor; sürümünüzde farklıysa gerçek denemede ilk bakılacak yer burası.
 
 ## 7.4 — AWS + DRM (Widevine / PlayReady) 🔴 M
 

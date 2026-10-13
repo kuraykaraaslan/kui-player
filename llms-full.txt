@@ -264,3 +264,11 @@ source-independent; position is per source, expires after 30 days, and is
 `MediaError`, plus the `<source>`-only failure browsers report on the source element.
 Network errors retry automatically with backoff (500 ms / 1 s / 2 s, three attempts);
 `engine.retry()` is the manual path and both restore the previous position.
+
+## DRM
+
+Widevine and PlayReady through hls.js (CMAF `cbcs` + HLS). `createHlsAdapter({ Hls, drm: { widevine: { licenseUrl, headers }, playready: { licenseUrl, headers } } })`.
+`headers` is an async callback run for every license request (short-lived token). The DRM code is a
+separate chunk loaded only when `drm` is set. Errors: `DRM_UNSUPPORTED`, `DRM_LICENSE_DENIED`
+(401/403), `DRM_LICENSE_NETWORK` (retryable), `DRM_OUTPUT_RESTRICTED`. Safari/iOS (FairPlay) are not
+supported and get `DRM_UNSUPPORTED` rather than a silent stall. See recipes/drm.md.
