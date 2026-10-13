@@ -19,6 +19,7 @@ import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter
  *   ?persist=1    remember position and preferences
  *   ?playlist=1   play through a two-item playlist
  *   ?theme=cinema apply a theme preset
+ *   ?mini=1       float the player into a corner when scrolled away while playing
  *   ?facade=1     show only a poster and a play button until clicked
  */
 const params = new URLSearchParams(location.search);
@@ -65,6 +66,13 @@ const playlist = params.get('playlist')
 const Component = params.get('facade') ? VideoPlayerFacade : (await import('../../../react')).VideoPlayer;
 const facadeProps = params.get('facade') ? { prefetch: params.get('prefetch') !== '0' } : {};
 
+// Room to scroll away from the player.
+if (params.get('mini')) {
+  const spacer = document.createElement('div');
+  spacer.style.height = '300vh';
+  document.body.appendChild(spacer);
+}
+
 createRoot(document.getElementById('stage')!).render(
   <Component
     {...facadeProps}
@@ -80,6 +88,7 @@ createRoot(document.getElementById('stage')!).render(
     chapters={params.get('chapters') ? '/media/chapters.vtt' : undefined}
     thumbnails={params.get('chapters') ? '/media/storyboard.vtt' : undefined}
     persist={params.get('persist') === '1'}
+    miniPlayer={params.get('mini') === '1'}
     locale={locale && locale in locales ? locales[locale as keyof typeof locales] : undefined}
     qualities={params.get('adapter') ? undefined : [
       { label: '1080p', value: '1080' },

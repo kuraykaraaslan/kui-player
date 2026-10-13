@@ -48,6 +48,8 @@ export const ar: PartialDictionary = {
   resumeFrom: 'المتابعة من {time}؟',
   resume: 'متابعة',
   dismiss: 'تجاهل',
+  miniReturn: "العودة إلى الفيديو",
+  miniClose: "إغلاق المشغّل المصغّر",
   skipIntro: "تخطي المقدمة",
   skipRecap: "تخطي الملخص",
   'shortcut.skip': "تخطي المقدمة / الملخص",

@@ -48,6 +48,8 @@ export const fr: PartialDictionary = {
   resumeFrom: 'Reprendre à {time} ?',
   resume: 'Reprendre',
   dismiss: 'Ignorer',
+  miniReturn: "Retour à la vidéo",
+  miniClose: "Fermer le mini-lecteur",
   skipIntro: "Passer l'intro",
   skipRecap: "Passer le résumé",
   'shortcut.skip': "Passer l'intro / le résumé",

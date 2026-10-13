@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { VideoPlayer } from '../../react';
 import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
@@ -324,5 +324,72 @@ describe('credits start the playlist countdown early', () => {
       emit(video, 'timeupdate', { currentTime: 52 });
       expect(onIndex).toHaveBeenCalledWith(1);
     });
+  });
+});
+
+describe('mini player', () => {
+  type IOCallback = (entries: Partial<IntersectionObserverEntry>[]) => void;
+  let callbacks: IOCallback[];
+  let targets: Element[];
+  const realIO = globalThis.IntersectionObserver;
+
+  beforeEach(() => {
+    callbacks = [];
+    targets = [];
+    globalThis.IntersectionObserver = class {
+      constructor(cb: IOCallback) { callbacks.push(cb); }
+      observe(el: Element) { targets.push(el); }
+      disconnect() {}
+      unobserve() {}
+      takeRecords() { return []; }
+    } as unknown as typeof IntersectionObserver;
+  });
+  afterEach(() => { globalThis.IntersectionObserver = realIO; });
+
+  const scrollTo = (ratio: number) => {
+    const last = callbacks[callbacks.length - 1];
+    last?.([{ intersectionRatio: ratio, isIntersecting: ratio > 0 }]);
+  };
+
+  it('is off unless asked for', async () => {
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} />);
+    await waitFor(() => expect(container.querySelector('.kui-player')).toBeInTheDocument());
+    expect(targets).toHaveLength(0);
+  });
+
+  it('floats while playing and scrolled away, and docks back when it returns', async () => {
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} miniPlayer />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'play', { paused: false });
+    await waitFor(() => expect(targets.length).toBeGreaterThan(0));
+
+    act(() => scrollTo(0));
+    await waitFor(() => expect(container.querySelector('.kui-player.is-mini')).toBeInTheDocument());
+    expect(container.querySelector('.kui-mini-placeholder')).toBeInTheDocument();
+    expect(container.querySelector('video')).toBe(video);   // same node: playback is not interrupted
+
+    act(() => scrollTo(0.8));
+    await waitFor(() => expect(container.querySelector('.is-mini')).not.toBeInTheDocument());
+    expect(container.querySelector('.kui-mini-placeholder')).not.toBeInTheDocument();
+  });
+
+  it('does not float a paused player', async () => {
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} miniPlayer />);
+    await waitFor(() => expect(targets.length).toBeGreaterThan(0));
+    act(() => scrollTo(0));
+    expect(container.querySelector('.is-mini')).not.toBeInTheDocument();
+  });
+
+  it('closing pauses and keeps it docked until the player is seen again', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} miniPlayer />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    const pause = vi.spyOn(video, 'pause');
+    emit(video, 'play', { paused: false });
+    await waitFor(() => expect(targets.length).toBeGreaterThan(0));
+    act(() => scrollTo(0));
+    await user.click(await screen.findByRole('button', { name: 'Close mini player' }));
+    expect(pause).toHaveBeenCalled();
+    await waitFor(() => expect(container.querySelector('.is-mini')).not.toBeInTheDocument());
   });
 });

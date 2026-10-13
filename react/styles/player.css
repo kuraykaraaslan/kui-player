@@ -778,3 +778,53 @@
   bottom: 5rem;
   z-index: 25;
 }
+
+/* ── mini player ─────────────────────────────────────────────────────────── */
+
+.kui-mini-placeholder { width: 100%; }
+.kui-player.is-mini {
+  position: fixed;
+  z-index: 40;
+  width: min(20rem, calc(100vw - 2rem));
+  min-height: 0;
+  height: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  inset-block-end: 1rem;
+  inset-inline-end: 1rem;
+}
+.kui-player.is-mini[data-kui-mini="bottom-left"] { inset-inline-end: auto; inset-inline-start: 1rem; }
+.kui-player.is-mini[data-kui-mini="top-right"]   { inset-block-end: auto; inset-block-start: 1rem; }
+.kui-player.is-mini[data-kui-mini="top-left"]    { inset-block-end: auto; inset-block-start: 1rem; inset-inline-end: auto; inset-inline-start: 1rem; }
+/* Simplified controls: just the bar below. */
+.kui-player.is-mini .kui-chrome,
+.kui-player.is-mini .kui-center-play,
+.kui-player.is-mini .kui-title { display: none; }
+.kui-mini-bar {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  padding: 0.375rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+}
+.kui-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--_kui-text);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.kui-mini-btn:hover { background: var(--_kui-surface-hover); }
+@media (prefers-reduced-motion: no-preference) {
+  .kui-player.is-mini { animation: kui-mini-in 160ms ease-out; }
+}
+@keyframes kui-mini-in { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: none; } }

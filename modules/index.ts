@@ -20,6 +20,8 @@ export { diagnosticRows, diagnosticsText, formatBitrate } from './videoplayer/vi
 export type { Diagnostics } from './videoplayer/videoplayer.diagnostics.js';
 export { chapterKind, chapterIndexAt, skippableAt, creditsAt, chapterJumpTarget } from './videoplayer/videoplayer.chapters.js';
 export type { ChapterKind } from './videoplayer/videoplayer.chapters.js';
+export { shouldFloat, miniEnabled } from './videoplayer/videoplayer.mini.js';
+export type { MiniOptions, MiniCorner } from './videoplayer/videoplayer.mini.js';
 export { findAt } from './videoplayer/videoplayer.timeline.js';
 export type { VttCue, Chapter, StoryboardTile } from './videoplayer/videoplayer.vtt.js';
 export { detectFormat } from './videoplayer/videoplayer.subtitles.js';

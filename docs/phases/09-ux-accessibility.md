@@ -22,13 +22,13 @@ ile kapsam paylaşır.
 
 ## 9.2 — Mini oynatıcı 🟡 S
 
-- [ ] Oynatıcı ekrandan çıkınca (IntersectionObserver) köşede sabit küçük pencereye geçer
-- [ ] Yalnızca **oynatılıyorken** devreye girer; kapatma ve "yerine dön" butonları
-- [ ] Köşe seçimi + sürükleme (isteğe bağlı), `miniPlayer` seçeneği ile aç/kapa (varsayılan kapalı)
-- [ ] `<video>` DOM'da taşınmaz (oynatma kesilir); aynı öğe CSS ile konumlanır
-- [ ] Mobilde varsayılan kapalı; kontrol sadeleşir (oynat/duraklat + kapat)
-- [ ] a11y: odak yönetimi, `aria-label`, `prefers-reduced-motion` saygısı
-- [ ] Test: component testi + Playwright (scroll ile mini moda geçiş)
+- [x] Oynatıcı ekrandan çıkınca (IntersectionObserver) köşede sabit küçük pencereye geçer
+- [x] Yalnızca **oynatılıyorken** devreye girer; kapatma ve "yerine dön" butonları
+- [x] Köşe seçimi (`corner`); **sürükleme yapılmadı** (isteğe bağlıydı), `miniPlayer` seçeneği ile aç/kapa (varsayılan kapalı)
+- [x] `<video>` DOM'da taşınmaz (oynatma kesilir); aynı öğe CSS ile konumlanır
+- [x] Mobilde varsayılan kapalı; kontrol sadeleşir (oynat/duraklat + kapat)
+- [x] a11y: `aria-label`'lı gerçek butonlar, `prefers-reduced-motion` saygısı; "videoya dön" odağı oynatıcıya taşır. Ekran okuyucuyla elle denenmedi
+- [x] Test: component testi + Playwright (scroll ile mini moda geçiş) — Chromium'da geçti
 
 ## 9.3 — Document Picture-in-Picture 🟡 M
 

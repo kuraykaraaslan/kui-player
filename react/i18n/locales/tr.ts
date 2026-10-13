@@ -48,6 +48,8 @@ export const tr: PartialDictionary = {
   resumeFrom: '{time} konumundan devam edilsin mi?',
   resume: 'Devam et',
   dismiss: 'Kapat',
+  miniReturn: "Videoya dön",
+  miniClose: "Mini oynatıcıyı kapat",
   skipIntro: "Girişi atla",
   skipRecap: "Özeti atla",
   'shortcut.skip': "Giriş / özeti atla",

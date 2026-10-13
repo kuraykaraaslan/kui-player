@@ -14,8 +14,11 @@ import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.type
 import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
+import { miniEnabled, type MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
+import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
+import { Icon } from './icons/index.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { useFocusTrap } from './hooks/useFocusTrap.js';
 import { usePlayerAnnouncements } from './hooks/usePlayerAnnouncements.js';
@@ -104,6 +107,8 @@ export interface VideoPlayerChromeProps {
   gestures?: boolean | GestureOptions;
   /** Enter fullscreen when a phone rotates to landscape while playing. Default `false`. */
   autoFullscreenOnLandscape?: boolean;
+  /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
+  miniPlayer?: boolean | MiniOptions;
   /** Offer to skip intro/recap chapters (default on); `{ autoSkip: true }` skips them unasked. */
   skipSegments?: boolean | SkipOptions;
   /** Remap or disable keys: `{ seekForward: 'l' }`, `{ captions: false }`, or `false` for none. */
@@ -118,7 +123,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -211,6 +216,14 @@ export function VideoPlayerChrome({
   useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList });
   const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
+  const miniOn = miniEnabled(miniPlayer, touchDevice);
+  const mini = useMiniPlayer({ enabled: miniOn, skin, playing, fullscreen: isFullscreen });
+  const { setContainer: setMiniContainer, setPlaceholder: setMiniPlaceholder } = mini;
+  const containerCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    containerRef.current = el;
+    setMiniContainer(el);
+  }, [setMiniContainer]);
+  const miniCorner = typeof miniPlayer === 'object' ? miniPlayer.corner ?? 'bottom-right' : 'bottom-right';
   const suppressRef = useRef<() => boolean>(() => false);
   const suppressClick = useCallback(() => suppressRef.current(), []);
 
@@ -362,12 +375,17 @@ export function VideoPlayerChrome({
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   return (
+    <>
+    {mini.floating && (
+      <div ref={setMiniPlaceholder} className="kui-mini-placeholder" style={{ height: mini.placeholderHeight }} aria-hidden="true" />
+    )}
     <div
-      ref={containerRef}
+      ref={containerCallbackRef}
       tabIndex={0}
       aria-label={title ? t('videoTitled', { title }) : t('videoPlayer')}
       dir={dictionary.dir ?? 'ltr'}
-      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', className)}
+      className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', mini.floating && 'is-mini', className)}
+      data-kui-mini={mini.floating ? miniCorner : undefined}
       data-kui-theme={theme}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
@@ -380,6 +398,25 @@ export function VideoPlayerChrome({
         : undefined}
     >
       {children}
+
+      {mini.floating && (
+        <div className="kui-mini-bar">
+          <button type="button" className="kui-mini-btn" onClick={() => engine.togglePlay()} aria-label={playing ? t('pause') : t('play')}>
+            <Icon name={playing ? 'pause' : 'play'} />
+          </button>
+          <button type="button" className="kui-mini-btn" onClick={mini.giveBack} aria-label={t('miniReturn')}>
+            <Icon name="expand" />
+          </button>
+          <button
+            type="button"
+            className="kui-mini-btn"
+            onClick={() => { engine.pause(); mini.dismiss(); }}
+            aria-label={t('miniClose')}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      )}
 
       <div className="kui-sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announcement}
@@ -564,5 +601,6 @@ export function VideoPlayerChrome({
         </Suspense>
       )}
     </div>
+    </>
   );
 }
