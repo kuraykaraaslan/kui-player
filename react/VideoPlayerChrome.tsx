@@ -23,6 +23,7 @@ import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { Icon } from './icons/index.js';
+import { useTranslatedCues, useTranslationTargets } from './hooks/useTranslatedCues.js';
 import { useSecondaryCues } from './hooks/useSecondaryCues.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { useFocusTrap } from './hooks/useFocusTrap.js';
@@ -117,6 +118,12 @@ export interface VideoPlayerChromeProps {
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /**
+   * Offer on-device translation of the chosen subtitle track into these
+   * languages (BCP-47, e.g. `['tr', 'ar']`), shown as the second line. Only where
+   * the browser has the `Translator` API (Chromium desktop); otherwise nothing is offered.
+   */
+  translation?: { targets: string[] };
+  /**
    * Picture-in-picture with the controls too (Chromium's Document PiP). Falls back
    * to the plain video PiP where the API is missing. Off by default.
    */
@@ -135,7 +142,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -227,7 +234,14 @@ export function VideoPlayerChrome({
   const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
-  const secondaryText = useSecondaryCues({ videoRef, selectedSecondary: secondarySubtitle, subtitles });
+  const secondaryTranslation = useVideoPlayerStore(s => s.secondaryTranslation);
+  const setSecondaryTranslation = useVideoPlayerStore(s => s.setSecondaryTranslation);
+  const primaryTrack = selectedSubtitle === null ? undefined : subtitles?.[selectedSubtitle];
+  const translationTargets = useTranslationTargets(translation?.targets, primaryTrack);
+  const translated = useTranslatedCues({ videoRef, source: primaryTrack, target: secondaryTranslation });
+  const fileSecondaryText = useSecondaryCues({ videoRef, selectedSecondary: secondarySubtitle, subtitles });
+  const secondaryText = fileSecondaryText ?? translated.text
+    ?? (translated.downloading !== null ? t('translationDownloading', { percent: Math.round(translated.downloading * 100) }) : null);
   const docPip = useDocumentPip({ enabled: documentPictureInPicture && !skin });
   const { toggle: toggleDocPip, setAnchor: setPipAnchor, host: pipHost } = docPip;
   const docPipSupported = docPip.supported;
@@ -332,7 +346,12 @@ export function VideoPlayerChrome({
     onQualityChange?.(v);
     closeSettings();
   }, [adaptive, engine, setSelectedQuality, onQualityChange, closeSettings]);
-  const applySecondary   = useCallback((i: number | null) => { setSecondarySubtitle(i); closeSettings(); }, [setSecondarySubtitle, closeSettings]);
+  const applySecondary   = useCallback((i: number | null) => {
+    setSecondarySubtitle(i);
+    if (i === null) setSecondaryTranslation(null);   // "Off" switches the second line off, whichever kind it was
+    closeSettings();
+  }, [setSecondarySubtitle, setSecondaryTranslation, closeSettings]);
+  const applyTranslation = useCallback((code: string | null) => { setSecondaryTranslation(code); closeSettings(); }, [setSecondaryTranslation, closeSettings]);
   const applySubtitle    = useCallback((i: number | null) => { setSelectedSubtitle(i); closeSettings(); }, [setSelectedSubtitle, closeSettings]);
   // Actually switches the rendition (adapter or the element's own track list)
   // instead of only telling the consumer about it.
@@ -564,6 +583,9 @@ export function VideoPlayerChrome({
               activeQualityLabel={activeQualityLabel}
               selectedSubtitle={selectedSubtitle}
               secondarySubtitle={secondarySubtitle}
+              secondaryTranslation={secondaryTranslation}
+              translationTargets={translationTargets}
+              applyTranslation={applyTranslation}
               selectedAudioTrack={selectedAudioTrack}
               speed={speed}
               subtitleFontSize={subtitleFontSize}

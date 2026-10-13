@@ -54,18 +54,21 @@ Altyazıyı **buluta veri göndermeden** başka dile çevirmek. Faz 5.4 gizlilik
 bazı tarayıcılarda ve model indirildiyse çalışır. Güncel desteği ve veri akışını (model
 cihazda mı, istek sunucuya gidiyor mu) dokümandan teyit et; teyit edilemeyen parça yapılmaz.
 
-- [ ] **A. Mevcut altyazıyı çevir (gerçekçi kısım):** seçili altyazı izinin cue metinlerini
+- [x] **A. Mevcut altyazıyı çevir (gerçekçi kısım):** seçili altyazı izinin cue metinlerini
       cihaz içi `Translator` ile hedef dile çevir; çıkan sonuç ikinci altyazı olarak
       gösterilir ([9.5 çift dil](./09-ux-accessibility.md) ile birleşir)
-- [ ] Özellik tespiti: API yoksa seçenek hiç görünmez; model indirilirken ilerleme göstergesi
-- [ ] **Veri sızıntısı yok kuralı:** çeviri istekleri ağ üzerinden gitmez; CI testi
-      (mevcut sıfır telemetri testine eklenir) ağ çağrısı olmadığını doğrular
-- [ ] Cue başına çeviri önbelleği (aynı cue tekrar çevrilmez), uzun altyazıda parça parça
+- [x] Özellik tespiti: API yoksa seçenek hiç görünmez; model indirilirken ilerleme göstergesi
+- [x] **Veri sızıntısı yok kuralı:** çeviri istekleri ağ üzerinden gitmez; CI testi
+      (mevcut sıfır telemetri testine eklenir) ağ çağrısı olmadığını doğrular. **Bileşen testi altyazı dosyası dışında hiçbir `fetch` yapılmadığını doğruluyor; Playwright gizlilik testine eklenmedi (CI tarayıcısında `Translator` yok). Modeli tarayıcı indirir, bu sayfa değil — README'de belirtildi**
+- [x] Cue başına çeviri önbelleği (aynı cue tekrar çevrilmez), uzun altyazıda parça parça
 - [ ] **B. Canlı altyazı (opsiyonel, ayrı karar):** ses → metin için cihaz içi tanıma.
       Tarayıcı tanıması yerelde çalışmıyorsa bu madde **yapılmaz**; WASM tabanlı model
       (Whisper vb.) ayrı, isteğe bağlı bir paket olur ve ana bundle'a girmez
-- [ ] Kullanıcıya açıkça söyle: çeviri otomatiktir, hata içerebilir (etiket: "Otomatik çeviri")
-- [ ] Test: API mock'u ile akış; gerçek çeviri kalitesi elle değerlendirilir
+- [x] Kullanıcıya açıkça söyle: çeviri otomatiktir, hata içerebilir (etiket: "Otomatik çeviri")
+- [x] Test: API mock'u ile akış; gerçek çeviri kalitesi elle değerlendirilir
+
+
+**Doğrulama (Ekim 2026):** `Translator` / `LanguageDetector` yalnızca masaüstü Chrome'da, `'Translator' in self` ile algılanıyor; `availability()` dört durum veriyor, `create({monitor})` indirme ilerlemesini veriyor ([belge](https://developer.chrome.com/docs/ai/translator-api)). Deneysel. Gerçek bir çeviri bu ortamda denenmedi (model yok), akış mock'la test edildi; çeviri kalitesi elle değerlendirilmeli. **B (canlı altyazı) yapılmadı:** konuşma tanımanın yerelde çalıştığı doğrulanamadı, madde gereği yapılmaz. Çeviri tercihi `persist` ile hatırlanmıyor (model her cihazda olmayabilir).
 
 ## 10.4 — Teknik bilgi paneli 🟡 S
 

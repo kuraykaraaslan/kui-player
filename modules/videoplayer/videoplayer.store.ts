@@ -58,6 +58,8 @@ export type VideoPlayerState = {
   selectedSubtitle: number | null;
   /** Second line of a dual-language pair; always a different track from `selectedSubtitle`. */
   secondarySubtitle: number | null;
+  /** Target language of an on-device translation of the primary track, instead of a second file. */
+  secondaryTranslation: string | null;
   selectedAudioTrack: number;
   /** Audio renditions discovered from the element or an adapter. */
   adaptiveAudioTracks: AudioTrackOption[];
@@ -111,6 +113,7 @@ export type VideoPlayerActions = {
   setAudioDescription:   (v: boolean) => void;
   setSelectedSubtitle:   (v: number | null) => void;
   setSecondarySubtitle:  (v: number | null) => void;
+  setSecondaryTranslation: (v: string | null) => void;
   setSelectedAudioTrack: (v: number) => void;
   setAdaptiveAudioTracks:(v: AudioTrackOption[]) => void;
   setSubtitleFontSize:   (v: SubtitleFontSize) => void;
@@ -169,6 +172,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     audioDescription: false,
     selectedSubtitle: null,
     secondarySubtitle: null,
+    secondaryTranslation: null,
     selectedAudioTrack: 0,
     adaptiveAudioTracks: [],
     subtitleFontSize: 'md',
@@ -215,7 +219,15 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setActiveQualityLabel: (v) => set({ activeQualityLabel: v }),
     setAudioDescription:   (v) => set({ audioDescription: v }),
     setSelectedSubtitle:   (v) => set((s) => ({ selectedSubtitle: v, secondarySubtitle: v !== null && v === s.secondarySubtitle ? null : s.secondarySubtitle })),
-    setSecondarySubtitle:  (v) => set((s) => ({ secondarySubtitle: v !== null && v === s.selectedSubtitle ? null : v })),
+    // One second line at a time: a file or a translation, never both.
+    setSecondarySubtitle:  (v) => set((s) => ({
+      secondarySubtitle: v !== null && v === s.selectedSubtitle ? null : v,
+      secondaryTranslation: v !== null ? null : s.secondaryTranslation,
+    })),
+    setSecondaryTranslation: (v) => set((s) => ({
+      secondaryTranslation: v,
+      secondarySubtitle: v !== null ? null : s.secondarySubtitle,
+    })),
     setSelectedAudioTrack: (v) => set({ selectedAudioTrack: v }),
     setAdaptiveAudioTracks:(v) => set({ adaptiveAudioTracks: v }),
     setSubtitleFontSize:   (v) => set({ subtitleFontSize: v }),

@@ -103,6 +103,13 @@ Google Cast is the single exception: enabling it loads Google's sender SDK from
 `gstatic.com`. That is why `enableCast` defaults to **off** — you opt into the one
 request the library can make.
 
+`translation` (off by default) is the second thing to know about: it uses the browser's
+built-in `Translator`, so the translation runs on the device and the page sends the
+subtitle text nowhere. The first time a language pair is used the *browser* may download
+the language model; the player shows that progress and labels the result "Automatic
+translation". Where the browser has no `Translator` (anything but desktop Chromium) the
+option simply does not appear.
+
 This is not a slogan. `tests/e2e/privacy.spec.ts` drives the player through playback,
 the settings menu, subtitles and the About dialog while recording every request, and
 fails if anything leaves the page's own origin. It runs in CI on every pull request.
@@ -465,6 +472,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `audioDescription` | `boolean` | start with audio description on when the stream has a description track (HLS `describes-video`, DASH `Role=description`, Safari `descriptions`). Settings shows an *Audio description* switch only then; the choice is remembered with `persist`. Producing the description audio is up to you |
 | `signLanguage` | `{ src, corner?, maxDrift? }` | a second (interpreter) video docked in a corner, muted, kept on the main video's timeline: same position and rate, held while the main video pauses or buffers, re-aligned when it drifts past `maxDrift` (default 0.3 s). Both videos must share a timeline |
 | `documentPictureInPicture` | `boolean` | the PiP button opens a small always-on-top window holding the **whole player, controls included** (Chromium's Document PiP); the same `<video>` is moved, so playback carries on, and it returns to the page when the window closes. Falls back to the plain video PiP where the API is missing. Off by default. Caveats: with this on, the player is rendered on the client only (not in server-rendered HTML); the mini player stands down while the window is open |
+| `translation` | `{ targets: string[] }` | offer on-device translation of the chosen subtitle track into these languages (BCP-47), shown as the second line and labelled *Automatic translation*. Needs the browser's `Translator` (desktop Chromium, experimental); nothing is offered elsewhere. The translated cue is cached; a language model may be downloaded by the browser on first use |
 | `miniPlayer` | `boolean \| { corner?, touch? }` | float the player into a corner while it **plays** and is scrolled out of view (same `<video>` node, playback is not interrupted); buttons: play/pause, back to the video, close (pauses). Off by default; off on touch devices unless `touch: true` |
 | `VideoPlayerFacade` | `import … from '@kuraykaraaslan/kui-player/facade'` | poster + play button, ~1 kB; the player loads on click. See [recipes/facade.md](recipes/facade.md) |
 | `skipSegments` | `boolean \| { autoSkip? }` | "Skip intro / recap" button for chapters of that kind (default on); `autoSkip` skips unasked. Chapters get a `kind` (`intro` `recap` `credits`), or it is guessed from the title ("Intro", "Recap", "Credits"…) |

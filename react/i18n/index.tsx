@@ -58,6 +58,10 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  translateTo: string;
+  autoTranslation: string;
+  translationDownloading: string;
+  translationDownload: string;
   pipPlaying: string;
   audioDescription: string;
   on: string;
@@ -189,6 +193,10 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  translateTo: "Translate to {language}",
+  autoTranslation: "Automatic translation",
+  translationDownloading: "Downloading language model… {percent}%",
+  translationDownload: "downloads a language model once",
   pipPlaying: "Playing in picture-in-picture",
   audioDescription: "Audio description",
   on: "On",

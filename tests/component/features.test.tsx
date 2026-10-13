@@ -633,3 +633,94 @@ describe('document picture-in-picture', () => {
     expect(requestWindow).not.toHaveBeenCalled();
   });
 });
+
+describe('on-device subtitle translation', () => {
+  const subtitles = [{ label: 'English', srclang: 'en', src: '/en.srt' }];
+  const files: Record<string, string> = { '/en.srt': '1\n00:00:01,000 --> 00:00:04,000\nHello there\n' };
+  let fetched: string[];
+  let fetchSpy: MockInstance<typeof fetch>;
+  let translate: ReturnType<typeof vi.fn>;
+  let create: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetched = [];
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      fetched.push(url);
+      return new Response(files[url] ?? '', { status: files[url] ? 200 : 404 });
+    });
+    translate = vi.fn(async (text: string) => `[tr] ${text}`);
+    create = vi.fn(async (options: { monitor?: (m: EventTarget) => void }) => {
+      const monitor = new EventTarget();
+      options.monitor?.(monitor);
+      monitor.dispatchEvent(Object.assign(new Event('downloadprogress'), { loaded: 0.4 }));
+      return { translate, destroy: vi.fn() };
+    });
+    (globalThis as { Translator?: unknown }).Translator = {
+      availability: vi.fn(async () => 'downloadable'),
+      create,
+    };
+  });
+  afterEach(() => {
+    fetchSpy.mockRestore();
+    delete (globalThis as { Translator?: unknown }).Translator;
+  });
+
+  async function openSubtitles(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Subtitles/ }));
+  }
+
+  it('offers a translation only once a track is chosen, labelled as automatic', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} translation={{ targets: ['tr'] }} />);
+    await openSubtitles(user);
+    expect(screen.queryByRole('menuitemradio', { name: /Translate to/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+
+    await openSubtitles(user);
+    const option = await screen.findByRole('menuitemradio', { name: /Translate to/ });
+    expect(option).toHaveTextContent('Turkish');
+    expect(option).toHaveTextContent('Automatic translation');
+    expect(option).toHaveTextContent('downloads a language model once');
+  });
+
+  it('translates the current cue on the device, with no request but the subtitle file', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} translation={{ targets: ['tr'] }} />,
+    );
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 60 });
+    await openSubtitles(user);
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    await openSubtitles(user);
+    await user.click(await screen.findByRole('menuitemradio', { name: /Translate to/ }));
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ sourceLanguage: 'en', targetLanguage: 'tr' }));
+    emit(video, 'timeupdate', { currentTime: 2 });
+    await waitFor(() => expect(container.querySelector('.kui-subtitle-text--secondary')?.textContent).toBe('[tr] Hello there'));
+    expect(translate).toHaveBeenCalledWith('Hello there');
+    // Privacy: the only thing fetched is the subtitle file the page was pointed at.
+    expect([...new Set(fetched)]).toEqual(['/en.srt']);
+  });
+
+  it('offers nothing where the browser has no Translator', async () => {
+    delete (globalThis as { Translator?: unknown }).Translator;
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} translation={{ targets: ['tr'] }} />);
+    await openSubtitles(user);
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    await openSubtitles(user);
+    expect(screen.queryByRole('menuitemradio', { name: /Translate to/ })).not.toBeInTheDocument();
+  });
+
+  it('is off unless asked for', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} subtitles={subtitles} />);
+    await openSubtitles(user);
+    await user.click(screen.getByRole('menuitemradio', { name: 'English' }));
+    await openSubtitles(user);
+    expect(screen.queryByRole('menuitemradio', { name: /Translate to/ })).not.toBeInTheDocument();
+  });
+});

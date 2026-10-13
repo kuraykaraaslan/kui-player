@@ -83,6 +83,12 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * to the plain video PiP where the API is missing. Off by default.
    */
   documentPictureInPicture?: boolean;
+  /**
+   * Offer on-device translation of the chosen subtitle track into these
+   * languages (BCP-47, e.g. `['tr', 'ar']`), shown as the second line. Only where
+   * the browser has the `Translator` API (Chromium desktop); otherwise nothing is offered.
+   */
+  translation?: { targets: string[] };
   /** Float the player into a corner while it plays and is scrolled out of view. Off by default. */
   miniPlayer?: boolean | MiniOptions;
   /** Skip-intro / skip-recap button for chapters of that kind (default on). */
@@ -138,7 +144,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, audioDescription, signLanguage, watermark, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -219,6 +225,7 @@ function VideoPlayerInner({
       shortcuts={shortcuts}
       skipSegments={skipSegments}
       miniPlayer={miniPlayer}
+      translation={translation}
       documentPictureInPicture={documentPictureInPicture}
       audioDescription={audioDescription}
       src={effectiveSrc}

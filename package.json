@@ -89,7 +89,7 @@
     {
       "name": "core (vanilla engine)",
       "path": "dist/index.js",
-      "limit": "15 kB"
+      "limit": "16 kB"
     },
     {
       "name": "react subpath",
@@ -119,7 +119,7 @@
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "45 kB"
+      "limit": "47 kB"
     },
     {
       "name": "stylesheet",
@@ -139,7 +139,7 @@
       "path": [
         "dist/locales/index.js"
       ],
-      "limit": "6.5 kB"
+      "limit": "7 kB"
     }
   ],
   "peerDependencies": {

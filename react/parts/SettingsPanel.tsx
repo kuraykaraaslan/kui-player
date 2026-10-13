@@ -10,7 +10,8 @@ import {
 } from '../../modules/videoplayer/videoplayer.constants.js';
 import { PLAYER_META } from '../../modules/videoplayer/videoplayer.meta.js';
 import { AUTO_QUALITY_VALUE } from '../../modules/videoplayer/adapters/adapter.types.js';
-import { useTranslate } from '../i18n/index.js';
+import { useDictionary, useTranslate } from '../i18n/index.js';
+import type { TranslationTarget } from '../../modules/videoplayer/videoplayer.translate.js';
 import { formatTime } from '../../modules/videoplayer/videoplayer.format.js';
 import type { Chapter } from '../../modules/videoplayer/videoplayer.vtt.js';
 import type {
@@ -32,6 +33,9 @@ type SettingsPanelProps = {
   activeQualityLabel?: string | null;
   selectedSubtitle: number | null;
   secondarySubtitle: number | null;
+  secondaryTranslation: string | null;
+  translationTargets: TranslationTarget[];
+  applyTranslation: (code: string | null) => void;
   selectedAudioTrack: number;
   speed: number;
   subtitleFontSize: SubtitleFontSize;
@@ -56,7 +60,7 @@ type SettingsPanelProps = {
 export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(function SettingsPanel(
   {
     view, onChangeView, onAbout, qualities, subtitles, audioTracks, chapters, onSeekTo,
-    selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, selectedAudioTrack,
+    selectedQuality, activeQualityLabel, selectedSubtitle, secondarySubtitle, secondaryTranslation, translationTargets, applyTranslation, selectedAudioTrack,
     speed, subtitleFontSize, subtitleColor, subtitleBackground, subtitleEdge, subtitleFont,
     audioDescription, onToggleAudioDescription,
     applyQuality, applySpeed, applySubtitle, applySecondary, applySubtitleSize, applyAudioTrack,
@@ -65,6 +69,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
   ref,
 ) {
   const t = useTranslate();
+  const dictionary = useDictionary();
   const currentQualityLabel = selectedQuality === AUTO_QUALITY_VALUE
     ? (activeQualityLabel ? `${t('auto')} · ${activeQualityLabel}` : t('auto'))
     : (qualities?.find((q) => q.value === selectedQuality)?.label ?? t('auto'));
@@ -154,12 +159,25 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
           {subtitles.map((sub, i) => (
             <SettingsOption key={i} label={sub.label} selected={selectedSubtitle === i} onClick={() => applySubtitle(i)} />
           ))}
-          {subtitles.length > 1 && selectedSubtitle !== null && (
+          {selectedSubtitle !== null && (subtitles.length > 1 || translationTargets.length > 0) && (
             <>
               <p className="kui-label kui-option-heading">{t('secondSubtitle')}</p>
-              <SettingsOption label={t('off')} selected={secondarySubtitle === null} onClick={() => applySecondary(null)} />
+              <SettingsOption
+                label={t('off')}
+                selected={secondarySubtitle === null && secondaryTranslation === null}
+                onClick={() => applySecondary(null)}
+              />
               {subtitles.map((sub, i) => i === selectedSubtitle ? null : (
                 <SettingsOption key={i} label={sub.label} selected={secondarySubtitle === i} onClick={() => applySecondary(i)} />
+              ))}
+              {translationTargets.map((target) => (
+                <SettingsOption
+                  key={target.code}
+                  label={`${t('translateTo', { language: languageName(target.code, dictionary.locale) })}`}
+                  sublabel={target.availability === 'available' ? t('autoTranslation') : `${t('autoTranslation')} · ${t('translationDownload')}`}
+                  selected={secondaryTranslation === target.code}
+                  onClick={() => applyTranslation(target.code)}
+                />
               ))}
             </>
           )}
@@ -250,3 +268,12 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
     </div>
   );
 });
+
+/** A language's own name in the player's language; the bare code if the runtime cannot say. */
+function languageName(code: string, locale: string | undefined): string {
+  try {
+    return new Intl.DisplayNames([locale ?? 'en'], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
