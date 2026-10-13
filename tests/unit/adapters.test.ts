@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createHlsAdapter } from '../../modules/videoplayer/adapters/hls.adapter';
+import { createHlsAdapter, lowLatencyConfig } from '../../modules/videoplayer/adapters/hls.adapter';
 import { createDashAdapter } from '../../modules/videoplayer/adapters/dash.adapter';
 import { bitrateLabel, heightLabel } from '../../modules/videoplayer/adapters/adapter.types';
 
@@ -40,7 +40,8 @@ describe('hls adapter', () => {
     media?: HTMLMediaElement;
     source?: string;
     handlers: Record<string, (e: string, d: unknown) => void> = {};
-    constructor() { created.push(this); }
+    config?: Record<string, unknown>;
+    constructor(config?: Record<string, unknown>) { this.config = config; created.push(this); }
     on(event: string, cb: (e: string, d: unknown) => void) { this.handlers[event] = cb; }
     attachMedia(v: HTMLMediaElement) { this.media = v; }
     loadSource(src: string) { this.source = src; }
@@ -61,6 +62,12 @@ describe('hls adapter', () => {
     expect(createHlsAdapter().canPlay('a.m3u8')).toBe(true);
     delete (globalThis as { Hls?: unknown }).Hls;
     expect(createHlsAdapter({ preferNative: false }).canPlay('a.m3u8')).toBe(false);
+  });
+
+  it('hands low-latency settings to hls.js, with explicit config winning', async () => {
+    const a = createHlsAdapter({ Hls: FakeHls, lowLatency: true, config: { liveSyncDuration: 5 } });
+    await a.attach(document.createElement('video'), 'https://x/live.m3u8', host());
+    expect(last().config).toMatchObject({ lowLatencyMode: true, liveSyncDuration: 5, maxLiveSyncPlaybackRate: 1.1 });
   });
 
   it('drives hls.js and publishes levels and audio tracks', async () => {
@@ -180,5 +187,25 @@ describe('dash adapter', () => {
     expect(h.qualities[0]).toEqual([{ label: '480p', value: '0' }]);
     a.setQuality(0);
     expect(player.setQualityFor).toHaveBeenCalledWith('video', 0);
+  });
+});
+
+describe('lowLatencyConfig', () => {
+  it('is empty when off', () => {
+    expect(lowLatencyConfig(undefined)).toEqual({});
+    expect(lowLatencyConfig(false)).toEqual({});
+  });
+
+  it('applies the defaults for true', () => {
+    expect(lowLatencyConfig(true)).toEqual({
+      lowLatencyMode: true, liveSyncDuration: 3, liveMaxLatencyDuration: 6, maxLiveSyncPlaybackRate: 1.1,
+    });
+  });
+
+  it('keeps the max latency above the sync target and the catch-up rate sane', () => {
+    const c = lowLatencyConfig({ liveSyncDuration: 8, liveMaxLatencyDuration: 4, catchUpRate: 5 });
+    expect(c.liveMaxLatencyDuration).toBe(9);
+    expect(c.maxLiveSyncPlaybackRate).toBe(2);
+    expect(lowLatencyConfig({ catchUpRate: 0.5 }).maxLiveSyncPlaybackRate).toBe(1);
   });
 });

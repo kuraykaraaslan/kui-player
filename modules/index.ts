@@ -23,12 +23,13 @@ export type { AssCue } from './videoplayer/videoplayer.subtitles.parse.js';
 export type {
   PlayerEventMap, PlayerEventName, PlayerEventHandler,
 } from './videoplayer/videoplayer.events.js';
-export { createHlsAdapter, createDashAdapter, AUTO_QUALITY, AUTO_QUALITY_VALUE } from './videoplayer/adapters/index.js';
+export { createHlsAdapter, lowLatencyConfig, createDashAdapter, AUTO_QUALITY, AUTO_QUALITY_VALUE } from './videoplayer/adapters/index.js';
 export type {
   MediaAdapter,
   MediaAdapterHost,
   HlsAdapterOptions,
   HlsConstructor,
+  LowLatencyOptions,
   DashAdapterOptions,
   DashJsNs,
 } from './videoplayer/adapters/index.js';

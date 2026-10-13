@@ -347,6 +347,8 @@ export function VideoPlayerChrome({
   const progress = isLive && dvrWindow > 0
     ? Math.max(0, Math.min(100, ((currentTime - dvrStart) / dvrWindow) * 100))
     : duration > 0 ? (currentTime / duration) * 100 : 0;
+  const liveLatency = isLive && dvrWindow > 0
+    ? Math.max(0, dvrWindow - (currentTime - dvrStart)) : null;
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   return (
@@ -515,6 +517,7 @@ export function VideoPlayerChrome({
             onAirPlay={() => engine.showAirPlayPicker()}
             isLive={isLive}
             atLiveEdge={atLiveEdge}
+            liveLatency={liveLatency}
             onGoLive={() => engine.seekToLive()}
             onPlay={() => engine.togglePlay()}
             onSeekBy={(d) => engine.seekBy(d)}

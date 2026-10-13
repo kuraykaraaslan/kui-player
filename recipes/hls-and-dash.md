@@ -50,3 +50,25 @@ engine.selectQuality("auto");
 
 Loading either library from a `<script>` tag instead? Omit the option and the adapter
 picks up the `window.Hls` / `window.dashjs` global.
+
+## Low-latency HLS (LL-HLS)
+
+```ts
+createHlsAdapter({ Hls, lowLatency: true });
+// or tune it:
+createHlsAdapter({ Hls, lowLatency: { liveSyncDuration: 2, liveMaxLatencyDuration: 5, catchUpRate: 1.15 } });
+```
+
+`lowLatency` maps to hls.js `lowLatencyMode`, `liveSyncDuration`,
+`liveMaxLatencyDuration` and `maxLiveSyncPlaybackRate`. When the viewer drifts past the
+max latency, hls.js plays slightly faster (`catchUpRate`, default 1.1×; `1` disables it)
+until it is back near the edge. An explicit `config` still wins over these values.
+
+The live badge shows the current delay (`LIVE −4s`) and its tooltip spells it out; click it to jump to the edge.
+
+Requirements on the source side:
+
+- Partial segments: the playlist must carry `EXT-X-PART` / `EXT-X-PART-INF` and
+  `EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES`, and the origin/CDN must support blocking playlist reload.
+- Native Safari playback (`preferNative`) handles low latency itself; these options apply to hls.js only.
+- MediaConvert does not do live. On AWS use MediaLive; on Cloudflare Stream enable LL-HLS on the live input.

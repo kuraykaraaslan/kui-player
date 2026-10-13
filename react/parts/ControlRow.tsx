@@ -28,6 +28,8 @@ type ControlRowProps = {
   onAirPlay: () => void;
   isLive: boolean;
   atLiveEdge: boolean;
+  /** Seconds behind the live edge; `null` when unknown. */
+  liveLatency: number | null;
   onGoLive: () => void;
   onPlay: () => void;
   onSeekBy: (delta: number) => void;
@@ -42,7 +44,7 @@ export function ControlRow({
   slotStart, slotEnd,
   playing, muted, volume, currentTime, duration, isFullscreen, showSettings,
   enableCast, castState, showPip, isPip, onTogglePip,
-  showAirPlay, isAirPlaying, onAirPlay, isLive, atLiveEdge, onGoLive,
+  showAirPlay, isAirPlaying, onAirPlay, isLive, atLiveEdge, liveLatency, onGoLive,
   onPlay, onSeekBy, onToggleMute, onVolumeChange,
   onToggleSettings, onToggleCast, onToggleFullscreen,
 }: ControlRowProps) {
@@ -92,9 +94,13 @@ export function ControlRow({
           className={cn('kui-live', atLiveEdge && 'is-edge')}
           aria-label={atLiveEdge ? t('live') : t('goLive')}
           disabled={atLiveEdge}
+          title={liveLatency !== null && liveLatency >= 1 ? t('behindLive', { time: formatTime(liveLatency) }) : undefined}
         >
           <span className="kui-live-dot" aria-hidden="true" />
           {t('live')}
+          {liveLatency !== null && liveLatency >= 1 && (
+            <span className="kui-live-lag" aria-hidden="true">−{Math.round(liveLatency)}s</span>
+          )}
         </button>
       ) : (
         <span className="kui-time">

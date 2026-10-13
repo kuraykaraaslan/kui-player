@@ -38,14 +38,47 @@ export type HlsAdapterOptions = {
    * `<script>` tag install leaves behind.
    */
   Hls?: HlsConstructor;
-  /** Passed straight to the `Hls` constructor. */
+  /** Passed straight to the `Hls` constructor; wins over `lowLatency` where they overlap. */
   config?: Record<string, unknown>;
+  /**
+   * Low-latency HLS tuning for live streams (hls.js only — native Safari
+   * playback manages its own latency). `true` uses the defaults below.
+   * The source must publish partial segments (`EXT-X-PART`) to benefit.
+   */
+  lowLatency?: boolean | LowLatencyOptions;
   /**
    * Prefer the browser's own HLS support when it has any (Safari / iOS), where
    * native playback gets hardware decoding and AirPlay for free. Default `true`.
    */
   preferNative?: boolean;
 };
+
+export type LowLatencyOptions = {
+  /** Target distance from the live edge, in seconds (default 3). */
+  liveSyncDuration?: number;
+  /** Beyond this the player catches up by speeding up, in seconds (default 6). */
+  liveMaxLatencyDuration?: number;
+  /**
+   * Playback rate used while catching up (default 1.1, i.e. 10 % faster —
+   * barely audible). `1` turns catch-up off.
+   */
+  catchUpRate?: number;
+};
+
+/** The hls.js settings a `lowLatency` option stands for; `{}` when it is off. */
+export function lowLatencyConfig(option: boolean | LowLatencyOptions | undefined): Record<string, unknown> {
+  if (!option) return {};
+  const o = option === true ? {} : option;
+  const liveSyncDuration = o.liveSyncDuration ?? 3;
+  // hls.js requires the max latency to exceed the sync target; keep it sane.
+  const liveMaxLatencyDuration = Math.max(o.liveMaxLatencyDuration ?? 6, liveSyncDuration + 1);
+  return {
+    lowLatencyMode: true,
+    liveSyncDuration,
+    liveMaxLatencyDuration,
+    maxLiveSyncPlaybackRate: Math.max(1, Math.min(o.catchUpRate ?? 1.1, 2)),
+  };
+}
 
 const HLS_PATTERN = /\.m3u8(\?|#|$)/i;
 const NATIVE_HLS_MIME = 'application/vnd.apple.mpegurl';
@@ -105,7 +138,7 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         return;
       }
 
-      const instance = new ctor({ ...opts.config });
+      const instance = new ctor({ ...lowLatencyConfig(opts.lowLatency), ...opts.config });
       hls = instance;
 
       instance.on(ctor.Events.MANIFEST_PARSED, () => {

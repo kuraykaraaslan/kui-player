@@ -29,11 +29,11 @@ Event API'si (`engine.on()`) ve CMCD var; ölçülen kalite verisi yok.
 
 Canlı + DVR var; gecikme düşürme ve yakalama yok.
 
-- [ ] `createHlsAdapter` için `lowLatency` seçeneği → hls.js `lowLatencyMode`,
+- [x] `createHlsAdapter` için `lowLatency` seçeneği → hls.js `lowLatencyMode`,
       `liveSyncDuration` ayarları
-- [ ] Canlı kenara yetişme (catch-up): gecikme eşiği aşılınca oynatma hızını hafifçe artır
-- [ ] "Canlıya dön" göstergesi gecikmeyi saniye cinsinden gösterir
-- [ ] `recipes/hls-and-dash.md` içine LL-HLS bölümü; kaynak tarafı gereksinimleri (parçalı segment, `EXT-X-PART`)
+- [x] Canlı kenara yetişme (catch-up): hls.js'in `maxLiveSyncPlaybackRate`'i ile (`catchUpRate`, varsayılan 1.1×); native Safari kendi gecikmesini yönetir. Gerçek LL-HLS kaynağıyla doğrulanmadı, yalnızca ayar geçişi test edildi
+- [x] "Canlıya dön" göstergesi gecikmeyi saniye cinsinden gösterir
+- [x] `recipes/hls-and-dash.md` içine LL-HLS bölümü; kaynak tarafı gereksinimleri (parçalı segment, `EXT-X-PART`)
 
 **Not:** Canlı kaynak gerektirir; MediaConvert canlı yapmaz (AWS tarafında MediaLive gerekir).
 Kaynak yoksa yalnızca ayar geçişi ve test sahte stream ile yapılır.

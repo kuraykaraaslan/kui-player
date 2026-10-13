@@ -431,6 +431,7 @@
 }
 .kui-live:hover:not(:disabled) { color: var(--_kui-text); }
 .kui-live:disabled { cursor: default; color: var(--_kui-text); }
+.kui-live-lag { margin-inline-start: 0.375rem; font-variant-numeric: tabular-nums; color: var(--_kui-text-faint); }
 .kui-live-dot {
   width: 7px;
   height: 7px;
