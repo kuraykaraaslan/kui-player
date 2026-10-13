@@ -194,7 +194,9 @@ properties on any ancestor:
 ## Keyboard
 
 `Space`/`k` play-pause · `←`/`→` ∓10s · `↑`/`↓` volume · `m` mute · `f` fullscreen ·
-`i` Picture-in-Picture · `Esc` close the menu or leave emulated fullscreen.
+`i` Picture-in-Picture · `c` subtitles · `0`-`9` jump to percent · `j`/`l` ∓10s · `,`/`.` frame step (paused) ·
+`<`/`>` speed · `Home`/`End` · `?` key list · `Esc` close the menu or leave emulated fullscreen.
+Remap with the React prop `shortcuts={{ seekForward: 'n', captions: false }}` (`false` = none).
 On the focused seek bar: `←`/`→` ∓5s, `PageUp`/`PageDown` ∓10%, `Home`/`End`.
 
 ## Touch

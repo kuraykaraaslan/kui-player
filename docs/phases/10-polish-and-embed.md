@@ -16,18 +16,18 @@ Bugün: `Space`/`k`, `←`/`→` (±10 sn), `↑`/`↓` (ses), `m`, `f`, `i`, `E
 ([`useKeyboardShortcuts.ts`](../../react/hooks/useKeyboardShortcuts.ts)). YouTube/Plyr
 kullanıcılarının beklediği çoğu tuş yok, ve kullanıcı hangi tuşların var olduğunu göremiyor.
 
-- [ ] Eklenecek tuşlar: `c` (altyazı aç/kapa), `0–9` (yüzdeye atla), `j`/`l` (±10 sn),
-      `,`/`.` (kare kare, duraklatılmışken), `<`/`>` (hız), `Home`/`End`, `t` (sinema modu varsa)
-- [ ] **Yardım katmanı:** `?` ile açılan kısayol listesi; odak tuzağı + `Esc` ile kapanma
+- [x] Eklenecek tuşlar: `c` (altyazı aç/kapa), `0–9` (yüzdeye atla), `j`/`l` (±10 sn),
+      `,`/`.` (kare kare, duraklatılmışken), `<`/`>` (hız), `Home`/`End`, ~~`t` (sinema modu varsa)~~ — sinema modu olmadığı için eklenmedi
+- [x] **Yardım katmanı:** `?` ile açılan kısayol listesi; odak tuzağı + `Esc` ile kapanma
       ([`useFocusTrap`](../../react/hooks/useFocusTrap.ts) yeniden kullanılır)
-- [ ] **Özelleştirme:** `shortcuts` seçeneği ile tuş eşlemesi (ör. `{ seekForward: 'l' }`),
+- [x] **Özelleştirme:** `shortcuts` seçeneği ile tuş eşlemesi (ör. `{ seekForward: 'l' }`),
       `false` ile tek tek kapatma
-- [ ] Çakışma kuralları: slider/metin alanında tuşlar yutulmaz (mevcut davranış korunur),
+- [x] Çakışma kuralları: slider/metin alanında tuşlar yutulmaz (mevcut davranış korunur),
       tarayıcı/ekran okuyucu kısayollarıyla çakışan tuşlar belgelenir
-- [ ] Çok oynatıcılı sayfada yalnızca **odaktaki** oynatıcı tepki verir
-- [ ] i18n: yardım metinleri 6 dilde, RTL'de düzgün hizalanır
-- [ ] README "Keyboard shortcuts" bölümü ve `llms-full.txt` güncellenir
-- [ ] Test: tuş → engine çağrısı birim testi, yardım katmanı a11y (axe) testi
+- [x] Çok oynatıcılı sayfada yalnızca **odaktaki** oynatıcı tepki verir
+- [x] i18n: yardım metinleri 6 dilde (mantıksal CSS ile RTL uyumlu; görsel RTL doğrulaması yapılmadı)
+- [x] README "Keyboard shortcuts" bölümü ve `llms-full.txt` güncellenir
+- [x] Test: tuş → engine çağrısı birim testi, yardım katmanı a11y (axe) testi
 
 ## 10.2 — Bölümler: atla ve gezin 🟡 M
 

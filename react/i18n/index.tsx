@@ -58,6 +58,24 @@ export type Dictionary = {
   resumeFrom: string;
   resume: string;
   dismiss: string;
+  shortcuts: string;
+  'shortcut.playPause': string;
+  'shortcut.seekBack': string;
+  'shortcut.seekForward': string;
+  'shortcut.volumeUp': string;
+  'shortcut.volumeDown': string;
+  'shortcut.mute': string;
+  'shortcut.fullscreen': string;
+  'shortcut.pip': string;
+  'shortcut.captions': string;
+  'shortcut.percent': string;
+  'shortcut.frameBack': string;
+  'shortcut.frameForward': string;
+  'shortcut.slower': string;
+  'shortcut.faster': string;
+  'shortcut.start': string;
+  'shortcut.end': string;
+  'shortcut.help': string;
   shareFromHere: string;
   linkCopied: string;
   linkCopyFailed: string;
@@ -144,6 +162,24 @@ export const en: Dictionary = {
   resumeFrom: 'Resume from {time}?',
   resume: 'Resume',
   dismiss: 'Dismiss',
+  shortcuts: "Keyboard shortcuts",
+  'shortcut.playPause': "Play / pause",
+  'shortcut.seekBack': "Back 10 s",
+  'shortcut.seekForward': "Forward 10 s",
+  'shortcut.volumeUp': "Volume up",
+  'shortcut.volumeDown': "Volume down",
+  'shortcut.mute': "Mute",
+  'shortcut.fullscreen': "Fullscreen",
+  'shortcut.pip': "Picture-in-picture",
+  'shortcut.captions': "Subtitles on / off",
+  'shortcut.percent': "Jump to 0–90 %",
+  'shortcut.frameBack': "Previous frame (paused)",
+  'shortcut.frameForward': "Next frame (paused)",
+  'shortcut.slower': "Slower",
+  'shortcut.faster': "Faster",
+  'shortcut.start': "Start",
+  'shortcut.end': "End",
+  'shortcut.help': "This list",
   shareFromHere: 'Share from here',
   linkCopied: 'Link copied',
   linkCopyFailed: 'Could not copy the link',

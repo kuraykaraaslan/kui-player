@@ -10,6 +10,7 @@ import { VideoPlayerChrome } from './VideoPlayerChrome.js';
 import { IconProvider, type IconOverrides } from './icons/index.js';
 import { I18nProvider, resolveDictionary, type PartialDictionary } from './i18n/index.js';
 import { detectFormat } from '../modules/videoplayer/videoplayer.subtitles.js';
+import type { ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { readUrlTime } from '../modules/videoplayer/videoplayer.share.js';
 import type { ShareOptions } from './parts/ShareController.js';
 import type { PersistOptions } from '../modules/videoplayer/videoplayer.persist.js';
@@ -53,6 +54,8 @@ export type VideoPlayerComponentProps = VideoPlayerProps & {
    * here" button. Off by default; pass `true` or `{ param, onShare }`.
    */
   share?: boolean | ShareOptions;
+  /** Remap or disable keyboard shortcuts; `?` opens the key list. */
+  shortcuts?: ShortcutOverrides | false;
   /** Your own nodes in named positions of the chrome. */
   slots?: PlayerSlots<ReactNode>;
 };
@@ -100,7 +103,7 @@ function VideoPlayerInner({
   adapters, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
-  mediaSession = true, persist = false, share = false, theme, slots,
+  mediaSession = true, persist = false, share = false, shortcuts, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,
 }: VideoPlayerComponentProps) {
   const engine = useVideoPlayerEngine();
@@ -178,6 +181,7 @@ function VideoPlayerInner({
       videoRef={videoRef}
       theme={theme}
       slots={slots}
+      shortcuts={shortcuts}
       src={effectiveSrc}
       poster={effectivePoster}
       title={effectiveTitle}

@@ -164,6 +164,57 @@ describe('keyboard shortcuts', () => {
     expect(video.volume).toBeCloseTo(0.9);
   });
 
+  it('handles the extended keys: jump to percent, j/l, speed, home/end, frame step', async () => {
+    const user = userEvent.setup();
+    const { video, container } = renderPlayer();
+    emit(video, 'loadedmetadata', { duration: 100 });
+    const player = container.querySelector('.kui-player') as HTMLElement;
+    player.focus();
+
+    await user.keyboard('5');
+    expect(video.currentTime).toBe(50);
+    await user.keyboard('j');
+    expect(video.currentTime).toBe(40);
+    await user.keyboard('l');
+    expect(video.currentTime).toBe(50);
+    await user.keyboard('{End}');
+    expect(video.currentTime).toBe(100);
+    await user.keyboard('{Home}');
+    expect(video.currentTime).toBe(0);
+
+    await user.keyboard('>');
+    expect(video.playbackRate).toBe(1.25);
+    await user.keyboard('<');
+    expect(video.playbackRate).toBe(1);
+
+    await user.keyboard('.');            // paused, so it steps one frame
+    expect(video.currentTime).toBeCloseTo(1 / 30);
+  });
+
+  it('remaps and disables keys through the shortcuts option', async () => {
+    const user = userEvent.setup();
+    const { video, container } = renderPlayer({ shortcuts: { seekForward: 'n', mute: false } });
+    emit(video, 'loadedmetadata', { duration: 100 });
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+
+    await user.keyboard('n');
+    expect(video.currentTime).toBe(10);
+    await user.keyboard('{ArrowRight}');   // replaced, no longer bound
+    expect(video.currentTime).toBe(10);
+    await user.keyboard('m');
+    expect(video.muted).toBe(false);
+  });
+
+  it('opens a key list with ? and closes it with Escape', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPlayer();
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('?');
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it('does nothing while focus is outside the player', async () => {
     const user = userEvent.setup();
     const { video } = renderPlayer();

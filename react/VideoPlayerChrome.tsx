@@ -1,5 +1,5 @@
 import {
-  Suspense, lazy, useCallback, useEffect, useRef, useState, useSyncExternalStore,
+  Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore,
   type ReactNode, type RefObject,
 } from 'react';
 import { cn } from '../libs/utils/cn.js';
@@ -14,6 +14,7 @@ import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.type
 import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
 import { useSubtitleCues } from './hooks/useSubtitleCues.js';
+import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { useFocusTrap } from './hooks/useFocusTrap.js';
 import { usePlayerAnnouncements } from './hooks/usePlayerAnnouncements.js';
@@ -23,6 +24,7 @@ import type { CastApi } from './parts/CastController.js';
 // reachable after a click, and the Cast SDK plumbing never loads at all unless
 // `enableCast` is on.
 const SettingsPanel = lazy(() => import('./parts/SettingsPanel.js').then((m) => ({ default: m.SettingsPanel })));
+const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
 const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
 const CastController = lazy(() => import('./parts/CastController.js'));
 const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
@@ -98,6 +100,8 @@ export interface VideoPlayerChromeProps {
   gestures?: boolean | GestureOptions;
   /** Enter fullscreen when a phone rotates to landscape while playing. Default `false`. */
   autoFullscreenOnLandscape?: boolean;
+  /** Remap or disable keys: `{ seekForward: 'l' }`, `{ captions: false }`, or `false` for none. */
+  shortcuts?: ShortcutOverrides | false;
   onCastStateChange?: (state: CastState) => void;
   onControlsVisibilityChange?: (visible: boolean) => void;
   className?: string;
@@ -108,7 +112,7 @@ export function VideoPlayerChrome({
   src = '', poster, title, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
-  gestures = true, autoFullscreenOnLandscape = false, onCastStateChange,
+  gestures = true, autoFullscreenOnLandscape = false, shortcuts, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
   const engine = useVideoPlayerEngine();
@@ -119,6 +123,9 @@ export function VideoPlayerChrome({
   const progressRef = useRef<HTMLDivElement>(null);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
   const [showAbout, setShowAbout] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const keymap = useMemo(() => buildKeymap(shortcuts), [shortcuts]);
+  const toggleHelp = useCallback(() => setShowHelp((v) => !v), []);
 
   // Reactive state
   const playing           = useVideoPlayerStore(s => s.playing);
@@ -191,7 +198,7 @@ export function VideoPlayerChrome({
   const onCastApi = useCallback((api: CastApi | null) => { castApi.current = api; }, []);
   const toggleCast = useCallback(() => castApi.current?.toggleCast(), []);
   const cueText = useSubtitleCues({ videoRef, selectedSubtitle, subtitles });
-  useKeyboardShortcuts({ containerRef, engine });
+  useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp });
   const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
   const suppressRef = useRef<() => boolean>(() => false);
@@ -519,6 +526,12 @@ export function VideoPlayerChrome({
           />
         </div>
       </div>
+
+      {showHelp && (
+        <Suspense fallback={null}>
+          <ShortcutsHelp keymap={keymap} onClose={() => setShowHelp(false)} />
+        </Suspense>
+      )}
 
       {showAbout && (
         <Suspense fallback={null}>

@@ -31,6 +31,15 @@ describe('accessibility', () => {
     expect(await scan(container)).toEqual([]);
   });
 
+  it('has no violations with the shortcuts help open', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} />);
+    (container.querySelector('.kui-player') as HTMLElement).focus();
+    await user.keyboard('?');
+    await screen.findByRole('dialog');
+    expect(await scan(container)).toEqual([]);
+  });
+
   it('has no violations with the settings menu open', async () => {
     const user = userEvent.setup();
     const { container } = render(

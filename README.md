@@ -376,12 +376,26 @@ Active while the player container is focused:
 | Key | Action |
 |---|---|
 | `Space` / `k` | play / pause |
-| `←` / `→` | seek ∓10s |
+| `←` / `→`, `j` / `l` | seek ∓10s |
 | `↑` / `↓` | volume ±10% |
 | `m` | mute / unmute |
 | `f` | toggle fullscreen |
 | `i` | Picture-in-Picture |
+| `c` | subtitles on / off (when tracks exist) |
+| `0`–`9` | jump to 0–90 % of the video |
+| `,` / `.` | previous / next frame (only while paused; assumes 30 fps) |
+| `<` / `>` | slower / faster |
+| `Home` / `End` | start / end |
+| `?` | open the shortcut list |
 | `Esc` | close the settings panel, or leave emulated fullscreen |
+
+Keys never fire with `Ctrl`/`Meta`/`Alt` held, nor while a slider or text field has focus.
+Remap or disable them with the `shortcuts` prop — a key or list of keys replaces that
+action's defaults, `false` turns it off, and `shortcuts={false}` disables all:
+
+```tsx
+<VideoPlayer src={src} shortcuts={{ seekForward: 'n', captions: false }} />
+```
 
 ---
 
@@ -442,6 +456,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `thumbnails` | `string` | WebVTT storyboard for seek previews |
 | `playlist` / `playlistIndex` / `onPlaylistIndexChange` / `playlistCountdown` | — | play through a list |
 | `persist` | `boolean \| PersistOptions` | remember position and preferences; **off by default** |
+| `shortcuts` | `{ [action]: key \| key[] \| false } \| false` | remap or disable keyboard shortcuts |
 | `share` | `boolean \| { param?, onShare? }` | start at `?t=90` / `#t=1m30s` and show a "Share from here" button; **off by default** |
 | `mediaSession` | `boolean` | OS media controls, default `true` |
 | `locale` | `PartialDictionary` | see [Languages](#languages) |

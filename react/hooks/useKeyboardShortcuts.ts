@@ -1,12 +1,26 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import type { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine.js';
+import { SPEEDS } from '../../modules/videoplayer/videoplayer.constants.js';
+import { lookupShortcut, type Keymap } from '../../modules/videoplayer/videoplayer.shortcuts.js';
 
 type Options = {
   containerRef: RefObject<HTMLDivElement | null>;
   engine: VideoPlayerEngine;
+  keymap: Keymap;
+  /** Number of subtitle tracks; `c` does nothing without any. */
+  subtitleCount: number;
+  onToggleHelp: () => void;
 };
 
-export function useKeyboardShortcuts({ containerRef, engine }: Options) {
+/** Frame length when the real rate is unknown — the video element does not expose it. */
+const FRAME_SECONDS = 1 / 30;
+
+export function useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount, onToggleHelp }: Options) {
+  // Latest-value ref so the listener is attached once and never goes stale.
+  const live = useRef({ keymap, subtitleCount, onToggleHelp });
+  useEffect(() => { live.current = { keymap, subtitleCount, onToggleHelp }; });
+  const lastCaption = useRef(0);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const c = containerRef.current;
@@ -22,21 +36,46 @@ export function useKeyboardShortcuts({ containerRef, engine }: Options) {
 
       const s = engine.store.getState();
 
-      switch (e.key) {
-        case ' ':
-        case 'k': e.preventDefault(); engine.togglePlay(); break;
-        case 'ArrowLeft':  e.preventDefault(); engine.seekBy(-10); break;
-        case 'ArrowRight': e.preventDefault(); engine.seekBy(10);  break;
-        case 'ArrowUp':    e.preventDefault(); engine.setVolume(s.volume + 0.1); break;
-        case 'ArrowDown':  e.preventDefault(); engine.setVolume(s.volume - 0.1); break;
-        case 'm': e.preventDefault(); engine.toggleMute(); break;
-        case 'f': e.preventDefault(); engine.toggleFullscreen(c); break;
-        case 'i': e.preventDefault(); void engine.togglePictureInPicture(); break;
-        case 'Escape':
-          if (s.showSettings) { e.preventDefault(); s.setShowSettings(false); s.setSettingsView('main'); }
-          // Emulated fullscreen gets no browser-provided escape hatch — wire one.
-          else if (s.fakeFullscreen) { e.preventDefault(); engine.exitFullscreen(c); }
+      if (e.key === 'Escape') {
+        if (s.showSettings) { e.preventDefault(); s.setShowSettings(false); s.setSettingsView('main'); }
+        // Emulated fullscreen gets no browser-provided escape hatch — wire one.
+        else if (s.fakeFullscreen) { e.preventDefault(); engine.exitFullscreen(c); }
+        return;
+      }
+
+      // Modified keys belong to the browser and the screen reader (Ctrl+L, Alt+←…).
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const { keymap: map, subtitleCount: tracks, onToggleHelp: toggleHelp } = live.current;
+      const action = lookupShortcut(map, e.key);
+      if (!action) return;
+      e.preventDefault();
+
+      switch (action) {
+        case 'playPause': engine.togglePlay(); break;
+        case 'seekBack': engine.seekBy(-10); break;
+        case 'seekForward': engine.seekBy(10); break;
+        case 'volumeUp': engine.setVolume(s.volume + 0.1); break;
+        case 'volumeDown': engine.setVolume(s.volume - 0.1); break;
+        case 'mute': engine.toggleMute(); break;
+        case 'fullscreen': engine.toggleFullscreen(c); break;
+        case 'pip': void engine.togglePictureInPicture(); break;
+        case 'captions':
+          if (tracks === 0) break;
+          if (s.selectedSubtitle === null) s.setSelectedSubtitle(Math.min(lastCaption.current, tracks - 1));
+          else { lastCaption.current = s.selectedSubtitle; s.setSelectedSubtitle(null); }
           break;
+        case 'percent':
+          if (s.duration > 0 && !s.isLive) engine.seek((Number(e.key) / 10) * s.duration);
+          break;
+        // Frame stepping only makes sense paused; while playing it would be a surprise nudge.
+        case 'frameBack': if (!s.playing) engine.seekBy(-FRAME_SECONDS); break;
+        case 'frameForward': if (!s.playing) engine.seekBy(FRAME_SECONDS); break;
+        case 'faster': engine.setSpeed(SPEEDS.find((v) => v > s.speed) ?? SPEEDS[SPEEDS.length - 1]!); break;
+        case 'slower': engine.setSpeed([...SPEEDS].reverse().find((v) => v < s.speed) ?? SPEEDS[0]!); break;
+        case 'start': engine.seek(0); break;
+        case 'end': if (s.duration > 0) engine.seek(s.duration); break;
+        case 'help': toggleHelp(); break;
       }
     };
     document.addEventListener('keydown', handler);
