@@ -61,10 +61,12 @@ DRM'in tamamlayıcısı: sızıntıyı kullanıcıya bağlayabilmek için.
 
 En büyük ve riskli madde; yalnızca gerçek ihtiyaç varsa.
 
-- [ ] Service worker + IndexedDB ile segment önbellekleme, indirme ilerlemesi
-- [ ] Depolama kotası, silme, "indirildi" durumu UI'ı
-- [ ] **DRM'li içerik:** kalıcı lisans (persistent-license) gerekir, sağlayıcı ve cihaz desteği
+- [~] **Kısmen:** segment önbellekleme / service worker **yapılmadı**. Yerine DRM'siz, tek dosyalık (progressive MP4/WebM/MP3) bir prototip: Cache Storage'a indirme, ilerleme, iptal (`offline` prop'u)
+- [x] Depolama kotası (indirmeden önce tahmin + yazma hatası), silme, "indirildi" durumu ve hata durumları ayarlar menüsünde
+- [ ] **DRM'li içerik (yapılmadı):** kalıcı lisans (persistent-license) gerekir, sağlayıcı ve cihaz desteği
       ayrı doğrulanmalı; çoğu durumda mümkün değil
-- [ ] Önce DRM'siz içerikle prototip
+- [x] Önce DRM'siz içerikle prototip
 
 **Karar noktası:** Faz 7.4 bittikten sonra, DRM'li çevrimdışı mümkün değilse kapsamı DRM'siz içerikle sınırla ya da maddeyi bırak.
+
+**Durum (Ekim 2026):** prototip DRM'siz tek dosyalar için çalışıyor (birim + bileşen testi, sahte `caches` ile). **Yapılmadı:** HLS/DASH çevrimdışı (service worker gerekir, ev sahibi sitenin kendi kökünde kayıt olmalı), DRM'li çevrimdışı (kalıcı lisans; 7.4 gerçek sağlayıcıyla denenemediği için karar noktası geçilmedi), indirme sırasında sekme kapanınca devam (arka plan indirme yok). İndirilen dosya oynarken `blob:` URL olarak bellekte durur; uzun filmler için uygun değildir. Gerçek tarayıcıda (Chrome/Firefox/Safari) elle denenmedi.
