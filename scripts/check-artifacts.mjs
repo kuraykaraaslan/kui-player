@@ -55,6 +55,15 @@ check('facade entry does not bundle the player',
   readFileSync(resolve(root, 'dist/react/facade.js'), 'utf8').includes('import("@kuraykaraaslan/kui-player/react")')
   && !readFileSync(resolve(root, 'dist/react/facade.js'), 'utf8').includes('kui-player--embedded'));
 
+const ads = await load('dist/ads/index.js');
+check('ads entry exports the overlay and the parsers',
+  typeof ads.AdsOverlay === 'function' && typeof ads.parseVast === 'function' && typeof ads.parseVmap === 'function');
+check('ads entry does not bundle the player or React',
+  !readFileSync(resolve(root, 'dist/ads/index.js'), 'utf8').includes('kui-player--embedded'));
+check('the core and React entries carry no ad code',
+  !readFileSync(resolve(root, 'dist/index.js'), 'utf8').includes('VASTAdTagURI')
+  && !readFileSync(resolve(root, 'dist/react/index.js'), 'utf8').includes('VASTAdTagURI'));
+
 const skin = await load('dist/skin/index.js');
 check('skin exports mountSkin and skinAll', typeof skin.mountSkin === 'function' && typeof skin.skinAll === 'function');
 check('skin exports the custom element', typeof skin.defineKuiPlayer === 'function');

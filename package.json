@@ -59,6 +59,10 @@
       "types": "./dist/react/facade.d.ts",
       "import": "./dist/react/facade.js"
     },
+    "./ads": {
+      "types": "./dist/react/ads.d.ts",
+      "import": "./dist/ads/index.js"
+    },
     "./skin": {
       "types": "./dist/embed/skin.d.ts",
       "import": "./dist/skin/index.js"
@@ -115,6 +119,11 @@
       "name": "facade (click-to-load cover)",
       "path": "dist/react/facade.js",
       "limit": "1.5 kB"
+    },
+    {
+      "name": "ads (VAST/VMAP, optional entry)",
+      "path": "dist/ads/index.js",
+      "limit": "6.5 kB"
     },
     {
       "name": "embed (single script)",
@@ -189,7 +198,7 @@
   },
   "scripts": {
     "dev": "vite --config vite.config.demo.ts",
-    "build:js": "vite build && vite build --config vite.config.react.ts && vite build --config vite.config.facade.ts && vite build --config vite.config.skin.ts && vite build --config vite.config.locales.ts && vite build --config vite.config.wrappers.ts",
+    "build:js": "vite build && vite build --config vite.config.react.ts && vite build --config vite.config.facade.ts && vite build --config vite.config.ads.ts && vite build --config vite.config.skin.ts && vite build --config vite.config.locales.ts && vite build --config vite.config.wrappers.ts",
     "build:types": "tsc -p tsconfig.lib.json",
     "build:css": "node scripts/build-css.mjs",
     "build:embed": "vite build --config vite.config.embed.ts",

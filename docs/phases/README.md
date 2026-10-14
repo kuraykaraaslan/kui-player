@@ -27,7 +27,7 @@ yarışına girerse kaybeder. Strateji:
 | [3](./03-quality-gate.md) | Kalite kapısı | 🔴 Zorunlu | ~2 hafta | ✅ |
 | [4](./04-expected-features.md) | Beklenen özellikler | 🟡 Olsa iyi | ~4 hafta | ✅ |
 | [5](./05-differentiation.md) | Niş farklılaşma | 🟣 Stratejik | ~3 hafta | ✅ |
-| [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | 🟡 6.2, 6.3, 6.4, 6.6 yapıldı; 6.1 ve 6.5 bilerek yapılmadı |
+| [6](./06-verticals.md) | Dikey nişler | 🟣 Keşif | opsiyonel | 🟡 6.2, 6.3, 6.4, 6.6 yapıldı; 6.1 (ayrı `ads` paketi) ve 6.5 (LMS hariç) kısmen yapıldı |
 | [7](./07-drm-streaming.md) | DRM ve yayın altyapısı (Cloudflare + AWS) | 🟣 Keşif | ~3–4 hafta | 🟡 yalnızca kod tarafı (7.3, örnek backend); hesap gerektiren 7.1/7.2/7.4/7.5 açık |
 | [8](./08-streaming-ops.md) | Yayın kalitesi ve operasyon | 🟡 Olsa iyi | ~3–4 hafta | ✅ (8.5 yalnızca DRM'siz tek dosya prototipi) |
 | [9](./09-ux-accessibility.md) | Kullanıcı deneyimi ve erişilebilirlik | 🟡 Olsa iyi | ~3–4 hafta | ✅ |

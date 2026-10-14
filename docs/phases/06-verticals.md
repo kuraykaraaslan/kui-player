@@ -165,6 +165,13 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   bölümlerin haritası ve `onProgress` kancası, hız ve tercih devamlılığı (`persist`, mevcut).
   *Yapılmadı:* xAPI/SCORM (ayrı ürün kararı), izlenen haritasının seek çubuğunda gösterimi
   (yalnızca panelde), LMS'e gönderim.
-- **6.1 yapılmadı.** 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
+- **6.1 (kısmen yapıldı, ayrı pakette):** `@kuraykaraaslan/kui-player/ads` — VAST 3/4 ayrıştırma
+  (wrapper'lar, pod'lar), VMAP zamanlama (pre/mid/post), reklam arayüzü (atla, geri sayım,
+  "Reklam 1/2", tıkla-geç), izleme pikselleri ve makrolar, hata durumunda içeriğe dönüş.
+  Faz belgesinin şartları korundu: IMA SDK yok, **ayrı opsiyonel paket** (~5 kB), çekirdek ve
+  React girişinde reklam kodu yok (`check:artifacts` bunu denetler), varsayılan gizlilik
+  testi etkilenmez. *Yapılmadı / doğrulanmadı:* non-linear reklamlar, VPAID/SIMID, OMID, tüketici
+  onayı (TCF/GPP). Gerçek bir reklam sunucusuyla denenmedi, yalnızca sentetik VAST/VMAP ve sahte
+  video ile. Not: "gerçek talep" kriteri yine sağlanmadı, talimatla yapıldı. 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
   ürün kararları.
 
