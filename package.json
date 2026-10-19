@@ -206,6 +206,7 @@
     "size": "node scripts/check-size.mjs",
     "build:demo": "vite build --config vite.config.demo.ts",
     "prepublishOnly": "pnpm build",
+    "prepare": "node scripts/prepare.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.lib.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
