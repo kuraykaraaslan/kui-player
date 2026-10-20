@@ -907,6 +907,7 @@
   font-variant-numeric: tabular-nums;
 }
 .kui-frametools-input { width: 8.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.kui-frametools-input.kui-frametools-input-frame { width: 5rem; }
 .kui-frametools-select { color-scheme: dark; }
 .kui-frametools-frame { color: var(--_kui-text-muted); font-variant-numeric: tabular-nums; }
 .kui-loop-range {
@@ -990,6 +991,10 @@
 .kui-wave path { fill: currentColor; }
 .kui-wave--base { color: var(--_kui-text-faint); opacity: 0.55; }
 .kui-wave--played { color: var(--_kui-accent); }
+/* RTL: mirror the bars with the clip. */
+.kui-player[dir="rtl"] .kui-wave { transform: scaleX(-1); }
+/* Learning: watched hairline. */
+.kui-seek-watched { position: absolute; inset-inline: 0; inset-block-end: -5px; height: 2px; opacity: 0.6; pointer-events: none; }
 
 /* ── subtitle editor ─────────────────────────────────────────────────────── */
 

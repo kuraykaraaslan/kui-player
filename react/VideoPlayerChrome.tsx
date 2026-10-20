@@ -530,6 +530,7 @@ export function VideoPlayerChrome({
   const adBreaks = useVideoPlayerStore(s => s.adBreaks);
   const adSpanList = adSpans(adBreaks, isLive && dvrWindow > 0 ? dvrStart : 0, isLive && dvrWindow > 0 ? dvrWindow : duration);
   const loopRange = useVideoPlayerStore(s => s.loopRange);
+  const watchedRuns = useVideoPlayerStore(s => s.watchedRuns);
   const loopSpan = loopRange && duration > 0
     ? adSpans([{ id: 'loop', start: loopRange.a, end: loopRange.b, duration: null, source: 'cue-out' }], 0, duration)[0] ?? null
     : null;
@@ -749,6 +750,7 @@ export function VideoPlayerChrome({
             adSpans={adSpanList}
             peaks={peaks}
             loopSpan={loopSpan}
+            watchedRuns={watchedRuns}
             tiles={tiles}
             valueText={isLive
               ? (atLiveEdge

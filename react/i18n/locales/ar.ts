@@ -85,6 +85,8 @@ export const ar: PartialDictionary = {
   frameTools: "أدوات الإطارات",
   goToFrame: "الانتقال إلى إطار أو رمز زمني",
   frame: "إطار",
+  goToFrameNumber: "رقم الإطار",
+  invalidFrame: "أدخل رقم إطار أو رمزًا زمنيًا صالحًا.",
   copyTimecode: "نسخ الرمز الزمني",
   loopA: "بداية التكرار (A)",
   loopB: "نهاية التكرار (B)",

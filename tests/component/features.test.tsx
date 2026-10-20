@@ -748,7 +748,7 @@ describe('frame tools and A-B loop', () => {
     const { video } = await setup();
     tick(video, 61.52);
     await waitFor(() => expect(screen.getByLabelText('Go to frame or timecode')).toHaveValue('00:01:01:13'));
-    expect(screen.getByTitle('Frame')).toHaveTextContent('#1538');
+    expect(screen.getByRole('textbox', { name: 'Frame number' })).toHaveValue('1538');
   });
 
   it('goes to a frame number or a timecode', async () => {
@@ -763,6 +763,19 @@ describe('frame tools and A-B loop', () => {
     await user.clear(input);
     await user.type(input, 'garbage{Enter}');
     expect(video.currentTime).toBe(10);   // unchanged
+  });
+
+  it('has a frame-number box next to the timecode that seeks to that frame', async () => {
+    const { user, video } = await setup();
+    const box = screen.getByRole('textbox', { name: 'Frame number' });
+    await user.clear(box);
+    await user.type(box, '100{Enter}');
+    expect(video.currentTime).toBeCloseTo(4.02);
+    await user.clear(box);
+    await user.type(box, 'abc{Enter}');
+    expect(video.currentTime).toBeCloseTo(4.02);   // not a frame number: unchanged
+    expect(screen.getByText(/Enter a frame number/)).toBeInTheDocument();   // and announced
+    await waitFor(() => expect(box).toHaveValue('100'));
   });
 
   it('steps exactly one frame at the configured rate', async () => {
@@ -1319,6 +1332,66 @@ describe('study mode', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('remember me')).toBeInTheDocument();
     expect(within(dialog).queryByText(/kept only until/)).not.toBeInTheDocument();
+  });
+
+  it('draws the watched map on the seek bar only in learning mode', async () => {
+    const off = render(<VideoPlayer src={SRC} enableCast={false} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument());
+    expect(off.container.querySelector('.kui-seek-watched')).toBeNull();
+    off.unmount();
+
+    const { container } = render(<VideoPlayer src={SRC} enableCast={false} learning />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 });
+    expect(container.querySelector('.kui-seek-watched')).toBeNull();   // nothing watched yet
+    play(video, 0, 40);
+    await waitFor(() => expect(container.querySelectorAll('.kui-seek-watched .kui-watched-run')).toHaveLength(1));
+    const run = container.querySelector('.kui-seek-watched .kui-watched-run') as HTMLElement;
+    expect(run.style.width).toBe('40%');
+    expect(container.querySelector('.kui-seek-watched')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('clears the seek-bar map when the source changes, and restores it when switching back', async () => {
+    const { map, storage } = mem();
+    const other = 'https://example.com/other.mp4';
+    const { container, rerender } = render(<VideoPlayer src={SRC} enableCast={false} learning persist={{ storage }} />);
+    const video = container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 });
+    play(video, 0, 40);
+    await waitFor(() => expect(container.querySelectorAll('.kui-seek-watched .kui-watched-run')).toHaveLength(1));
+    expect([...map.keys()].some((k) => k.includes(':watched:'))).toBe(true);
+
+    rerender(<VideoPlayer src={other} enableCast={false} learning persist={{ storage }} />);
+    await waitFor(() => expect(container.querySelector('.kui-seek-watched')).toBeNull());
+
+    rerender(<VideoPlayer src={SRC} enableCast={false} learning persist={{ storage }} />);
+    await waitFor(() => expect(container.querySelectorAll('.kui-seek-watched .kui-watched-run')).toHaveLength(1));
+  });
+
+  it('draws a saved watched map on mount, and leaves nothing behind on unmount', async () => {
+    const { storage } = mem();
+    const first = render(<VideoPlayer src={SRC} enableCast={false} learning persist={{ storage }} />);
+    const video = first.container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'loadedmetadata', { duration: 100 });
+    await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 });
+    play(video, 0, 40);
+    await waitFor(() => expect(first.container.querySelectorAll('.kui-seek-watched .kui-watched-run')).toHaveLength(1));
+    first.unmount();
+
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const second = render(<VideoPlayer src={SRC} enableCast={false} learning persist={{ storage }} />);
+    await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 });
+    await waitFor(() => expect(second.container.querySelectorAll('.kui-seek-watched .kui-watched-run')).toHaveLength(1));
+    expect((second.container.querySelector('.kui-seek-watched .kui-watched-run') as HTMLElement).style.width).toBe('40%');
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('while rendering a different component'))).toBe(false);
+    warn.mockRestore();
+    second.unmount();
+
+    const third = render(<VideoPlayer src="https://example.com/fresh.mp4" enableCast={false} learning />);
+    await screen.findByRole('button', { name: /Notes/ }, { timeout: 4000 });
+    expect(third.container.querySelector('.kui-seek-watched')).toBeNull();
   });
 
   it('deletes a note', async () => {

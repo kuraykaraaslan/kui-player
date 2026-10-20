@@ -32,6 +32,8 @@ type ProgressBarProps = {
   peaks?: number[] | null;
   /** The A-B loop range as a percentage span. */
   loopSpan?: { left: number; width: number } | null;
+  /** Watched runs as 0–1 fractions (learning mode), drawn as a thin strip under the bar. */
+  watchedRuns?: { start: number; end: number }[];
   tiles: StoryboardTile[];
 };
 
@@ -46,7 +48,7 @@ const PAGE_STEP_RATIO = 0.1;
 export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function ProgressBar(
   {
     progress, buffered, seekHoverRatio, hoverTime, valueText, duration,
-    hoverSeconds, chapters, tiles, adSpans, loopSpan, peaks,
+    hoverSeconds, chapters, tiles, adSpans, loopSpan, peaks, watchedRuns,
     onSeek, onSeekMouseMove, onSeekLeave, onScrubStart, onScrubMove, onScrubEnd,
     onSeekBy, onSeekToRatio,
   },
@@ -97,6 +99,13 @@ export const ProgressBar = forwardRef<HTMLDivElement, ProgressBarProps>(function
         {adSpans?.map((a) => (
           <div key={a.id} className="kui-adbreak" style={{ insetInlineStart: `${a.left}%`, width: `${a.width}%` }} aria-hidden="true" />
         ))}
+        {watchedRuns?.length ? (
+          <div className="kui-seek-watched" aria-hidden="true">
+            {watchedRuns.map((r) => (
+              <span key={r.start} className="kui-watched-run" style={{ insetInlineStart: `${r.start * 100}%`, width: `${(r.end - r.start) * 100}%` }} />
+            ))}
+          </div>
+        ) : null}
         <div className="kui-seek-played" style={{ width: `${progress}%` }} />
         {seekHoverRatio !== null && (
           <div className="kui-seek-hover" style={{ width: `${seekHoverRatio * 100}%` }} />

@@ -85,6 +85,8 @@ export const tr: PartialDictionary = {
   frameTools: "Kare araçları",
   goToFrame: "Kareye veya zaman koduna git",
   frame: "Kare",
+  goToFrameNumber: "Kare numarası",
+  invalidFrame: "Bir kare numarası veya geçerli bir zaman kodu girin.",
   copyTimecode: "Zaman kodunu kopyala",
   loopA: "Döngü başlangıcı (A)",
   loopB: "Döngü bitişi (B)",

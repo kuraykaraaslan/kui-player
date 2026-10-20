@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { markLoop, RangeSpeeds, stepLoop } from '../../modules/videoplayer/videoplayer.loop.js';
 import {
-  frameAt, parseFrameInput, snapFps, toTimecode,
+  frameAt, parseFrameInput, snapFps, timeOfFrame, toTimecode,
 } from '../../modules/videoplayer/videoplayer.timecode.js';
 import { useVideoPlayerEngine } from '../hooks/useVideoPlayerEngine.js';
 import { useVideoPlayerStore } from '../hooks/useVideoPlayerStore.js';
@@ -23,6 +23,12 @@ type FrameCallbackVideo = HTMLVideoElement & {
 
 const REPEAT_CHOICES = [0, 1, 2, 3, 5, 10];
 const FPS_SAMPLES = 30;
+/** Shared by the two go-to boxes: select on focus, no spellcheck, numeric keypad. */
+const INPUT = {
+  onFocus: (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select(),
+  spellCheck: false,
+  inputMode: 'numeric',
+} as const;
 
 /**
  * Review tools, opt-in and loaded on demand: a SMPTE timecode that follows the
@@ -41,6 +47,7 @@ export default function FrameTools({ options }: Readonly<{ options: FrameToolsOp
   const [repeat, setRepeat] = useState(0);
   const [message, setMessage] = useState('');
   const [draft, setDraft] = useState<string | null>(null);
+  const [frameDraft, setFrameDraft] = useState<string | null>(null);
 
   const fps = options.fps ?? measured ?? 30;
   const dropFrame = options.dropFrame ?? false;
@@ -138,7 +145,15 @@ export default function FrameTools({ options }: Readonly<{ options: FrameToolsOp
     e.preventDefault();
     const seconds = parseFrameInput(draft ?? '', fps, dropFrame);
     if (seconds !== null) engine.seek(seconds);
+    else setMessage(t('invalidFrame'));
     setDraft(null);
+  };
+
+  const submitFrame = (e: FormEvent) => {
+    e.preventDefault();
+    if (/^\d+$/.test(frameDraft ?? '')) engine.seek(timeOfFrame(Number(frameDraft), fps));
+    else setMessage(t('invalidFrame'));
+    setFrameDraft(null);
   };
 
   const copy = async () => {
@@ -159,13 +174,23 @@ export default function FrameTools({ options }: Readonly<{ options: FrameToolsOp
           className="kui-frametools-input"
           value={draft ?? timecode}
           onChange={(e) => setDraft(e.target.value)}
-          onFocus={(e) => e.currentTarget.select()}
           onBlur={() => setDraft(null)}
           aria-label={t('goToFrame')}
-          spellCheck={false}
-          inputMode="numeric"
+          {...INPUT}
         />
-        <span className="kui-frametools-frame" title={t('frame')}>#{frameAt(time, fps)}</span>
+      </form>
+      <form className="kui-frametools-row" onSubmit={submitFrame}>
+        <label className="kui-frametools-frame" title={t('goToFrameNumber')}>
+          #
+          <input
+            className="kui-frametools-input kui-frametools-input-frame"
+            value={frameDraft ?? String(frameAt(time, fps))}
+            onChange={(e) => setFrameDraft(e.target.value)}
+            onBlur={() => setFrameDraft(null)}
+            aria-label={t('goToFrameNumber')}
+            {...INPUT}
+          />
+        </label>
         <button type="button" className="kui-btn-outline" onClick={() => { void copy(); }}>{t('copyTimecode')}</button>
       </form>
       {loopEnabled && (

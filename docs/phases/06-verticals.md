@@ -139,8 +139,7 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
 
 - **6.3** — `,` / `.` kare adımı (kare ortasına iner), SMPTE timecode (drop-frame dahil, 29.97
   için birim testle doğrulandı), kareye/timecode'a git, timecode kopyala, fps prop'u veya
-  ölçüm + standart orana yuvarlama. *Yapılmadı:* kare numarası için ayrı bir görünüm
-  (zaman kodunun yanında `#N` olarak gösteriliyor).
+  ölçüm + standart orana yuvarlama. Kare numarası artık zaman kodunun yanında ayrı bir kutu (`#N`, "kareye git"): yazıp Enter ile o kareye atlar, ana zaman kodu kutusu ise hâlâ hem kare hem timecode kabul eder. Kutunun erişilebilir adı mevcut "Kare" çevirisidir (yeni anahtar eklenmedi, gömülü paket bütçesi için). Aynı `frameTools` lazy chunk'ı içinde; yeni bağımlılık yok.
 - **6.4** — `a` tuşu veya düğme ile A / B / temizle, seek bar'da vurgulu aralık, sonsuz ya da
   1/2/3/5/10 tekrar, aralık başına hız hafızası.
 - **Doğrulanmadı:** gerçek `requestVideoFrameCallback` yolu tarayıcıda denenmedi (testler
@@ -156,15 +155,13 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   `audiowaveform` JSON'u ya da `'decode'` ile Web Audio'dan hesaplama; 60 MB sınırı), bölüm
   işaretleri mevcut chapters çubuğundan, transkript paneli (altyazı izinden, geçerli satır
   işaretli, tıklayınca seek). Gerçek Chromium'da ekran görüntüsüyle ve Playwright ile görülüp
-  doğrulandı (bir CSS özgüllük hatası böyle yakalandı). *Yapılmadı:* RTL'de dalga formunun aynalanması,
-  ayrı bir "audio-only skin" paketi (skin modu sürümü), peaks üretim betiği. `'decode'` yolu gerçek bir
+  doğrulandı (bir CSS özgüllük hatası böyle yakalandı). **Sonradan yapıldı:** RTL'de dalga formu aynalanıyor (`[dir="rtl"] .kui-wave { scaleX(-1) }`; çalma konumu kırpması ve çubuk sırası birlikte döner) ve `scripts/peaks.mjs` (ffmpeg ile, audiowaveform uyumlu JSON, bağımlılık yok; saf kısmı `PeakAccumulator` birim testli; [recipes/waveform-peaks.md](../../recipes/waveform-peaks.md)). *Yapılmadı:* ayrı bir "audio-only skin" paketi (skin modu sürümü; ürün kararı). Aynalama jsdom'da CSS uygulanmadığı için yalnızca kural kaynağı ve `dir` özniteliği üzerinden test edildi, gerçek tarayıcıda görülmedi. `peaks.mjs` bu makinede ffmpeg olmadığı için uçtan uca çalıştırılmadı; yalnızca PCM → JSON kısmı test edildi. `'decode'` yolu gerçek bir
   ses dosyasıyla denenmedi (testler Web Audio'yu taklit ediyor).
 - **6.5 (kısmen yapıldı):** `learning` prop'u — transkript paneli (6.6'da, tıklayınca seek +
   geçerli satır işaretli; altyazı **araması** 6.2'de), zaman damgalı notlar (yazmaya başlanan
   an damgalanır; Markdown/JSON dışa aktarma, `persist` ile kalıcı), gerçekten izlenen
   bölümlerin haritası ve `onProgress` kancası, hız ve tercih devamlılığı (`persist`, mevcut).
-  *Yapılmadı:* xAPI/SCORM (ayrı ürün kararı), izlenen haritasının seek çubuğunda gösterimi
-  (yalnızca panelde), LMS'e gönderim.
+  *Yapılmadı:* xAPI/SCORM (ayrı ürün kararı), LMS'e gönderim. **Sonradan yapıldı:** izlenen haritası `learning` açıkken seek çubuğunun altında ince bir şerit olarak da çiziliyor (panelin yayımladığı `watchedRuns` store alanından; panel kapanınca temizlenir; yalnızca bir yüzde dilimi tamamlandığında güncellenir; ekran okuyucuya gizli, erişilebilir bilgi panelde ve düğmede kalıyor). Gerçek tarayıcıda görsel olarak denenmedi.
 - **6.1 (kısmen yapıldı, ayrı pakette):** `@kuraykaraaslan/kui-player/ads` — VAST 3/4 ayrıştırma
   (wrapper'lar, pod'lar), VMAP zamanlama (pre/mid/post), reklam arayüzü (atla, geri sayım,
   "Reklam 1/2", tıkla-geç), izleme pikselleri ve makrolar, hata durumunda içeriğe dönüş.
@@ -174,4 +171,4 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   onayı (TCF/GPP). Gerçek bir reklam sunucusuyla denenmedi, yalnızca sentetik VAST/VMAP ve sahte
   video ile. Not: "gerçek talep" kriteri yine sağlanmadı, talimatla yapıldı. 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
   ürün kararları.
-
+- **Bütçe:** bu dört ek gömülü `embed` paketini 51,96 → 52,07 kB gzip yaptı; sınır 52 → 52,2 kB'a çıkarıldı (diğer paketler mevcut sınırların içinde).

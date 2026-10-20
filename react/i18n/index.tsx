@@ -95,6 +95,8 @@ export type Dictionary = {
   frameTools: string;
   goToFrame: string;
   frame: string;
+  goToFrameNumber: string;
+  invalidFrame: string;
   copyTimecode: string;
   loopA: string;
   loopB: string;
@@ -278,6 +280,8 @@ export const en: Dictionary = {
   frameTools: "Frame tools",
   goToFrame: "Go to frame or timecode",
   frame: "Frame",
+  goToFrameNumber: "Frame number",
+  invalidFrame: "Enter a frame number or a timecode such as 1:02:03:04.",
   copyTimecode: "Copy timecode",
   loopA: "Set loop start (A)",
   loopB: "Set loop end (B)",

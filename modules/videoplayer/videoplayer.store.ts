@@ -63,6 +63,8 @@ export type VideoPlayerState = {
   offlineRequest: 'download' | 'cancel' | 'remove' | null;
   /** The A-B loop markers, when frame tools are on. */
   loopRange: LoopRange | null;
+  /** Watched runs as 0–1 fractions, published by the learning panel for the seek bar. */
+  watchedRuns: { start: number; end: number }[];
   /** True while the playhead is inside one. */
   inAdBreak: boolean;
   /** True while the adapter's ABR logic is choosing the rendition. */
@@ -191,6 +193,7 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     offline: { state: 'unavailable', percent: null, bytes: null, reason: null },
     offlineRequest: null,
     loopRange: null,
+    watchedRuns: [],
     inAdBreak: false,
     qualityAuto: false,
     activeQualityLabel: null,

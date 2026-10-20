@@ -85,6 +85,8 @@ export const de: PartialDictionary = {
   frameTools: "Bildwerkzeuge",
   goToFrame: "Zu Bild oder Timecode springen",
   frame: "Bild",
+  goToFrameNumber: "Bildnummer",
+  invalidFrame: "Bitte eine Bildnummer oder einen Timecode eingeben.",
   copyTimecode: "Timecode kopieren",
   loopA: "Schleifenanfang (A)",
   loopB: "Schleifenende (B)",

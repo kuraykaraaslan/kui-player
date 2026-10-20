@@ -85,6 +85,8 @@ export const es: PartialDictionary = {
   frameTools: "Herramientas de fotogramas",
   goToFrame: "Ir a fotograma o código de tiempo",
   frame: "Fotograma",
+  goToFrameNumber: "Número de fotograma",
+  invalidFrame: "Introduce un número de fotograma o un código de tiempo.",
   copyTimecode: "Copiar código de tiempo",
   loopA: "Inicio del bucle (A)",
   loopB: "Fin del bucle (B)",

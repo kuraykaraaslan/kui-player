@@ -71,23 +71,27 @@ export default function LearningPanel({ options, src, title, persist }: Props) {
   // Count only continuous playback at a studying pace.
   useEffect(() => {
     let last = engine.store.getState().currentTime;
+    let reported = watched.percent;
     return engine.store.subscribe((state) => {
       const now = state.currentTime;
       if (now === last) return;
       if (state.playing && state.speed <= MAX_COUNTED_SPEED) {
         watched.mark(last, now, state.duration);
         const next = watched.percent;
-        setPercent((previous) => {
-          if (next !== previous) {
-            onProgress.current?.(next);
-            storage?.writeStudy('watched', src, watched.toArray());
-          }
-          return next;
-        });
+        if (next !== reported) {
+          reported = next;
+          onProgress.current?.(next);
+          storage?.writeStudy('watched', src, watched.toArray());
+          setPercent(next);
+        }
       }
       last = now;
     });
   }, [engine, watched, storage, src]);
+
+  // The seek bar draws what this panel tracks. Published from effects, never from render.
+  useEffect(() => { engine.store.setState({ watchedRuns: watched.runs() }); }, [engine, watched, percent]);
+  useEffect(() => () => engine.store.setState({ watchedRuns: [] }), [engine]);
 
   const save = (next: Note[]) => { setNotes(next); storage?.writeStudy('notes', src, next); };
 

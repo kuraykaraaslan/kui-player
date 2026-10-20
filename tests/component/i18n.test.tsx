@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -53,6 +55,20 @@ describe('localisation', () => {
     const player = container.querySelector('.kui-player') as HTMLElement;
     expect(player).toHaveAttribute('dir', 'rtl');
     expect(screen.getByRole('button', { name: 'تشغيل' })).toBeInTheDocument();
+  });
+
+  it('mirrors the waveform in right-to-left locales only', async () => {
+    const peaks = [0.2, 0.8, 0.5, 1];
+    const rtl = render(<VideoPlayer src={SRC} enableCast={false} locale={ar} waveform={peaks} />);
+    await waitFor(() => expect(rtl.container.querySelectorAll('.kui-wave')).toHaveLength(2));
+    expect(rtl.container.querySelector('.kui-player')).toHaveAttribute('dir', 'rtl');
+    rtl.unmount();
+    const ltr = render(<VideoPlayer src={SRC} enableCast={false} waveform={peaks} />);
+    await waitFor(() => expect(ltr.container.querySelectorAll('.kui-wave')).toHaveLength(2));
+    expect(ltr.container.querySelector('.kui-player')).toHaveAttribute('dir', 'ltr');
+    // jsdom does not apply the stylesheet, so the mirroring rule itself is checked in the source.
+    const css = readFileSync(resolve(__dirname, '../../react/styles/player.css'), 'utf8');
+    expect(css).toMatch(/\.kui-player\[dir="rtl"\] \.kui-wave\s*\{\s*transform:\s*scaleX\(-1\)/);
   });
 
   it('renders durations in the locale\'s numbering system', async () => {
