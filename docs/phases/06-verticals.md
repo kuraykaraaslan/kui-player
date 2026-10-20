@@ -1,6 +1,6 @@
 # Faz 6 — Dikey Nişler
 
-**Öncelik:** 🟣 Keşif · **Efor:** opsiyonel · **Durum:** ⏸️ Bilinçli olarak başlatılmadı
+**Öncelik:** 🟣 Keşif · **Efor:** opsiyonel · **Durum:** 🟡 Kısmen yapıldı (Ekim 2026, talep olmadan, Kuray'ın talimatıyla); ayrıntı aşağıdaki "Uygulama notu"nda. Açık: xAPI/SCORM, VPAID/SIMID/OMID/TCF, ayrı audio-only skin paketi
 
 > Bunlar **yol haritası değil, opsiyon havuzu.** Hiçbiri "eninde sonunda yapılacak"
 > değil. Faz 5'ten gelen kullanıcı geri bildirimi hangi dikeyin gerçekten talep
