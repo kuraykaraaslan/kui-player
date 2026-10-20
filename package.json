@@ -101,7 +101,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "38.2 kB"
+      "limit": "38.4 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -114,7 +114,7 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "47.3 kB"
+      "limit": "47.5 kB"
     },
     {
       "name": "facade (click-to-load cover)",
@@ -129,7 +129,7 @@
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "53.8 kB"
+      "limit": "54 kB"
     },
     {
       "name": "stylesheet",

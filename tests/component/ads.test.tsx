@@ -68,6 +68,14 @@ describe('ads overlay', () => {
     expect(events.map((e) => e.type)).toEqual(['break:start', 'ad:start', 'ad:complete', 'break:end']);
   });
 
+  it('renders in the player root, not inside the top slot (a 24 px strip that hides with the controls)', async () => {
+    const { main, adRegion, container } = setup({ tag: vast('pre'), load: async () => '' });
+    act(() => { emit(main, 'play', { paused: false }); });
+    const region = await waitFor(() => { const r = adRegion(); expect(r).not.toBeNull(); return r!; }, { timeout: 4000 });
+    expect(region.parentElement).toBe(container.querySelector('.kui-player'));
+    expect(region.closest('.kui-slot')).toBeNull();
+  });
+
   it('does not start the content under the ad when the viewer presses play again', async () => {
     const { main, adRegion } = setup({ tag: vast('pre'), load: async () => '' });
     act(() => { emit(main, 'play', { paused: false }); });
@@ -185,6 +193,12 @@ describe('ads overlay', () => {
     }
 
     afterEach(() => { vi.useRealTimers(); });
+
+    it('puts the banner in the player root too', async () => {
+      const { container } = await reach();
+      const region = await waitFor(() => { const b = banner(); expect(b).not.toBeNull(); return b!; }, { timeout: 4000 });
+      expect(region.parentElement).toBe(container.querySelector('.kui-player'));
+    });
 
     it('shows the image over the video at its VMAP time, tracks it, and never pauses the content', async () => {
       const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause');

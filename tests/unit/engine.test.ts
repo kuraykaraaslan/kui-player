@@ -638,3 +638,82 @@ describe('state mirroring', () => {
     expect(state().duration).toBe(0);
   });
 });
+
+describe('stepFrame follows the frame that is on screen', () => {
+  /** A <video> whose frame callbacks the test fires by hand, like a browser presenting frames. */
+  function withFrameCallbacks() {
+    const { engine, video } = (() => {
+      const v = document.createElement('video');
+      let next = 1;
+      const pending = new Map<number, (now: number, meta: { mediaTime: number }) => void>();
+      Object.assign(v, {
+        requestVideoFrameCallback: (cb: (now: number, meta: { mediaTime: number }) => void) => { pending.set(next, cb); return next++; },
+        cancelVideoFrameCallback: (h: number) => { pending.delete(h); },
+        present: (mediaTime: number) => { const all = [...pending.values()]; pending.clear(); all.forEach((cb) => cb(0, { mediaTime })); },
+      });
+      const e = new VideoPlayerEngine();
+      document.body.appendChild(v);
+      e.attach(v);
+      return { engine: e, video: v as typeof v & { present: (t: number) => void } };
+    })();
+    engine.setFrameRate(25);
+    return { engine, video };
+  }
+
+  it('steps from the presented frame when the clock is a hair short of it', () => {
+    const { engine, video } = withFrameCallbacks();
+    Object.defineProperty(video, 'duration', { value: 10, configurable: true });
+    Object.defineProperty(video, 'paused', { value: false, configurable: true });
+    emit(video, 'playing');
+    video.present(2.88);                                   // frame 72 is on screen
+    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+    video.currentTime = 2.8767;                            // ...but the clock has not reached it
+    engine.stepFrame(1);
+    expect(video.currentTime).toBeCloseTo(73.5 / 25, 6);   // frame 73, not 72 again
+  });
+
+  it('ignores a presented frame that is stale (before a seek)', () => {
+    const { engine, video } = withFrameCallbacks();
+    Object.defineProperty(video, 'duration', { value: 10, configurable: true });
+    Object.defineProperty(video, 'paused', { value: false, configurable: true });
+    emit(video, 'playing');
+    video.present(2.88);
+    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+    video.currentTime = 5.02;                              // seeked away; the new frame has not been presented yet
+    engine.stepFrame(1);
+    expect(video.currentTime).toBeCloseTo(126.5 / 25, 6);  // frame 125 + 1
+  });
+
+  it('falls back to the clock without frame callbacks, and cancels its callback on detach', () => {
+    const { engine, video } = setup();
+    engine.setFrameRate(25);
+    Object.defineProperty(video, 'duration', { value: 10, configurable: true });
+    video.currentTime = 2.02;
+    engine.stepFrame(1);
+    expect(video.currentTime).toBeCloseTo(51.5 / 25, 6);
+    const w = withFrameCallbacks();
+    const cancel = vi.spyOn(w.video as unknown as { cancelVideoFrameCallback: (h: number) => void }, 'cancelVideoFrameCallback');
+    Object.defineProperty(w.video, 'paused', { value: false, configurable: true });
+    emit(w.video, 'playing');
+    w.engine.detach();
+    expect(cancel).toHaveBeenCalled();
+  });
+});
+
+describe('stepFrame repeated before the seek lands', () => {
+  it('a second backward step goes on from the first target instead of the old frame', () => {
+    const v = document.createElement('video');
+    Object.assign(v, { requestVideoFrameCallback: (cb: (n: number, m: { mediaTime: number }) => void) => { cb(0, { mediaTime: 2.88 }); return 1; }, cancelVideoFrameCallback: () => {} });
+    const e = new VideoPlayerEngine();
+    document.body.appendChild(v);
+    e.attach(v);
+    e.setFrameRate(25);
+    Object.defineProperty(v, 'duration', { value: 10, configurable: true });
+    Object.defineProperty(v, 'paused', { value: true, configurable: true });
+    v.currentTime = 2.88;
+    emit(v, 'seeked');                                  // frame 72 presented
+    e.stepFrame(-1);
+    e.stepFrame(-1);
+    expect(v.currentTime).toBeCloseTo(70.5 / 25, 6);    // frame 70, not 71 twice
+  });
+});

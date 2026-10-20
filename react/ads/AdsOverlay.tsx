@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useVideoPlayerEngine } from '@kuraykaraaslan/kui-player/react';
 import { breakTime, dueBreaks, parseVmap, type AdBreakSpec } from '../../modules/ads/vmap.js';
 import { pickMediaFile, resolveVast, type PlayableAd, type PlayableNonLinear } from '../../modules/ads/vast.js';
@@ -229,8 +230,20 @@ export function AdsOverlay(props: AdsOverlayProps) {
     return () => { disposed = true; offs.forEach((off) => off()); unsubscribe(); };
   }, [engine]);
 
+  // The `top` slot is a thin strip inside the auto-hiding controls, so an overlay laid out
+  // inside it would be 24 px tall, sit above the picture, and vanish with the controls.
+  // Render into the player's root instead, which is what the overlay's geometry assumes.
+  const [host, setHost] = useState<Element | null>(null);
+  const anchor = useCallback((el: HTMLElement | null) => { setHost(el?.closest('.kui-player') ?? null); }, []);
+  const place = (node: ReactNode) => (
+    <>
+      <span ref={anchor} hidden />
+      {host ? createPortal(node, host) : node}
+    </>
+  );
+
   if (!running) {
-    return banner ? (
+    return place(banner ? (
       <NonLinearBanner
         key={`${banner.ad.id ?? ''}-${banner.ad.item.imageUrl}`}
         banner={banner}
@@ -238,16 +251,16 @@ export function AdsOverlay(props: AdsOverlayProps) {
         ping={props.ping ?? pingBeacon}
         emit={(event) => props.onEvent?.(event)}
       />
-    ) : null;
+    ) : null);
   }
-  return (
+  return place(
     <AdPlayer
       key={`${running.ad.id ?? ''}-${running.index}`}
       running={running}
       labels={labels}
       ping={props.ping ?? pingBeacon}
       emit={(event) => props.onEvent?.(event)}
-    />
+    />,
   );
 }
 
@@ -364,7 +377,7 @@ function AdPlayer({ running, labels, ping, emit }: Readonly<{
   );
 }
 
-const bannerWrap: CSSProperties = { position: 'absolute', insetInline: 0, insetBlockEnd: '4rem', zIndex: 39, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 0.5rem' };
+const bannerWrap: CSSProperties = { position: 'absolute', insetInline: 0, insetBlockEnd: '6rem', zIndex: 39, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 0.5rem' };
 const bannerBox: CSSProperties = { position: 'relative', display: 'inline-block', maxWidth: '100%', pointerEvents: 'auto', lineHeight: 0 };
 const bannerClose: CSSProperties = { position: 'absolute', insetBlockStart: 2, insetInlineEnd: 2, width: 22, height: 22, padding: 0, border: '1px solid rgba(255,255,255,.5)', borderRadius: '50%', background: 'rgba(0,0,0,.7)', color: '#fff', font: 'inherit', fontSize: 14, lineHeight: '20px', cursor: 'pointer' };
 

@@ -23,6 +23,10 @@ import type { MediaAdapter } from '../../../modules/videoplayer/adapters/adapter
  *   ?docpip=1     Document Picture-in-Picture for the PiP button
  *   ?audio=1      podcast layout with a waveform and a transcript button
  *   ?facade=1     show only a poster and a play button until clicked
+ *   ?video=1      play the generated picture (/media/test.webm, 25 fps, 10 s) — see fixtures/video.ts
+ *   ?learning=1   study mode: notes, transcript, and the watched strip on the seek bar
+ *   ?frames=1     frame tools (frame-number box, timecode, A-B loop); ?fps=N fixes the rate
+ *   ?nl=1         a non-linear banner ad at 1 s (needs ?video=1 or the clip)
  */
 const params = new URLSearchParams(location.search);
 
@@ -48,11 +52,20 @@ const stubAdapter: MediaAdapter = {
   detach: () => {},
 };
 
+const nonLinearVmap = `<vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">
+  <vmap:AdBreak timeOffset="00:00:01.000" breakType="nonlinear" breakId="nl"><vmap:AdSource><vmap:VASTAdData>
+  <VAST version="4.2"><Ad id="nl"><InLine><Creatives><Creative><NonLinearAds>
+    <NonLinear width="300" height="50" minSuggestedDuration="00:00:30">
+      <StaticResource creativeType="image/png">${location.origin}/media/banner.png</StaticResource>
+    </NonLinear>
+  </NonLinearAds></Creative></Creatives></InLine></Ad></VAST>
+  </vmap:VASTAdData></vmap:AdSource></vmap:AdBreak></vmap:VMAP>`;
+
 const src = params.get('broken')
   ? '/media/missing.wav'
   : params.get('adapter')
     ? 'https://example.com/live.stream'
-    : params.get('src') ?? '/media/clip.wav';
+    : params.get('src') ?? (params.get('video') ? '/media/test.webm' : '/media/clip.wav');
 
 const locales = { tr, ar } as const;
 const locale = params.get('locale');
@@ -65,6 +78,8 @@ const playlist = params.get('playlist')
   : undefined;
 
 // Imported on demand so that facade mode really does start without the player.
+const AdsOverlay = params.get('nl') ? (await import('../../../react/ads')).AdsOverlay : null;
+(window as unknown as { __adEvents: unknown[] }).__adEvents = [];
 const Component = params.get('facade') ? VideoPlayerFacade : (await import('../../../react')).VideoPlayer;
 const facadeProps = params.get('facade') ? { prefetch: params.get('prefetch') !== '0' } : {};
 
@@ -95,6 +110,9 @@ createRoot(document.getElementById('stage')!).render(
     waveform={params.get('audio') === '1'
       ? Array.from({ length: 120 }, (_, i) => 0.2 + 0.8 * Math.abs(Math.sin(i / 7) * Math.cos(i / 17)))
       : undefined}
+    learning={params.get('learning') === '1'}
+    frameTools={params.get('frames') === '1' ? (params.get('fps') ? { fps: Number(params.get('fps')) } : true) : false}
+    slots={AdsOverlay ? { top: <AdsOverlay vmap={nonLinearVmap} onEvent={(e) => (window as unknown as { __adEvents: unknown[] }).__adEvents.push(e)} /> } : undefined}
     documentPictureInPicture={params.get('docpip') === '1'}
     locale={locale && locale in locales ? locales[locale as keyof typeof locales] : undefined}
     qualities={params.get('adapter') ? undefined : [

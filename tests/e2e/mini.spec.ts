@@ -131,3 +131,46 @@ test.describe('touch', () => {
     await expect(player).toHaveAttribute('data-kui-mini', 'top-left');
   });
 });
+
+test.describe('handle appearance', () => {
+  async function floated(page: import('@playwright/test').Page) {
+    await page.emulateMedia({ reducedMotion: 'reduce' });   // no entrance slide while measuring
+    await page.goto('/?mini=1&autohide=0');
+    await page.getByRole('button', { name: 'Play' }).click();
+    await page.evaluate(() => window.scrollTo(0, 1500));
+    await expect(page.locator('.kui-player.is-mini')).toBeVisible();
+    return page.getByRole('button', { name: /Move mini player/ });
+  }
+
+  test('is a 24 px strip across the top edge with a visible grip, fully inside the mini player', async ({ page }) => {
+    const handle = await floated(page);
+    const player = (await page.locator('.kui-player.is-mini').boundingBox())!;
+    const box = (await handle.boundingBox())!;
+    expect(box.height).toBe(24);                                  // WCAG 2.5.8 minimum target size
+    expect(box.width).toBeCloseTo(player.width, 0);
+    expect(box.y).toBeCloseTo(player.y, 0);
+    const grip = await handle.evaluate((el) => {
+      const s = getComputedStyle(el, '::after');
+      return { w: parseFloat(s.width), h: parseFloat(s.height), bg: s.backgroundColor, opacity: s.opacity };
+    });
+    expect(grip.w).toBe(32);
+    expect(grip.h).toBe(4);
+    expect(grip.bg).not.toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('in forced-colors mode it is drawn in system colours: Canvas strip, ButtonText grip and edge', async ({ page }) => {
+    const handle = await floated(page);
+    await page.emulateMedia({ forcedColors: 'active' });
+    expect(await page.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true);
+    const style = await handle.evaluate((el) => {
+      const s = getComputedStyle(el);
+      const grip = getComputedStyle(el, '::after');
+      return { image: s.backgroundImage, edge: s.borderBottomColor, edgeWidth: s.borderBottomWidth, grip: grip.backgroundColor, gripOpacity: grip.opacity, bg: s.backgroundColor };
+    });
+    expect(style.image).toBe('none');                       // no translucent gradient to vanish against the video
+    expect(style.edgeWidth).toBe('1px');
+    expect(style.grip).toBe(style.edge);                    // the grip and the edge share the ButtonText colour
+    expect(style.gripOpacity).toBe('1');
+    expect(style.bg).not.toBe(style.grip);                  // and it contrasts with the Canvas strip
+  });
+});

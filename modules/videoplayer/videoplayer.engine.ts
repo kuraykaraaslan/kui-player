@@ -125,6 +125,9 @@ export class VideoPlayerEngine {
   private listeners: (() => void) | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Media time of the frame last put on screen (from `requestVideoFrameCallback`), for exact frame stepping. */
+  private presentedTime: number | null = null;
+
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private retryAttempt = 0;
   private restorePoint: RestorePoint | null = null;
@@ -404,6 +407,7 @@ export class VideoPlayerEngine {
       ['progress',       () => this.syncLive(video)],
     ];
     for (const [type, handler] of bindings) video.addEventListener(type, handler);
+    const stopFrameWatch = this.watchPresentedFrames(video);
     document.addEventListener('fullscreenchange', onFSChange);
     document.addEventListener('webkitfullscreenchange', onFSChange);
 
@@ -416,6 +420,7 @@ export class VideoPlayerEngine {
     trackList?.addEventListener?.('change', onTrackListChange);
 
     this.listeners = () => {
+      stopFrameWatch();
       video.removeEventListener('error', onSourceError, true);
       for (const [type, handler] of bindings) video.removeEventListener(type, handler);
       document.removeEventListener('fullscreenchange', onFSChange);
@@ -939,10 +944,50 @@ export class VideoPlayerEngine {
     if (Number.isFinite(fps) && fps > 0) this.frameRate = fps;
   }
 
+  /**
+   * Remembers which frame is actually on screen. A browser presents a frame slightly before
+   * `currentTime` reaches its timestamp, so a pause can leave `currentTime` just short of the
+   * frame being shown — and a step computed from it would land on that same frame (no visible
+   * change). Only runs while playing (plus once after each seek); browsers without
+   * `requestVideoFrameCallback` fall back to `currentTime`.
+   */
+  private watchPresentedFrames(video: HTMLVideoElement): () => void {
+    const v = video as HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: (now: number, meta: { mediaTime: number }) => void) => number;
+      cancelVideoFrameCallback?: (handle: number) => void;
+    };
+    if (typeof v.requestVideoFrameCallback !== 'function') return () => {};
+    let handle = 0;
+    const watch = () => {
+      if (handle) return;
+      handle = v.requestVideoFrameCallback!((_now, meta) => {
+        handle = 0;
+        this.presentedTime = meta.mediaTime;
+        if (!video.paused) watch();
+      });
+    };
+    const forget = () => { this.presentedTime = null; };
+    video.addEventListener('playing', watch);
+    video.addEventListener('seeked', watch);
+    video.addEventListener('emptied', forget);
+    if (!video.paused) watch();
+    return () => {
+      video.removeEventListener('playing', watch);
+      video.removeEventListener('seeked', watch);
+      video.removeEventListener('emptied', forget);
+      if (handle) v.cancelVideoFrameCallback?.(handle);
+      this.presentedTime = null;
+    };
+  }
+
   /** Step one frame forward or back, landing mid-frame so the displayed frame is the intended one. */
   stepFrame(direction: 1 | -1): void {
     if (!this.video) return;
-    this.seek(timeOfFrame(frameAt(this.video.currentTime, this.frameRate) + direction, this.frameRate));
+    const now = this.video.currentTime;
+    // The presented frame wins when it is within a frame of the clock (a stale one, from before a seek, is not).
+    const shown = this.presentedTime !== null && Math.abs(this.presentedTime - now) < 1 / this.frameRate ? this.presentedTime : now;
+    this.seek(timeOfFrame(frameAt(shown, this.frameRate) + direction, this.frameRate));
+    this.presentedTime = null;   // the target is mid-frame: a rapid second step must start from it, not from the old frame
   }
 
   seekBy(delta: number): void {
