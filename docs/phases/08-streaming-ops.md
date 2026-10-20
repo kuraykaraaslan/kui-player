@@ -42,7 +42,10 @@ Kaynak yoksa yalnızca ayar geçişi ve test sahte stream ile yapılır.
 
 Reklam göstermek değil, **stream içindeki işaretleri olay olarak vermek**. Faz 6.1'den (VAST/VMAP) bağımsız ve çok daha hafif.
 
-- [x] HLS `EXT-X-DATERANGE`, `EXT-X-CUE-OUT/IN` okuma (hls.js adapter'ı, parça `tagList`'inden). **ID3 timed metadata ve native HLS (Safari) yapılmadı**; DATERANGE için `PROGRAM-DATE-TIME` gerekir, yoksa o işaret atlanır
+- [x] HLS `EXT-X-DATERANGE`, `EXT-X-CUE-OUT/IN` okuma (hls.js adapter'ı, parça `tagList`'inden). DATERANGE için `PROGRAM-DATE-TIME` gerekir, yoksa o işaret atlanır
+- [x] ID3 timed metadata (hls.js `FRAG_PARSING_METADATA`): `TXXX`/`WXXX`/`PRIV` (ID3v2.3/2.4) güvenli çözülür, bozuk veri yok sayılır; reklam işareti aynı `adbreak:*` olaylarına (`source: 'id3'`) gider. Playlist ve ID3 işaretleri tek listede birleşir (aynı reklamı ikisi de işaretliyorsa playlist kazanır). **Sahte olaylarla test edildi, gerçek akışla değil.** Kod `videoplayer.timedmeta.ts`, adapter `attach()` içinde lazy yüklenir (core'a girmez)
+- [x] Native HLS (Safari, hls.js yok): `video.textTracks` içindeki `metadata` track'leri (id3 ve DATERANGE cue'ları) okunur, aynı olaylar üretilir; `textTracks` yoksa hiçbir şey yapmaz. **Sahte `TextTrack` ile test edildi, gerçek Safari ile değil.**
+- [ ] **Gerçek akışla doğrulanmadı:** ID3 ve native yolu yalnızca sahte hls.js olayları ve sahte `TextTrack`/`DataCue` ile test edildi. Safari'nin DATERANGE cue şekli (`DataCue.value` içinde `{key, data}` ve alternatif düz nesne) dokümana göre tahmin edildi. Yapılmadı: ikili SCTE-35 (`PRIV`) çözümü (süre okunamazsa açık uçlu işaret olur, yalnızca metin/`duration=` içeren etiketler tam anlaşılır), ID3 v2.2, hls.js'in `pts` değerinin medya saatiyle ofsetinin (ör. canlı/discontinuity) gerçek akışta doğrulanması. Native yolda canlı akışta cue'lar yalnızca `cuechange`/`addtrack`/`loadedmetadata` ile yeniden taranır
 - [x] Event: `adbreak:start` / `adbreak:end` (başlangıç, süre, kimlik)
 - [x] Zaman çizelgesinde reklam aralıklarını işaretle, reklam sırasında atlamayı kapatma seçeneği
 - [x] Unit test: örnek fragment/etiket listeleriyle doğru event'ler. Gerçek bir SSAI akışıyla denenmedi

@@ -116,7 +116,7 @@ Bugünkü durum ve öneri: [Faz 6](./06-verticals.md#durum-neden-hiçbiri-yapıl
 |---|---|---|---|
 | 8 | 8.1 | QoE metrikleri (başlangıç süresi, stall, bitrate, düşen kare) | M |
 | 8 | 8.2 | Düşük gecikmeli HLS + canlı kenara yetişme | S |
-| 8 | 8.3 | SSAI işaretleri (`DATERANGE`, `CUE-OUT`, ID3) → event | M |
+| 8 | 8.3 | SSAI işaretleri (`DATERANGE`, `CUE-OUT`, ID3) → event. ID3 ve Safari yolu yalnızca sahte olaylarla test edildi, gerçek akışla değil; ikili SCTE-35 ve ID3 v2.2 desteklenmiyor | M |
 | 8 | 8.4 | Görünür filigran | S |
 | 8 | 8.5 | Çevrimdışı izleme — *opsiyonel, DRM'siz önce* | L |
 | 9 | 9.1 | Zaman damgalı paylaşım linki (`?t=90`) + "buradan paylaş" | S |

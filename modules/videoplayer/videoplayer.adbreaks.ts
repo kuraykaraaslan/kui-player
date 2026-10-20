@@ -9,7 +9,7 @@ export type AdBreak = {
   /** Media time it ends; `null` while an open-ended `CUE-OUT` has no `CUE-IN` yet. */
   end: number | null;
   duration: number | null;
-  source: 'cue-out' | 'daterange';
+  source: 'cue-out' | 'daterange' | 'id3';
 };
 
 /** The slice of an hls.js fragment this needs; `tagList` holds `[name, value]` pairs. */
@@ -39,7 +39,7 @@ export function parseCueOut(value: string | undefined): number | null {
 
 const AD_CLASS = /(^|[.\-_])(ads?|interstitial)([.\-_]|$)/i;
 
-function isAdDateRange(attrs: Record<string, string>): boolean {
+export function isAdDateRange(attrs: Record<string, string>): boolean {
   return 'SCTE35-OUT' in attrs || AD_CLASS.test(attrs.CLASS ?? '');
 }
 
@@ -149,4 +149,17 @@ export function adSpans(breaks: readonly AdBreak[], origin: number, span: number
     spans.push({ id: b.id, left, width: Math.max(0.4, right - left) });
   }
   return spans;
+}
+
+/**
+ * Two sources can mark the same SSAI break (a playlist tag and in-band ID3).
+ * Entries of `secondary` that start within `tolerance` seconds of a `primary`
+ * break, or inside one, are dropped; the primary entry wins.
+ */
+export function mergeAdBreaks(primary: readonly AdBreak[], secondary: readonly AdBreak[], tolerance = 2): AdBreak[] {
+  const extra = secondary.filter((s) => !primary.some((p) =>
+    p.id === s.id
+    || Math.abs(p.start - s.start) <= tolerance
+    || (p.end !== null && s.start >= p.start && s.start < p.end)));
+  return [...primary, ...extra];
 }

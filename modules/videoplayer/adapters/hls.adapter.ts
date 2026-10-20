@@ -1,7 +1,7 @@
 import type { AudioTrackOption, QualityOption } from '../videoplayer.types.js';
 import type { DrmOptions } from './drm.js';
 import { audioKind } from '../videoplayer.audiokind.js';
-import { extractAdBreaks, type TaggedFragment } from '../videoplayer.adbreaks.js';
+import { extractAdBreaks, mergeAdBreaks, type AdBreak, type TaggedFragment } from '../videoplayer.adbreaks.js';
 import { AUTO_QUALITY, heightLabel, type MediaAdapter, type MediaAdapterHost } from './adapter.types.js';
 
 // ─── the slice of the hls.js surface we actually touch ───────────────────────
@@ -35,6 +35,7 @@ type HlsEvents = {
   ERROR: string;
   LEVEL_LOADED?: string;
   LEVEL_UPDATED?: string;
+  FRAG_PARSING_METADATA?: string;
 };
 
 export type HlsConstructor = {
@@ -134,6 +135,14 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
   let hls: HlsInstance | null = null;
   let qualities: QualityOption[] = [];
   let audioTracks: AudioTrackOption[] = [];
+  let stopNativeMeta: (() => void) | null = null;
+  // Ad breaks come from two places on the hls.js path (playlist tags, in-band
+  // ID3); both are republished together because the host takes one list.
+  let playlistBreaks: AdBreak[] = [];
+  let inBand: import('../videoplayer.timedmeta.js').MetadataBreaks | null = null;
+  // Bumped by every attach and detach: an attach that resumes after an await
+  // and finds a different value was superseded and must not touch anything.
+  let generation = 0;
 
   return {
     name: 'hls',
@@ -148,6 +157,7 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
 
     async attach(video, src, host: MediaAdapterHost) {
       this.detach();
+      const token = ++generation;
 
       const ctor = resolveCtor(opts.Hls);
       let drmModule: typeof import('./drm.js') | null = null;
@@ -157,22 +167,34 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         // encrypted segments without a word — so protected content either goes
         // through hls.js's EME support or fails here, loudly.
         drmModule = await import('./drm.js');
+        if (token !== generation) return;
         if (!ctor?.isSupported()) {
           host.reportError(drmModule.drmError(
             'DRM_UNSUPPORTED', 'This browser cannot play protected video here (no Media Source Extensions).', false));
           return;
         }
         const unsupported = await drmModule.probeKeySystems(opts.drm);
+        if (token !== generation) return;
         if (unsupported) { host.reportError(unsupported); return; }
       }
 
+      // In-band metadata parsing is optional and only needed once a stream is
+      // playing, so it stays out of the core chunk and loads alongside the
+      // source without delaying it. A failed load just means no in-band markers.
+      const metaReady: Promise<typeof import('../videoplayer.timedmeta.js') | null> =
+        import('../videoplayer.timedmeta.js').catch(() => null);
       const nativeOk = !opts.drm && preferNative && video.canPlayType(NATIVE_HLS_MIME) !== '';
 
       if (nativeOk || !ctor?.isSupported()) {
         // Safari / iOS: the element decodes the manifest itself. Renditions are
         // not exposed to JS, so the quality menu stays consumer-driven.
+        // Ad markers still arrive as `metadata` text-track cues.
         video.src = src;
         video.load();
+        void metaReady.then((timedMeta) => {
+          if (!timedMeta || token !== generation) return;
+          stopNativeMeta = timedMeta.watchNativeMetadata(video, (breaks) => host.updateAdBreaks(breaks));
+        });
         return;
       }
 
@@ -182,6 +204,9 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         ...opts.config,
       });
       hls = instance;
+      let bandBreaks: import('../videoplayer.timedmeta.js').MetadataBreaks | null = null;
+      // Samples that arrive before the metadata chunk has loaded.
+      let pending: { pts?: number; data?: Uint8Array }[] = [];
 
       instance.on(ctor.Events.MANIFEST_PARSED, () => {
         qualities = levelsToQualities(instance.levels);
@@ -199,8 +224,40 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
       // Playlist (re)loads carry the SSAI markers; rescanning is cheap and idempotent.
       const scanAds = (_e: string, data: unknown) => {
         const fragments = (data as { details?: { fragments?: HlsFragment[] } } | undefined)?.details?.fragments;
-        if (fragments) host.updateAdBreaks(extractAdBreaks(fragments.map(toTagged)));
+        if (!fragments) return;
+        playlistBreaks = extractAdBreaks(fragments.map(toTagged));
+        publishBreaks();
       };
+      const publishBreaks = () => host.updateAdBreaks(mergeAdBreaks(playlistBreaks, bandBreaks?.breaks ?? []));
+      const feed = (samples: { pts?: number; data?: Uint8Array }[]): boolean => {
+        let changed = false;
+        for (const sample of samples) {
+          if (bandBreaks && typeof sample?.pts === 'number' && bandBreaks.addId3(sample.data, sample.pts)) changed = true;
+        }
+        return changed;
+      };
+      void metaReady.then((timedMeta) => {
+        if (!timedMeta || token !== generation) { pending = []; return; }
+        bandBreaks = new timedMeta.MetadataBreaks();
+        inBand = bandBreaks;
+        const queued = pending;
+        pending = [];
+        if (feed(queued)) publishBreaks();
+      });
+      // ID3 timed metadata (`PRIV`/`TXXX`) parsed out of segments. Malformed tags are ignored.
+      if (ctor.Events.FRAG_PARSING_METADATA) {
+        instance.on(ctor.Events.FRAG_PARSING_METADATA, (_e, data) => {
+          try {
+            const samples = (data as { samples?: { pts?: number; data?: Uint8Array }[] } | undefined)?.samples;
+            if (!Array.isArray(samples)) return;
+            if (!bandBreaks) {
+              if (pending.length < 64) pending.push(...samples.slice(0, 64 - pending.length));
+              return;
+            }
+            if (feed(samples)) publishBreaks();
+          } catch { /* a bad sample must not stop playback */ }
+        });
+      }
       if (ctor.Events.LEVEL_LOADED) instance.on(ctor.Events.LEVEL_LOADED, scanAds);
       if (ctor.Events.LEVEL_UPDATED) instance.on(ctor.Events.LEVEL_UPDATED, scanAds);
       instance.on(ctor.Events.AUDIO_TRACKS_UPDATED, () => {
@@ -247,6 +304,12 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
     },
 
     detach() {
+      generation++;
+      stopNativeMeta?.();
+      stopNativeMeta = null;
+      playlistBreaks = [];
+      inBand?.clear();
+      inBand = null;
       qualities = [];
       audioTracks = [];
       if (!hls) return;

@@ -34,6 +34,19 @@ check('core exports the parsers', typeof core.parseVtt === 'function' && typeof 
 check('core reports the published version', core.PLAYER_META?.version === pkg.version,
   `${core.PLAYER_META?.version} vs ${pkg.version}`);
 
+// The adapter loads the in-band metadata parser lazily; a stale chunk name would
+// only fail at attach time, in a browser, so prove the referenced chunk loads.
+{
+  const entry = readFileSync(resolve(root, 'dist/index.js'), 'utf8');
+  const ref = /import\(["']\.\/(videoplayer\.timedmeta[^"']*\.js)["']\)/.exec(entry)?.[1];
+  check('core references the timed-metadata chunk', ref, ref ?? 'no import() of videoplayer.timedmeta found');
+  if (ref) {
+    const meta = await load(`dist/${ref}`);
+    check('timed-metadata chunk exports its parsers',
+      typeof meta.decodeId3 === 'function' && typeof meta.watchNativeMetadata === 'function' && typeof meta.MetadataBreaks === 'function');
+  }
+}
+
 // The engine must be constructible with no DOM at all — this is the SSR promise.
 const engine = new core.VideoPlayerEngine();
 check('engine constructs without a DOM', engine.store.getState().playing === false);
