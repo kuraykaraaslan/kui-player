@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useVideoPlayerEngine } from '@kuraykaraaslan/kui-player/react';
-import { dueBreaks, parseVmap, type AdBreakSpec } from '../../modules/ads/vmap.js';
-import { pickMediaFile, resolveVast, type PlayableAd } from '../../modules/ads/vast.js';
+import { breakTime, dueBreaks, parseVmap, type AdBreakSpec } from '../../modules/ads/vmap.js';
+import { pickMediaFile, resolveVast, type PlayableAd, type PlayableNonLinear } from '../../modules/ads/vast.js';
 import { AdQuartiles, expandMacros, pingBeacon, skipCountdown } from '../../modules/ads/tracking.js';
 
 export type AdsLabels = {
@@ -12,6 +12,7 @@ export type AdsLabels = {
   skipIn: (seconds: number) => string;
   pause: string;
   play: string;
+  dismiss: string;
 };
 
 const ENGLISH: AdsLabels = {
@@ -22,11 +23,14 @@ const ENGLISH: AdsLabels = {
   skipIn: (s) => `Skip in ${s}s`,
   pause: 'Pause ad',
   play: 'Play ad',
+  dismiss: 'Close ad',
 };
 
 export type AdEvent =
   | { type: 'break:start' | 'break:end'; breakId: string | null }
   | { type: 'ad:start' | 'ad:complete' | 'ad:skip' | 'ad:click'; adId: string | null }
+  | { type: 'nonlinear:start' | 'nonlinear:click'; adId: string | null }
+  | { type: 'nonlinear:end'; adId: string | null; reason: 'dismiss' | 'timeout' | 'replaced' }
   | { type: 'ad:error'; adId: string | null; code: number; message: string };
 
 export type AdsOverlayProps = {
@@ -47,6 +51,13 @@ export type AdsOverlayProps = {
   /** Where beacons go (default: an image request). Replace it to route or inspect them. */
   ping?: (url: string) => void;
 };
+
+type Banner = { ad: PlayableNonLinear; done: () => void };
+type Resolved = { ads: PlayableAd[]; nonLinear: PlayableNonLinear[] };
+
+const DEFAULT_NONLINEAR_SECONDS = 10;
+/** A non-linear break the playhead is further past than this (a seek) is skipped, not shown late. */
+const NONLINEAR_STALE_SECONDS = 5;
 
 type Running = { ad: PlayableAd; index: number; total: number; done: (result: 'complete' | 'skip' | 'error') => void };
 
@@ -70,6 +81,7 @@ const WATCHDOG_MS = 8000;
 export function AdsOverlay(props: AdsOverlayProps) {
   const engine = useVideoPlayerEngine();
   const [running, setRunning] = useState<Running | null>(null);
+  const [banner, setBanner] = useState<Banner | null>(null);
   const labels = useMemo<AdsLabels>(() => ({ ...ENGLISH, ...props.labels }), [props.labels]);
   const live = useRef(props);
   useEffect(() => { live.current = props; });
@@ -85,30 +97,68 @@ export function AdsOverlay(props: AdsOverlayProps) {
 
     let schedule: AdBreakSpec[] = [];
     const played = new Set<string>();
-    const cache = new Map<string, Promise<PlayableAd[]>>();
+    const cache = new Map<string, Promise<Resolved>>();
     let busy = false;
+    let bannerOpen = false;
     let disposed = false;
 
     const keyOf = (spec: AdBreakSpec) => spec.id ?? `#${schedule.indexOf(spec)}`;
 
-    const resolveBreak = (spec: AdBreakSpec): Promise<PlayableAd[]> => {
+    const resolveBreak = (spec: AdBreakSpec): Promise<Resolved> => {
       const key = keyOf(spec);
       let pending = cache.get(key);
       if (!pending) {
         pending = withTimeout(resolveVast(spec.source ?? '', (u) => withTimeout(load(u)), { maxDepth: live.current.maxWrapperDepth }))
-          .then((r) => r.ads)
-          .catch(() => []);
+          .then((r) => ({ ads: r.ads, nonLinear: r.nonLinear }))
+          .catch(() => ({ ads: [], nonLinear: [] }));
         cache.set(key, pending);
       }
       return pending;
     };
 
+    // Non-linear breaks that came due but have not been shown yet (a banner is up, or a linear break runs).
+    const queue: AdBreakSpec[] = [];
+    let inflight: AdBreakSpec | null = null;
+    let shown: { adId: string | null } | null = null;
+    /** Bumped whenever a pending banner resolve must be abandoned (a linear break took over). */
+    let gen = 0;
+
+    const pump = async (): Promise<void> => {
+      if (busy || bannerOpen || disposed) return;
+      const spec = queue.shift();
+      if (!spec) return;
+      bannerOpen = true;
+      inflight = spec;
+      gen += 1;
+      const mine = gen;
+      const { nonLinear } = await resolveBreak(spec);
+      if (disposed || mine !== gen) return;
+      inflight = null;
+      const ad = nonLinear[0];
+      if (!ad) { bannerOpen = false; void pump(); return; }
+      shown = { adId: ad.id };
+      setBanner({
+        ad,
+        done: () => {
+          if (mine !== gen) return;
+          shown = null; bannerOpen = false; setBanner(null);
+          void pump();
+        },
+      });
+    };
+
     const runBreak = async (spec: AdBreakSpec, resume: boolean) => {
       busy = true;
+      // A linear break takes over: abandon a banner that is still resolving (it goes back in the queue) or showing.
+      gen += 1;
+      if (inflight) { queue.unshift(inflight); inflight = null; }
+      if (shown) { emit({ type: 'nonlinear:end', adId: shown.adId, reason: 'replaced' }); shown = null; }
+      bannerOpen = false;
+      setBanner(null);
       played.add(keyOf(spec));
       engine.pause();
       emit({ type: 'break:start', breakId: spec.id });
-      const ads = await resolveBreak(spec);
+      const { ads } = await resolveBreak(spec);
       for (let i = 0; i < ads.length && !disposed; i += 1) {
         const ad = ads[i]!;
         await new Promise<void>((resolve) => {
@@ -118,6 +168,7 @@ export function AdsOverlay(props: AdsOverlayProps) {
       emit({ type: 'break:end', breakId: spec.id });
       busy = false;
       if (resume && !disposed) engine.play();
+      void pump();
     };
 
     /** Several breaks due at once (a seek past two): play the latest, mark the rest as seen. */
@@ -127,6 +178,19 @@ export function AdsOverlay(props: AdsOverlayProps) {
       if (due.length === 0) return;
       due.slice(0, -1).forEach((s) => played.add(keyOf(s)));
       void runBreak(due[due.length - 1]!, resume);
+    };
+
+    /** Overlay ads never pause the content: they only need the playhead to have reached them. */
+    const runNonLinear = (position: number, duration: number) => {
+      const due = dueBreaks(schedule, position, duration, played, 'nonlinear');
+      if (due.length === 0) return;
+      due.forEach((s) => played.add(keyOf(s)));
+      const spec = due[due.length - 1]!;
+      const at = breakTime(spec.offset, duration);
+      // A seek far past the break: skip it rather than show it late.
+      if (spec.offset.kind !== 'start' && at !== null && position - at > NONLINEAR_STALE_SECONDS) return;
+      queue.push(spec);
+      void pump();
     };
 
     const start = async () => {
@@ -146,6 +210,7 @@ export function AdsOverlay(props: AdsOverlayProps) {
       // The viewer's first play is when a pre-roll goes; hold the content until it is done.
       engine.on('play', ({ currentTime }) => {
         if (busy) { engine.pause(); return; }
+        runNonLinear(currentTime, engine.store.getState().duration);
         runDue(currentTime, engine.store.getState().duration, true);
       }),
       engine.on('complete', () => {
@@ -157,13 +222,24 @@ export function AdsOverlay(props: AdsOverlayProps) {
     ];
     const unsubscribe = engine.store.subscribe((state, previous) => {
       if (state.currentTime === previous.currentTime || !state.playing || state.seeking) return;
+      runNonLinear(state.currentTime, state.duration);
       runDue(state.currentTime, state.duration, true);
     });
 
     return () => { disposed = true; offs.forEach((off) => off()); unsubscribe(); };
   }, [engine]);
 
-  if (!running) return null;
+  if (!running) {
+    return banner ? (
+      <NonLinearBanner
+        key={`${banner.ad.id ?? ''}-${banner.ad.item.imageUrl}`}
+        banner={banner}
+        labels={labels}
+        ping={props.ping ?? pingBeacon}
+        emit={(event) => props.onEvent?.(event)}
+      />
+    ) : null;
+  }
   return (
     <AdPlayer
       key={`${running.ad.id ?? ''}-${running.index}`}
@@ -285,5 +361,79 @@ function AdPlayer({ running, labels, ping, emit }: Readonly<{
         )}
       </div>
     </div>
+  );
+}
+
+const bannerWrap: CSSProperties = { position: 'absolute', insetInline: 0, insetBlockEnd: '4rem', zIndex: 39, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 0.5rem' };
+const bannerBox: CSSProperties = { position: 'relative', display: 'inline-block', maxWidth: '100%', pointerEvents: 'auto', lineHeight: 0 };
+const bannerClose: CSSProperties = { position: 'absolute', insetBlockStart: 2, insetInlineEnd: 2, width: 22, height: 22, padding: 0, border: '1px solid rgba(255,255,255,.5)', borderRadius: '50%', background: 'rgba(0,0,0,.7)', color: '#fff', font: 'inherit', fontSize: 14, lineHeight: '20px', cursor: 'pointer' };
+
+/**
+ * A VAST non-linear overlay: an image over the lower part of the video. The content keeps
+ * playing. It goes away after `minSuggestedDuration` (default 10 s) or when dismissed.
+ */
+function NonLinearBanner({ banner, labels, ping, emit }: Readonly<{
+  banner: Banner; labels: AdsLabels; ping: (url: string) => void; emit: (event: AdEvent) => void;
+}>) {
+  const { ad, done } = banner;
+  const { item } = ad;
+  const live = useRef({ ping, emit, done });
+  useEffect(() => { live.current = { ping, emit, done }; });
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!started.current) {
+      started.current = true;
+      [...ad.impressions, ...(ad.tracking.creativeView ?? [])].forEach((u) => live.current.ping(expandMacros(u, { assetUri: item.imageUrl })));
+      live.current.emit({ type: 'nonlinear:start', adId: ad.id });
+    }
+    const id = setTimeout(() => {
+      live.current.emit({ type: 'nonlinear:end', adId: ad.id, reason: 'timeout' });
+      live.current.done();
+    }, (item.minSuggestedDuration ?? DEFAULT_NONLINEAR_SECONDS) * 1000);
+    return () => clearTimeout(id);
+  }, [ad, item]);
+
+  const image = (
+    <img
+      src={item.imageUrl}
+      alt={item.clickThrough ? labels.advertisement : ''}
+      referrerPolicy="no-referrer"
+      width={item.width || undefined}
+      height={item.height || undefined}
+      style={{ display: 'block', maxWidth: '100%', maxHeight: '25vh', height: 'auto', width: item.width ? `min(${item.width}px, 100%)` : undefined }}
+    />
+  );
+
+  return (
+    <aside
+      style={bannerWrap}
+      aria-label={labels.advertisement}
+      onKeyDown={(e) => { if (e.key === 'Escape') { emit({ type: 'nonlinear:end', adId: ad.id, reason: 'dismiss' }); done(); } }}
+    >
+      <div style={bannerBox}>
+        {item.clickThrough ? (
+          <a
+            href={item.clickThrough}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              item.clickTracking.forEach((u) => ping(expandMacros(u, { assetUri: item.imageUrl })));
+              emit({ type: 'nonlinear:click', adId: ad.id });
+            }}
+          >
+            {image}
+          </a>
+        ) : image}
+        <button
+          type="button"
+          style={bannerClose}
+          aria-label={labels.dismiss}
+          onClick={() => { emit({ type: 'nonlinear:end', adId: ad.id, reason: 'dismiss' }); done(); }}
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </aside>
   );
 }

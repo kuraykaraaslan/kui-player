@@ -167,8 +167,12 @@ kriter korunmaya çalışıldı: iki özellik de `frameTools` prop'u arkasında,
   "Reklam 1/2", tıkla-geç), izleme pikselleri ve makrolar, hata durumunda içeriğe dönüş.
   Faz belgesinin şartları korundu: IMA SDK yok, **ayrı opsiyonel paket** (~5 kB), çekirdek ve
   React girişinde reklam kodu yok (`check:artifacts` bunu denetler), varsayılan gizlilik
-  testi etkilenmez. *Yapılmadı / doğrulanmadı:* non-linear reklamlar, VPAID/SIMID, OMID, tüketici
-  onayı (TCF/GPP). Gerçek bir reklam sunucusuyla denenmedi, yalnızca sentetik VAST/VMAP ve sahte
-  video ile. Not: "gerçek talep" kriteri yine sağlanmadı, talimatla yapıldı. 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
+  testi etkilenmez. *Yapıldı (sonradan):* VAST 3/4 non-linear reklamlar: yalnızca `StaticResource` görseli `<img>` olarak,
+  videonun alt kısmında, oynatmayı durdurmadan; kapatma düğmesi, `minSuggestedDuration` (varsayılan 10 sn)
+  sonunda otomatik gizlenme, VMAP zaman ofsetiyle planlama, tıklama (`noopener noreferrer`, yalnızca http/https),
+  Impression/creativeView/ClickTracking. `IFrameResource`/`HTMLResource` güvenlik gereği bilerek yok sayılır.
+  *Yapılmadı / doğrulanmadı:* VPAID/SIMID, OMID, tüketici onayı (TCF/GPP), companion reklamlar.
+  Gerçek bir reklam sunucusuyla denenmedi, yalnızca sentetik VAST/VMAP ve sahte
+  video ile; non-linear kısım da yalnızca elle yazılmış sentetik VAST ile test edildi. Not: "gerçek talep" kriteri yine sağlanmadı, talimatla yapıldı. 6.1 (reklam) hâlâ konumlanmayla çelişiyor; 6.5/6.6 büyük
   ürün kararları.
 - **Bütçe:** bu dört ek gömülü `embed` paketini 51,96 → 52,07 kB gzip yaptı; sınır 52 → 52,2 kB'a çıkarıldı (diğer paketler mevcut sınırların içinde).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseClock, parseSkipOffset, parseVast, pickMediaFile, resolveVast } from '../../modules/ads/vast';
+import { isSafeHttpUrl, parseClock, parseSkipOffset, parseVast, pickMediaFile, resolveVast } from '../../modules/ads/vast';
 import { breakTime, dueBreaks, parseOffset, parseVmap } from '../../modules/ads/vmap';
 
 const INLINE = (id: string, extra = '') => `<?xml version="1.0"?>
@@ -80,7 +80,7 @@ describe('resolveVast', () => {
 
   it('survives a failing fetch and orders a pod by sequence', async () => {
     const failing = await resolveVast('https://ads.test/down', async () => { throw new Error('offline'); });
-    expect(failing).toEqual({ ads: [], errors: ['could not load https://ads.test/down'] });
+    expect(failing).toEqual({ ads: [], nonLinear: [], errors: ['could not load https://ads.test/down'] });
 
     const pod = `<VAST version="4.0">${INLINE('b', 'sequence="2"').replace(/<\/?VAST[^>]*>|<\?xml[^>]*>/g, '')}${INLINE('a', 'sequence="1"').replace(/<\/?VAST[^>]*>|<\?xml[^>]*>/g, '')}</VAST>`;
     const out = await resolveVast(pod, async () => '');
@@ -142,5 +142,99 @@ describe('VMAP', () => {
     expect(dueBreaks(specs, 31, 100, new Set()).map((b) => b.id)).toEqual(['pre', 'mid']);   // a seek past both
     expect(dueBreaks(specs, 31, 100, new Set(['pre'])).map((b) => b.id)).toEqual(['mid']);
     expect(dueBreaks(specs, 99, 100, new Set(['pre', 'mid']))).toEqual([]);
+  });
+});
+
+const NONLINEAR = (extra = '', tracking = '<Tracking event="creativeView">https://t.test/nl/view</Tracking>') => `<VAST version="4.2"><Ad id="nl"><InLine>
+  <AdTitle>Banner</AdTitle>
+  <Impression>https://t.test/nl/imp</Impression>
+  <Creatives><Creative><NonLinearAds>
+    <TrackingEvents>${tracking}</TrackingEvents>
+    ${extra || `<NonLinear width="300" height="50" minSuggestedDuration="00:00:07">
+      <StaticResource creativeType="image/png"><![CDATA[https://cdn.test/banner.png]]></StaticResource>
+      <NonLinearClickThrough>https://brand.test/nl</NonLinearClickThrough>
+      <NonLinearClickTracking>https://t.test/nl/click</NonLinearClickTracking>
+    </NonLinear>`}
+  </NonLinearAds></Creative></Creatives>
+</InLine></Ad></VAST>`;
+
+describe('non-linear VAST', () => {
+  it('parses a static image overlay with size, duration, click-through and tracking', () => {
+    const ad = parseVast(NONLINEAR()).ads[0]!;
+    expect(ad.creative).toBeNull();
+    expect(ad.nonLinear!.items).toEqual([{
+      imageUrl: 'https://cdn.test/banner.png', imageType: 'image/png', width: 300, height: 50, minSuggestedDuration: 7,
+      clickThrough: 'https://brand.test/nl', clickTracking: ['https://t.test/nl/click'],
+    }]);
+    expect(ad.nonLinear!.tracking.creativeView).toEqual(['https://t.test/nl/view']);
+  });
+
+  it('ignores IFrameResource and HTMLResource: no third-party markup or script is ever kept', () => {
+    const only = NONLINEAR(`<NonLinear width="300" height="50">
+      <IFrameResource>https://evil.test/frame.html</IFrameResource>
+      <HTMLResource><![CDATA[<script>alert(1)</script>]]></HTMLResource>
+    </NonLinear>`);
+    expect(parseVast(only).ads[0]!.nonLinear!.items).toEqual([]);
+    const mixed = NONLINEAR(`<NonLinear><HTMLResource><![CDATA[<b>x</b>]]></HTMLResource></NonLinear>
+      <NonLinear><StaticResource creativeType="image/gif">https://cdn.test/ok.gif</StaticResource></NonLinear>`);
+    expect(parseVast(mixed).ads[0]!.nonLinear!.items.map((i) => i.imageUrl)).toEqual(['https://cdn.test/ok.gif']);
+  });
+
+  it('refuses non-image static resources and non-http image URLs', () => {
+    const bad = NONLINEAR(`<NonLinear><StaticResource creativeType="application/x-javascript">https://cdn.test/a.js</StaticResource></NonLinear>
+      <NonLinear><StaticResource creativeType="text/html">https://cdn.test/a.html</StaticResource></NonLinear>
+      <NonLinear><StaticResource creativeType="image/png">javascript:alert(1)</StaticResource></NonLinear>
+      <NonLinear><StaticResource creativeType="image/png">data:image/png;base64,AAAA</StaticResource></NonLinear>`);
+    expect(parseVast(bad).ads[0]!.nonLinear!.items).toEqual([]);
+  });
+
+  it('drops unsafe click-through and click-tracking URLs but keeps the image', () => {
+    const xml = NONLINEAR(`<NonLinear><StaticResource creativeType="image/jpeg">https://cdn.test/a.jpg</StaticResource>
+      <NonLinearClickThrough>javascript:alert(document.cookie)</NonLinearClickThrough>
+      <NonLinearClickTracking>data:text/html,x</NonLinearClickTracking>
+      <NonLinearClickTracking>https://t.test/ok</NonLinearClickTracking></NonLinear>`);
+    const [item] = parseVast(xml).ads[0]!.nonLinear!.items;
+    expect(item).toMatchObject({ imageUrl: 'https://cdn.test/a.jpg', clickThrough: null, clickTracking: ['https://t.test/ok'], minSuggestedDuration: null });
+  });
+
+  it('knows which URLs are safe to open', () => {
+    expect(isSafeHttpUrl('https://a.test/x')).toBe(true);
+    expect(isSafeHttpUrl('http://a.test/x')).toBe(true);
+    for (const u of ['javascript:alert(1)', 'data:text/html,x', 'file:///etc/passwd', '//a.test', 'not a url', '', null]) expect(isSafeHttpUrl(u)).toBe(false);
+  });
+
+  it('merges NonLinearClickTracking from wrappers, dropping unsafe URLs', async () => {
+    const wrapper = `<VAST version="4.0"><Ad id="w"><Wrapper>
+      <VASTAdTagURI>https://ads.test/nl</VASTAdTagURI>
+      <Creatives><Creative><NonLinearAds><NonLinear>
+        <NonLinearClickTracking>https://t.test/wrapper-click</NonLinearClickTracking>
+        <NonLinearClickTracking>javascript:alert(1)</NonLinearClickTracking>
+      </NonLinear></NonLinearAds></Creative></Creatives>
+    </Wrapper></Ad></VAST>`;
+    const { nonLinear } = await resolveVast(wrapper, async () => NONLINEAR());
+    expect(nonLinear[0]!.item.clickTracking).toEqual(['https://t.test/wrapper-click', 'https://t.test/nl/click']);
+  });
+
+  it('resolves through a wrapper, keeping wrapper impressions and creativeView tracking', async () => {
+    const wrapper = `<VAST version="4.0"><Ad id="w"><Wrapper>
+      <Impression>https://t.test/wrapper-imp</Impression>
+      <VASTAdTagURI>https://ads.test/nl</VASTAdTagURI>
+      <Creatives><Creative><NonLinearAds><TrackingEvents><Tracking event="creativeView">https://t.test/wrapper-view</Tracking></TrackingEvents></NonLinearAds></Creative></Creatives>
+    </Wrapper></Ad></VAST>`;
+    const { ads, nonLinear } = await resolveVast(wrapper, async () => NONLINEAR());
+    expect(ads).toEqual([]);
+    expect(nonLinear).toHaveLength(1);
+    expect(nonLinear[0]!.impressions).toEqual(['https://t.test/wrapper-imp', 'https://t.test/nl/imp']);
+    expect(nonLinear[0]!.tracking.creativeView).toEqual(['https://t.test/wrapper-view', 'https://t.test/nl/view']);
+  });
+
+  it('schedules non-linear breaks separately from linear ones', () => {
+    const specs = [
+      { id: 'pre', type: 'linear' as const, offset: { kind: 'start' as const }, source: 'a' },
+      { id: 'nl', type: 'nonlinear' as const, offset: { kind: 'time' as const, seconds: 10 }, source: 'c' },
+    ];
+    expect(dueBreaks(specs, 12, 100, new Set(), 'nonlinear').map((b) => b.id)).toEqual(['nl']);
+    expect(dueBreaks(specs, 5, 100, new Set(), 'nonlinear')).toEqual([]);
+    expect(dueBreaks(specs, 12, 100, new Set(['nl']), 'nonlinear')).toEqual([]);
   });
 });

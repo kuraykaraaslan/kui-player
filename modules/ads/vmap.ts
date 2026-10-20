@@ -71,11 +71,12 @@ export function breakTime(offset: BreakOffset, duration: number, contentPosition
  */
 export function dueBreaks(
   breaks: readonly AdBreakSpec[], position: number, duration: number, played: ReadonlySet<string>,
+  type: AdBreakSpec['type'] = 'linear',
 ): AdBreakSpec[] {
   const due: { spec: AdBreakSpec; at: number }[] = [];
   breaks.forEach((spec, i) => {
     const key = spec.id ?? `#${i}`;
-    if (played.has(key) || spec.type !== 'linear') return;
+    if (played.has(key) || spec.type !== type) return;
     const at = breakTime(spec.offset, duration);
     if (at === null || at === Infinity || at > position) return;
     due.push({ spec, at });

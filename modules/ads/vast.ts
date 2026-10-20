@@ -16,6 +16,31 @@ export type Creative = {
   clickThrough: string | null;
 };
 
+/**
+ * A non-linear (overlay) creative. Only a `StaticResource` image is kept: `IFrameResource` and
+ * `HTMLResource` would mean running a third party's markup or script, so they are dropped.
+ */
+export type NonLinear = {
+  /** http(s) URL of the image. Rendered as an `<img>`, never injected as HTML. */
+  imageUrl: string;
+  imageType: string;
+  width: number;
+  height: number;
+  /** Seconds the overlay should stay up; `null` when the ad does not say. */
+  minSuggestedDuration: number | null;
+  /** http(s) only; anything else is dropped. */
+  clickThrough: string | null;
+  clickTracking: string[];
+};
+
+export type NonLinearSet = {
+  items: NonLinear[];
+  /** `NonLinearAds` tracking events (`creativeView`, ...). */
+  tracking: Record<string, string[]>;
+  /** `NonLinearClickTracking` of every `NonLinear` element, even those without a usable image (a wrapper has none). */
+  clickTracking: string[];
+};
+
 export type ParsedAd = {
   id: string | null;
   sequence: number | null;
@@ -25,6 +50,7 @@ export type ParsedAd = {
   /** A wrapper points at the next VAST document instead of carrying a creative. */
   wrapperUrl: string | null;
   creative: Creative | null;
+  nonLinear: NonLinearSet | null;
 };
 
 export type ParsedVast = { ads: ParsedAd[]; errors: string[] };
@@ -48,6 +74,45 @@ export function parseSkipOffset(value: string | null | undefined, duration: numb
     return Number.isFinite(pct) && pct >= 0 ? (pct / 100) * duration : null;
   }
   return parseClock(value);
+}
+
+/** Only http(s) URLs are ever opened or loaded as a creative; `javascript:`, `data:` and the like are refused. */
+export function isSafeHttpUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    const u = new URL(value.trim());
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch { return false; }
+}
+
+const IMAGE_TYPE = /^image\/(png|jpe?g|gif|webp|avif)$/i;
+
+function parseNonLinear(container: Element): NonLinearSet {
+  const items: NonLinear[] = [];
+  const clickTracking: string[] = [];
+  for (const el of children(container, 'NonLinear')) {
+    clickTracking.push(...children(el, 'NonLinearClickTracking').map(text).filter(isSafeHttpUrl));
+    // Only StaticResource is read. IFrameResource / HTMLResource are never looked at.
+    const resource = children(el, 'StaticResource').find((r) => IMAGE_TYPE.test((r.getAttribute('creativeType') ?? '').trim()) && isSafeHttpUrl(text(r)));
+    if (!resource) continue;
+    const through = text(children(el, 'NonLinearClickThrough')[0]);
+    const suggested = parseClock(el.getAttribute('minSuggestedDuration'));
+    items.push({
+      imageUrl: text(resource),
+      imageType: (resource.getAttribute('creativeType') ?? '').trim().toLowerCase(),
+      width: Number(el.getAttribute('width')) || 0,
+      height: Number(el.getAttribute('height')) || 0,
+      minSuggestedDuration: suggested && suggested > 0 ? suggested : null,
+      clickThrough: isSafeHttpUrl(through) ? through : null,
+      clickTracking: children(el, 'NonLinearClickTracking').map(text).filter(isSafeHttpUrl),
+    });
+  }
+  const tracking: Record<string, string[]> = {};
+  for (const t of children(container, 'Tracking')) {
+    const event = t.getAttribute('event');
+    if (event && text(t)) (tracking[event] ??= []).push(text(t));
+  }
+  return { items, tracking, clickTracking };
 }
 
 function parseCreative(linear: Element, isWrapper: boolean): Creative | null {
@@ -91,6 +156,7 @@ export function parseVast(xml: string): ParsedVast {
     const body = wrapper ?? inline;
     if (!body) continue;
     const linear = body.getElementsByTagName('Linear')[0];
+    const nonLinearAds = body.getElementsByTagName('NonLinearAds')[0];
     ads.push({
       id: ad.getAttribute('id'),
       sequence: ad.getAttribute('sequence') ? Number(ad.getAttribute('sequence')) : null,
@@ -99,6 +165,7 @@ export function parseVast(xml: string): ParsedVast {
       errors: children(body, 'Error').map(text).filter(Boolean),
       wrapperUrl: wrapper ? text(wrapper.getElementsByTagName('VASTAdTagURI')[0]) || null : null,
       creative: linear ? parseCreative(linear, Boolean(wrapper)) : null,
+      nonLinear: nonLinearAds ? parseNonLinear(nonLinearAds) : null,
     });
   }
   return { ads, errors: ads.length === 0 ? ['no ads in the response'] : [] };
@@ -114,6 +181,15 @@ export type PlayableAd = {
   creative: Creative;
 };
 
+export type PlayableNonLinear = {
+  id: string | null;
+  impressions: string[];
+  errors: string[];
+  /** `creativeView` and friends, accumulated across wrappers. */
+  tracking: Record<string, string[]>;
+  item: NonLinear;
+};
+
 /**
  * Fetch and unwrap a VAST tag. Wrappers add their impressions, tracking and
  * error URLs to the ad that finally plays. Depth is capped, so a loop of
@@ -123,12 +199,14 @@ export async function resolveVast(
   tagUrlOrXml: string,
   load: (url: string) => Promise<string>,
   options: { maxDepth?: number } = {},
-): Promise<{ ads: PlayableAd[]; errors: string[] }> {
+): Promise<{ ads: PlayableAd[]; nonLinear: PlayableNonLinear[]; errors: string[] }> {
   const maxDepth = options.maxDepth ?? 4;
   const errors: string[] = [];
+  const nonLinear: PlayableNonLinear[] = [];
 
   async function walk(
-    source: string, depth: number, inherited: { impressions: string[]; errors: string[]; tracking: Record<string, string[]> },
+    source: string, depth: number,
+    inherited: { impressions: string[]; errors: string[]; tracking: Record<string, string[]>; nlTracking: Record<string, string[]>; nlClick: string[] },
   ): Promise<PlayableAd[]> {
     let xml = source;
     if (!source.trimStart().startsWith('<')) {
@@ -142,12 +220,20 @@ export async function resolveVast(
         impressions: [...inherited.impressions, ...ad.impressions],
         errors: [...inherited.errors, ...ad.errors],
         tracking: { ...inherited.tracking },
+        nlTracking: { ...inherited.nlTracking },
+        nlClick: [...inherited.nlClick, ...(ad.nonLinear?.clickTracking ?? [])],
       };
       for (const [k, v] of Object.entries(ad.creative?.tracking ?? {})) merged.tracking[k] = [...(merged.tracking[k] ?? []), ...v];
+      for (const [k, v] of Object.entries(ad.nonLinear?.tracking ?? {})) merged.nlTracking[k] = [...(merged.nlTracking[k] ?? []), ...v];
       if (ad.wrapperUrl) {
         if (depth >= maxDepth) { errors.push('wrapper chain too deep'); continue; }
         out.push(...await walk(ad.wrapperUrl, depth + 1, merged));
-      } else if (ad.creative && ad.creative.mediaFiles.length > 0) {
+      } else {
+        for (const item of ad.nonLinear?.items ?? []) {
+          nonLinear.push({ id: ad.id, impressions: merged.impressions, errors: merged.errors, tracking: merged.nlTracking, item: { ...item, clickTracking: [...inherited.nlClick, ...item.clickTracking] } });
+        }
+      }
+      if (!ad.wrapperUrl && ad.creative && ad.creative.mediaFiles.length > 0) {
         out.push({
           id: ad.id, sequence: ad.sequence, title: ad.title, impressions: merged.impressions, errors: merged.errors,
           creative: { ...ad.creative, tracking: merged.tracking },
@@ -157,13 +243,13 @@ export async function resolveVast(
     return out;
   }
 
-  const ads = await walk(tagUrlOrXml, 0, { impressions: [], errors: [], tracking: {} });
+  const ads = await walk(tagUrlOrXml, 0, { impressions: [], errors: [], tracking: {}, nlTracking: {}, nlClick: [] });
   // Ad pods play in `sequence` order; ads without one keep the order they came in.
   const ordered = ads
     .map((ad, i) => ({ ad, i }))
     .sort((a, b) => (a.ad.sequence ?? a.i + 1e6) - (b.ad.sequence ?? b.i + 1e6) || a.i - b.i)
     .map((x) => x.ad);
-  return { ads: ordered, errors };
+  return { ads: ordered, nonLinear, errors };
 }
 
 /**

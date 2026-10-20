@@ -123,7 +123,7 @@
     {
       "name": "ads (VAST/VMAP, optional entry)",
       "path": "dist/ads/index.js",
-      "limit": "6.5 kB"
+      "limit": "6.7 kB"
     },
     {
       "name": "embed (single script)",
