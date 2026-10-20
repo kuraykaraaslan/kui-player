@@ -90,7 +90,7 @@ createRoot(document.getElementById('stage')!).render(
     chapters={params.get('chapters') ? '/media/chapters.vtt' : undefined}
     thumbnails={params.get('chapters') ? '/media/storyboard.vtt' : undefined}
     persist={params.get('persist') === '1'}
-    miniPlayer={params.get('mini') === '1'}
+    miniPlayer={params.get('mini') === 'touch' ? { touch: true } : params.get('mini') === '1'}
     audioOnly={params.get('audio') === '1'}
     waveform={params.get('audio') === '1'
       ? Array.from({ length: 120 }, (_, i) => 0.2 + 0.8 * Math.abs(Math.sin(i / 7) * Math.cos(i / 17)))

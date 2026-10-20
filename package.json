@@ -101,7 +101,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "38 kB"
+      "limit": "38.2 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -110,10 +110,11 @@
         "dist/react/player.js",
         "dist/react/SettingsPanel.js",
         "dist/react/AboutModal.js",
+        "dist/react/MiniDragHandle.js",
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "46 kB"
+      "limit": "47.3 kB"
     },
     {
       "name": "facade (click-to-load cover)",
@@ -128,12 +129,12 @@
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "52.2 kB"
+      "limit": "53.8 kB"
     },
     {
       "name": "stylesheet",
       "path": "dist/styles.css",
-      "limit": "7 kB"
+      "limit": "7.2 kB"
     },
     {
       "name": "skin mode (bundler entry)",

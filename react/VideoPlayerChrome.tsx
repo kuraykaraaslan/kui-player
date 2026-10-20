@@ -18,7 +18,7 @@ import { pickDescriptionTrack, pickMainTrack } from '../modules/videoplayer/vide
 import { createPortal } from 'react-dom';
 import { useDocumentPip } from './hooks/useDocumentPip.js';
 import { adSpans } from '../modules/videoplayer/videoplayer.adbreaks.js';
-import { miniEnabled, type MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
+import { miniEnabled, type MiniCorner, type MiniOptions } from '../modules/videoplayer/videoplayer.mini.js';
 import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
@@ -42,6 +42,7 @@ const SubtitleEditor = lazy(() => import('./parts/SubtitleEditor.js'));
 const SubtitleSearch = lazy(() => import('./parts/SubtitleSearch.js'));
 const StatsPanel = lazy(() => import('./parts/StatsPanel.js'));
 const ShortcutsHelp = lazy(() => import('./parts/ShortcutsHelp.js'));
+const MiniDragHandle = lazy(() => import('./parts/MiniDragHandle.js').then((m) => ({ default: m.MiniDragHandle })));
 const AboutModal = lazy(() => import('./parts/AboutModal.js').then((m) => ({ default: m.AboutModal })));
 const CastController = lazy(() => import('./parts/CastController.js'));
 const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
@@ -309,6 +310,8 @@ export function VideoPlayerChrome({
   const miniOn = miniEnabled(miniPlayer, touchDevice) && !docPip.active;
   const mini = useMiniPlayer({ enabled: miniOn, skin, playing, fullscreen: isFullscreen });
   const { setContainer: setMiniContainer, setPlaceholder: setMiniPlaceholder } = mini;
+  const [dragCorner, setDragCorner] = useState<MiniCorner | null>(null);
+  if (!mini.floating && dragCorner !== null) setDragCorner(null);   // forget a dragged spot on leaving mini mode
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     if (!Array.from(e.dataTransfer.types).includes('Files')) return;
     e.preventDefault();
@@ -547,7 +550,7 @@ export function VideoPlayerChrome({
       aria-label={title ? t('videoTitled', { title }) : t('videoPlayer')}
       dir={dictionary.dir ?? 'ltr'}
       className={cn('kui-player', skin ? 'kui-player--skin' : 'kui-player--embedded', audioOnly && 'kui-player--audio', mini.floating && 'is-mini', dropping && 'is-dropping', className)}
-      data-kui-mini={mini.floating ? miniCorner : undefined}
+      data-kui-mini={mini.floating ? dragCorner ?? miniCorner : undefined}
       data-kui-theme={theme}
       onMouseMove={() => engine.resetHideTimer()}
       onMouseLeave={() => engine.hideIfPlaying()}
@@ -592,6 +595,10 @@ export function VideoPlayerChrome({
       )}
 
       {mini.floating && (
+        <>
+          <Suspense fallback={null}>
+            <MiniDragHandle container={mini.container} corner={dragCorner ?? miniCorner} onCorner={setDragCorner} label={t('miniMove')} />
+          </Suspense>
         <div className="kui-mini-bar">
           <button type="button" className="kui-mini-btn" onClick={() => engine.togglePlay()} aria-label={playing ? t('pause') : t('play')}>
             <Icon name={playing ? 'pause' : 'play'} />
@@ -608,6 +615,7 @@ export function VideoPlayerChrome({
             <Icon name="close" />
           </button>
         </div>
+        </>
       )}
 
       <div className="kui-sr-only" role="status" aria-live="polite" aria-atomic="true">

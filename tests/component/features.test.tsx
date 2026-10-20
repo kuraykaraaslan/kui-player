@@ -395,6 +395,194 @@ describe('mini player', () => {
   });
 });
 
+describe('mini player dragging', () => {
+  type IOCallback = (entries: Partial<IntersectionObserverEntry>[]) => void;
+  let callbacks: IOCallback[];
+  const realIO = globalThis.IntersectionObserver;
+  const realInner = [window.innerWidth, window.innerHeight];
+
+  beforeEach(() => {
+    callbacks = [];
+    globalThis.IntersectionObserver = class {
+      constructor(cb: IOCallback) { callbacks.push(cb); }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+      takeRecords() { return []; }
+    } as unknown as typeof IntersectionObserver;
+    Object.assign(window, { innerWidth: 1000, innerHeight: 600 });
+  });
+  afterEach(() => {
+    globalThis.IntersectionObserver = realIO;
+    Object.assign(window, { innerWidth: realInner[0], innerHeight: realInner[1] });
+  });
+
+  async function floated(props: Record<string, unknown> = {}) {
+    const utils = render(<VideoPlayer src={SRC} enableCast={false} miniPlayer {...props} />);
+    const video = utils.container.querySelector('video') as HTMLVideoElement;
+    emit(video, 'play', { paused: false });
+    await waitFor(() => expect(callbacks.length).toBeGreaterThan(0));
+    act(() => callbacks[callbacks.length - 1]?.([{ intersectionRatio: 0 }]));
+    const player = await waitFor(() => {
+      const el = utils.container.querySelector('.kui-player.is-mini') as HTMLElement;
+      expect(el).toBeInTheDocument();
+      return el;
+    });
+    // jsdom has no layout: park the box in the bottom-right corner of a 1000x600 viewport.
+    const rect = () => ({ left: 780, top: 460, width: 200, height: 120, right: 980, bottom: 580, x: 780, y: 460, toJSON() {} }) as DOMRect;
+    player.getBoundingClientRect = rect;
+    const handle = await screen.findByRole('button', { name: /Move mini player/ });
+    return { ...utils, video, player, handle };
+  }
+  const ev = (id: number, x: number, y: number) => ({ pointerId: id, clientX: x, clientY: y, pointerType: 'mouse', button: 0 });
+
+  it('follows the pointer while dragging, clamped to the viewport, without moving the <video>', async () => {
+    const { video, player, handle, container } = await floated();
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    expect(player).toHaveAttribute('data-kui-dragging');
+    fireEvent.pointerMove(handle, ev(1, 700, 400));
+    expect(player.style.transform).toBe('translate3d(-100px, -70px, 0)');
+    fireEvent.pointerMove(handle, ev(1, 5000, 5000));   // far past the edges
+    expect(player.style.transform).toBe('translate3d(20px, 20px, 0)');
+    expect(container.querySelector('video')).toBe(video);
+  });
+
+  it('snaps to the nearest corner on release and clears the drag state', async () => {
+    const { player, handle } = await floated();
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 100, 100));   // box ends near the top-left
+    fireEvent.pointerUp(handle, ev(1, 100, 100));
+    await waitFor(() => expect(player).toHaveAttribute('data-kui-mini', 'top-left'));
+    expect(player.style.transform).toBe('');
+    expect(player).not.toHaveAttribute('data-kui-dragging');
+  });
+
+  it('snaps to a logical corner in RTL', async () => {
+    const { player, handle } = await floated({ dir: 'rtl' });
+    player.style.direction = 'rtl';
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 100, 470));   // physical bottom-left
+    fireEvent.pointerUp(handle, ev(1, 100, 470));
+    await waitFor(() => expect(player).toHaveAttribute('data-kui-mini', 'bottom-right'));
+  });
+
+  it('ignores a non-primary mouse button and other pointers mid-drag', async () => {
+    const { player, handle } = await floated();
+    fireEvent.pointerDown(handle, { ...ev(1, 800, 470), button: 2 });
+    expect(player).not.toHaveAttribute('data-kui-dragging');
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(2, 100, 100));   // a different pointer: ignored
+    expect(player.style.transform).toBe('');
+    fireEvent.pointerMove(handle, ev(1, 790, 470));
+    expect(player.style.transform).toBe('translate3d(-10px, 0px, 0)');
+  });
+
+  it('Escape cancels a drag and leaves the corner unchanged', async () => {
+    const { player, handle } = await floated();
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 100, 100));
+    fireEvent.keyDown(handle, { key: 'Escape' });
+    expect(player.style.transform).toBe('');
+    expect(player).toHaveAttribute('data-kui-mini', 'bottom-right');
+  });
+
+  it('the handle is a focusable button and arrow keys step between corners', async () => {
+    const user = userEvent.setup();
+    const { player, handle } = await floated();
+    await user.tab();   // focus moves through the player; focus the handle directly for the arrow keys
+    handle.focus();
+    expect(handle).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(player).toHaveAttribute('data-kui-mini', 'bottom-left');
+    await user.keyboard('{ArrowUp}');
+    expect(player).toHaveAttribute('data-kui-mini', 'top-left');
+    await user.keyboard('{ArrowUp}{ArrowLeft}');   // already at the edge
+    expect(player).toHaveAttribute('data-kui-mini', 'top-left');
+  });
+
+  it('glides after a nudge that keeps the same corner, and not under reduced motion', async () => {
+    const { player, handle } = await floated();
+    const animate = vi.fn();
+    (player as unknown as { animate: unknown }).animate = animate;
+    let end = 780;
+    player.getBoundingClientRect = () => ({ left: end, top: 460, width: 200, height: 120, right: end + 200, bottom: 580, x: end, y: 460, toJSON() {} }) as DOMRect;
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 780, 470));   // a small nudge: nearest corner is unchanged
+    end = 780;
+    fireEvent.pointerUp(handle, ev(1, 780, 470));
+    expect(player).toHaveAttribute('data-kui-mini', 'bottom-right');
+    expect(animate).toHaveBeenCalledTimes(1);
+
+    animate.mockClear();
+    const mm = vi.spyOn(window, 'matchMedia').mockImplementation(((q: string) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false })) as unknown as typeof window.matchMedia);
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 780, 470));
+    fireEvent.pointerUp(handle, ev(1, 780, 470));
+    expect(animate).not.toHaveBeenCalled();
+    mm.mockRestore();
+  });
+
+  it('Escape cancels a drag even when the handle is not focused', async () => {
+    const { player, handle } = await floated();
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 100, 100));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(player).not.toHaveAttribute('data-kui-dragging');
+    expect(player).toHaveAttribute('data-kui-mini', 'bottom-right');
+  });
+
+  it('ignores arrow keys while a pointer drag is active', async () => {
+    const { player, handle } = await floated();
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+    expect(player).toHaveAttribute('data-kui-mini', 'bottom-right');
+    expect(player).toHaveAttribute('data-kui-dragging');
+  });
+
+  it('announces the new corner and advertises the arrow keys', async () => {
+    const { handle } = await floated();
+    expect(handle).toHaveAttribute('aria-keyshortcuts', expect.stringContaining('ArrowLeft'));
+    fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+    expect(await screen.findByText('Moved to bottom left')).toBeInTheDocument();
+  });
+
+  it('keeps the buttons clickable and a drag does not toggle playback', async () => {
+    const user = userEvent.setup();
+    const { video, handle } = await floated();
+    const pause = vi.spyOn(video, 'pause');
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerUp(handle, ev(1, 800, 470));
+    expect(pause).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Close mini player' }));
+    expect(pause).toHaveBeenCalled();
+  });
+
+  it('resets the position when leaving mini mode and starts from the configured corner', async () => {
+    const { container, player, handle } = await floated({ miniPlayer: { corner: 'top-right' } });
+    expect(player).toHaveAttribute('data-kui-mini', 'top-right');
+    fireEvent.keyDown(handle, { key: 'ArrowDown' });
+    expect(player).toHaveAttribute('data-kui-mini', 'bottom-right');
+    act(() => callbacks[callbacks.length - 1]?.([{ intersectionRatio: 1 }]));
+    await waitFor(() => expect(container.querySelector('.is-mini')).not.toBeInTheDocument());
+    act(() => callbacks[callbacks.length - 1]?.([{ intersectionRatio: 0 }]));
+    const again = await waitFor(() => {
+      const el = container.querySelector('.kui-player.is-mini') as HTMLElement;
+      expect(el).toBeInTheDocument();
+      return el;
+    });
+    expect(again).toHaveAttribute('data-kui-mini', 'top-right');
+  });
+
+  it('re-clamps an active drag when the window shrinks', async () => {
+    const { player, handle } = await floated();
+    fireEvent.pointerDown(handle, ev(1, 800, 470));
+    fireEvent.pointerMove(handle, ev(1, 820, 480));   // +20, +10 inside a 1000x600 window
+    Object.assign(window, { innerWidth: 990, innerHeight: 590 });
+    act(() => { window.dispatchEvent(new Event('resize')); });
+    expect(player.style.transform).toBe('translate3d(10px, 10px, 0)');
+  });
+});
+
 describe('dual-language subtitles', () => {
   const subtitles = [
     { label: 'English', srclang: 'en', src: '/en.srt' },

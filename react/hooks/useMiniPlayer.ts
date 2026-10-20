@@ -50,5 +50,5 @@ export function useMiniPlayer({ enabled, skin, playing, fullscreen }: Options) {
     container?.focus({ preventScroll: true });
   }, [placeholder, container]);
 
-  return { floating, setContainer, setPlaceholder, placeholderHeight: height, dismiss, giveBack };
+  return { floating, container, setContainer, setPlaceholder, placeholderHeight: height, dismiss, giveBack };
 }

@@ -823,6 +823,37 @@
   font-size: 0.75rem;
   cursor: pointer;
 }
+.kui-mini-handle {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 31;
+  height: 1.5rem;   /* 24px: WCAG 2.5.8 minimum target */
+  padding: 0;
+  border: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.65), transparent);
+  cursor: grab;
+  touch-action: none;
+}
+.kui-mini-handle::after {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 4px;
+  margin: 0.5rem auto 0;
+  border-radius: 2px;
+  background: var(--_kui-text);
+  opacity: 0.7;
+}
+@media (pointer: coarse) {
+  .kui-mini-handle { height: 2.75rem; }
+  .kui-mini-handle::after { margin-top: 0.75rem; }
+}
+@media (forced-colors: active) {
+  .kui-mini-handle { background: Canvas; border-bottom: 1px solid ButtonText; }
+  .kui-mini-handle::after { background: ButtonText; opacity: 1; }
+}
+.kui-mini-handle:focus-visible { outline: 2px solid var(--_kui-text); outline-offset: -2px; }
+[data-kui-dragging] .kui-mini-handle { cursor: grabbing; }
 .kui-mini-btn:hover { background: var(--_kui-surface-hover); }
 @media (prefers-reduced-motion: no-preference) {
   .kui-player.is-mini { animation: kui-mini-in 160ms ease-out; }

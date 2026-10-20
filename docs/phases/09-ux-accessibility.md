@@ -24,11 +24,14 @@ ile kapsam paylaşır.
 
 - [x] Oynatıcı ekrandan çıkınca (IntersectionObserver) köşede sabit küçük pencereye geçer
 - [x] Yalnızca **oynatılıyorken** devreye girer; kapatma ve "yerine dön" butonları
-- [x] Köşe seçimi (`corner`); **sürükleme yapılmadı** (isteğe bağlıydı), `miniPlayer` seçeneği ile aç/kapa (varsayılan kapalı)
+- [x] Köşe seçimi (`corner`), `miniPlayer` seçeneği ile aç/kapa (varsayılan kapalı)
+- [x] **Sürükleme:** üstteki tutamaç düğmesiyle (fare/dokunma/kalem, `setPointerCapture`); sürüklerken yalnızca `transform` değişir (yerleşim/yeniden çizim yok), görüntü alanıyla sınırlanır, bırakınca en yakın **mantıksal** köşeye oturur (RTL'de fiziksel sol = `right`), `prefers-reduced-motion` açıkken kayma animasyonu yok, pencere yeniden boyutlanınca sınırlama güncellenir, Esc sürüklemeyi iptal eder, mini moddan çıkınca konum sıfırlanır. Yalnızca tutamaçtan sürüklenir (videonun kendisinden değil): düğmelerin tıklaması çalınmaz. Kod: `useMiniDrag` + saf yardımcılar `videoplayer.mini.ts`
+- [x] Klavye alternatifi: tutamaç odaklanabilir bir düğme; ok tuşları bitişik köşeye geçirir (serbest piksel taşıma yok, bilerek: yerleşim öngörülebilir kalsın). Köşe seçeneği yedek olarak durur. Taşıma sonrası yeni köşe canlı bölgeyle duyurulur ("… taşındı"), tutamaçta `aria-keyshortcuts` var; ekran okuyucuyla elle denenmedi. Tutamaç 24px (dokunmatikte 44px), forced-colors'ta kenarlık/grip görünür
 - [x] `<video>` DOM'da taşınmaz (oynatma kesilir); aynı öğe CSS ile konumlanır
 - [x] Mobilde varsayılan kapalı; kontrol sadeleşir (oynat/duraklat + kapat)
 - [x] a11y: `aria-label`'lı gerçek butonlar, `prefers-reduced-motion` saygısı; "videoya dön" odağı oynatıcıya taşır. Ekran okuyucuyla elle denenmedi
-- [x] Test: component testi + Playwright (scroll ile mini moda geçiş) — Chromium'da geçti
+- [x] Test: component testi + Playwright (scroll ile mini moda geçiş) — Chromium'da geçti. Sürükleme: saf yardımcı birim testleri, sahte işaretçi dizileriyle bileşen testleri (sınırlama, köşeye oturma, RTL, klavye, düğmeler), Playwright'ta gerçek fare sürüklemesi (yalnızca headless Chromium; Firefox/WebKit ve gerçek dokunmatik cihazda denenmedi), Esc ortası sürükleme, reduced-motion ve CDP dokunma sürüklemesi. Kayma animasyonunun gerçek tarayıcıda görsel doğruluğu otomatik testle doğrulanmaz (yalnızca animate çağrısı sayılır); gerçek forced-colors denenmedi
+- [x] Boyut bütçeleri: sürükleme kodu tembel parça (`MiniDragHandle`); `react subpath` 38→38.2 kB, `every lazy chunk` 46→47.3 kB (yeni parça), `embed` 52.2→53.8 kB (embed tek betik olduğundan tutamaç + 5 dil metni içeri girer; özellik varsayılan kapalı olsa da), stylesheet 7→7.2 kB (tutamaç CSS'i). Çekirdek (core) bütçesi değişmedi
 
 ## 9.3 — Document Picture-in-Picture 🟡 M
 

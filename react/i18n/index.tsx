@@ -115,6 +115,12 @@ export type Dictionary = {
   secondSubtitle: string;
   miniReturn: string;
   miniClose: string;
+  miniMove: string;
+  miniMoved: string;
+  miniCornerTopLeft: string;
+  miniCornerTopRight: string;
+  miniCornerBottomLeft: string;
+  miniCornerBottomRight: string;
   skipIntro: string;
   skipRecap: string;
   'shortcut.skip': string;
@@ -300,6 +306,12 @@ export const en: Dictionary = {
   secondSubtitle: "Second language",
   miniReturn: "Back to the video",
   miniClose: "Close mini player",
+  miniMove: "Move mini player (arrow keys)",
+  miniMoved: "Moved to {corner}",
+  miniCornerTopLeft: "top left",
+  miniCornerTopRight: "top right",
+  miniCornerBottomLeft: "bottom left",
+  miniCornerBottomRight: "bottom right",
   skipIntro: "Skip intro",
   skipRecap: "Skip recap",
   'shortcut.skip': "Skip intro / recap",
