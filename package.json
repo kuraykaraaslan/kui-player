@@ -93,7 +93,7 @@
     {
       "name": "core (vanilla engine)",
       "path": "dist/index.js",
-      "limit": "18.9 kB"
+      "limit": "19.1 kB"
     },
     {
       "name": "react subpath",
@@ -101,7 +101,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "42.8 kB"
+      "limit": "42.9 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
@@ -114,7 +114,7 @@
         "dist/react/CastController.js",
         "dist/react/videoplayer.meta.js"
       ],
-      "limit": "51.8 kB"
+      "limit": "52.0 kB"
     },
     {
       "name": "facade (click-to-load cover)",
@@ -129,7 +129,7 @@
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "57.4 kB"
+      "limit": "57.6 kB"
     },
     {
       "name": "stylesheet",
@@ -142,7 +142,7 @@
         "dist/skin/index.js",
         "dist/skin/skin.js"
       ],
-      "limit": "41.3 kB"
+      "limit": "41.4 kB"
     },
     {
       "name": "locales (all six)",

@@ -156,7 +156,11 @@ export function VideoPlayer(props: VideoPlayerComponentProps) {
     seekLockInAds: props.seekLockInAds,
     // Known before the first source is attached, which happens in a child effect.
     live: props.live,
+    // Autoplay is a play intent already: it loads at once.
+    loadOnPlay: !!props.loadOnPlay && !props.autoPlay,
   }));
+  const loadOnPlay = !!props.loadOnPlay && !props.autoPlay;
+  useEffect(() => { engine.setLoadOnPlay(loadOnPlay); }, [engine, loadOnPlay]);
 
   // Live options after the first render.
   const liveKey = JSON.stringify(props.live ?? null);

@@ -12,4 +12,4 @@ Live streams, a presence check and alternate sources — all generic, none of it
 - Translations of the new strings in `tr`, `de`, `es`, `fr` and `ar`. New engine events: `presence:ask`, `presence:continue`, `presence:timeout`, `suspend`, `resume`, `live:reconnect`, `live:recovered`.
 - Adapter errors now also reach `engine.on('error')`.
 
-**Behaviour change:** a live stream no longer shows a seek bar or ±10 s buttons by default; pass `live={{ dvr: true }}` for the old bar over the DVR window, or `live={false}` for the previous behaviour entirely. The hls.js adapter now sets `liveDurationInfinity: true`, so live HLS reports an unbounded duration. Size budgets rose with the feature (core 15.5 → 18.9 kB gzipped, React subpath 38.4 → 42.8 kB).
+**Behaviour change:** a live stream no longer shows a seek bar or ±10 s buttons by default; pass `live={{ dvr: true }}` for the old bar over the DVR window, or `live={false}` for the previous behaviour entirely. The hls.js adapter now sets `liveDurationInfinity: true`, so live HLS reports an unbounded duration. Size budgets rose with the feature (core 15.5 → 19.1 kB gzipped, React subpath 38.4 → 42.9 kB).

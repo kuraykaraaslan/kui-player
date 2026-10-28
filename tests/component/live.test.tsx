@@ -413,3 +413,46 @@ describe('translations', () => {
     expect(dict.presenceCountdown).toContain('{seconds}');
   });
 });
+
+describe('load on first play', () => {
+  it('attaches nothing until Play is pressed', async () => {
+    const { adapter, hosts } = liveAdapter();
+    render(<VideoPlayer src={LIVE} adapters={[adapter]} enableCast={false} loadOnPlay />);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(adapter.attach).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Play' }));
+    await waitFor(() => expect(hosts).toHaveLength(1));
+  });
+
+  it('loads at once with autoPlay', async () => {
+    const { adapter, hosts } = liveAdapter();
+    render(<VideoPlayer src={LIVE} adapters={[adapter]} enableCast={false} loadOnPlay autoPlay />);
+    await waitFor(() => expect(hosts).toHaveLength(1));
+  });
+
+  it('is off by default', async () => {
+    const { adapter, hosts } = liveAdapter();
+    render(<VideoPlayer src={LIVE} adapters={[adapter]} enableCast={false} />);
+    await waitFor(() => expect(hosts).toHaveLength(1));
+  });
+
+  it('works with alternate sources: the chosen one loads', async () => {
+    const { adapter, hosts } = liveAdapter();
+    const u = userEvent.setup();
+    render(
+      <VideoPlayer
+        adapters={[adapter]} enableCast={false} loadOnPlay
+        sources={[{ label: 'Standard', src: 'https://example.com/sd.m3u8' }, { label: 'High', src: 'https://example.com/hd.m3u8' }]}
+      />,
+    );
+    await u.click(screen.getByRole('button', { name: 'Settings' }));
+    await u.click(await screen.findByRole('menuitem', { name: /Quality/ }));
+    await u.click(screen.getByRole('menuitemradio', { name: 'High' }));
+    expect(adapter.attach).not.toHaveBeenCalled();
+    await u.click(screen.getByRole('button', { name: 'Play' }));
+    await waitFor(() => expect(hosts).toHaveLength(1));
+    expect(adapter.attach.mock.calls[0]![1]).toBe('https://example.com/hd.m3u8');
+  });
+});

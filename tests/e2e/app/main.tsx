@@ -32,6 +32,7 @@ import { FetchHlsCtor } from './fetch-hls';
  *   ?live=1       a live stream from the /live fixture origin (vite.config.e2e.ts) through the real HLS adapter;
  *                 ?src= picks the address (cam | dies | refused | gone), ?ttl= ends the session after N ms,
  *                 ?dvr=1 keeps the seek bar, ?spacer=1 makes the page scrollable, ?retries=N / ?base=ms the back-off
+ *   ?loadonplay=1 with ?live=1: nothing is requested until Play
  *   ?wall=N       N players in one presence group; ?pe= the interval and ?pg= the grace period, in ms
  *   ?sources=1    two addresses (Standard / High) in the quality menu; ?prefer=1 plays High in fullscreen
  */
@@ -134,6 +135,7 @@ if (wallSize > 0) {
     adapters={live ? [liveAdapter] : params.get('adapter') ? [stubAdapter] : undefined}
     live={live ? { dvr: params.get('dvr') === '1', reauth: { maxAttempts: Number(params.get('retries') ?? 3), baseDelayMs: Number(params.get('base') ?? 300) } } : undefined}
     sources={sources}
+    loadOnPlay={params.get('loadonplay') === '1'}
     preferAlternateInFullscreen={params.get('prefer') === '1'}
     theme={(params.get('theme') as 'cinema' | undefined) ?? undefined}
     chapters={params.get('chapters') ? '/media/chapters.vtt' : undefined}

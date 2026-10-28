@@ -47,6 +47,7 @@ other than the media you point it at.
 | `sources` | `AlternateSource[]` | — | `{ label, src }[]` — alternate addresses for one stream ("Standard", "High"), listed in the quality menu; replaces `src`; the first is the default; one entry is ignored |
 | `preferAlternateInFullscreen` | `boolean` | `false` | with `sources`: play the second in fullscreen, the first in the card, until the viewer picks one by hand |
 | `onSourceChange` | `(index: number, source: AlternateSource) => void` | — | the viewer or the fullscreen rule changed the active source |
+| `loadOnPlay` | `boolean` | `false` | adapter-managed (HLS) sources are not attached, and nothing is requested, until the first play intent (button, `engine.play()`); `autoPlay` loads at once; other sources unaffected |
 | `live` | `boolean \| LiveOptions` | auto | live behaviour; live itself is detected. `true`/object = "this source is live" (hint). `false` = all live behaviour off. See Live streams below |
 | `presence` | `{ everyMs: number; graceMs: number } \| PresenceGroup \| false` | — | "Still watching?" check; `false` opts out of an enclosing `<PresenceGroupProvider>` |
 | `defaultQuality` | `string` | first quality | |
@@ -95,7 +96,7 @@ other than the media you point it at.
 
 `defaultQuality`, `startMuted`, `autoHideControls` (true), `controlsVisible`,
 `maxAutoRetries` (3), `adapters`, `preferNativeIosFullscreen` (false),
-`live` (`LiveInput`, see Live streams), `presence` (`{ everyMs, graceMs }` or a `PresenceGroup`).
+`loadOnPlay` (false; `engine.load()` starts a held source, `setLoadOnPlay(on)`), `live` (`LiveInput`, see Live streams), `presence` (`{ everyMs, graceMs }` or a `PresenceGroup`).
 
 ### Methods
 

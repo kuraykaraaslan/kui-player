@@ -69,6 +69,18 @@ hls.js and no status code to read; the engine's ordinary network retry applies t
 Events: `live:reconnect` (`{ attempt, reason: 'auth' | 'network' }`), `live:recovered`, and
 `error` when it gives up (`LIVE_REFUSED`, `LIVE_UNAVAILABLE`).
 
+## Load on first play
+
+```tsx
+<VideoPlayer src={src} adapters={adapters} live loadOnPlay />
+```
+
+With `loadOnPlay` an HLS source is not attached and nothing is requested (no playlist, no segment)
+until the viewer presses Play or code calls `engine.play()`; `autoPlay` loads at once. The player
+shows its poster and a Play button. A player that never started is not "playing": it is not counted
+by the presence check and is not watched for visibility. Sources no adapter claims (MP4) are
+unaffected, and with `sources` the entry chosen before Play is the one that loads.
+
 ## Stop when nobody can see it
 
 A live player that is scrolled out of view, or in a hidden tab, **makes no requests**: the

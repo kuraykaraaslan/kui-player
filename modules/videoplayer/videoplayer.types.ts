@@ -185,6 +185,13 @@ export type VideoPlayerProps = {
   /** Called when the viewer (or the fullscreen rule) changes the active `sources` entry. */
   onSourceChange?: (index: number, source: AlternateSource) => void;
   /**
+   * Load on first play: an HLS (adapter-managed) source is not attached and no
+   * playlist or segment is requested until the viewer presses Play (or code
+   * calls `play()`). With `autoPlay` it loads at once. Sources no adapter claims
+   * are unaffected. Default `false`.
+   */
+  loadOnPlay?: boolean;
+  /**
    * Live behaviour. Live is detected from the stream, so this is optional:
    * `true` / an object says "this source is live" up front (small-tile quality
    * defaults), `{ dvr: true }` keeps a seek bar, `false` turns the live

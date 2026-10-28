@@ -89,6 +89,12 @@ export type VideoPlayerEngineOptions = {
    * `createPresenceGroup()` to share one timer and one question between players.
    */
   presence?: PresenceOptions | PresenceGroup;
+  /**
+   * Do not touch an adapter-managed (HLS) source until the first play intent:
+   * no adapter is attached and no playlist or segment is requested until
+   * `play()` (or `load()`). Sources no adapter claims are unaffected. Default `false`.
+   */
+  loadOnPlay?: boolean;
 };
 
 /** State carried across a source swap so the viewer lands where they left off. */
@@ -162,6 +168,11 @@ export class VideoPlayerEngine {
   private firstFrameReported = false;
   private seekFrom = 0;
 
+  private loadOnPlay = false;
+  /** A source waiting for the first play intent (see `loadOnPlay`). */
+  private pendingSrc: string | null = null;
+  /** The viewer (or the page) has asked to play: later sources load at once. */
+  private started = false;
   private liveCfg: ResolvedLive = resolveLive(undefined);
   /** What the adapter says about the stream having an end; `null` while it has said nothing. */
   private adapterLive: boolean | null = null;
@@ -221,6 +232,7 @@ export class VideoPlayerEngine {
     this.seekLockInAds = opts.seekLockInAds ?? false;
     this.preferNativeIosFullscreen = opts.preferNativeIosFullscreen ?? false;
     if (opts.adapters) this.adapters = [...opts.adapters];
+    this.loadOnPlay = opts.loadOnPlay ?? false;
     this.setLive(opts.live);
     if (opts.presence) this.setPresence(opts.presence);
   }
@@ -491,6 +503,8 @@ export class VideoPlayerEngine {
     this.stopVisibility?.();
     this.stopVisibility = null;
     this.visible = true;
+    this.pendingSrc = null;
+    this.started = false;
     this.suspender.reset();
     this.store.getState().setPresencePaused(false);
     this.exitFakeFullscreen();
@@ -760,8 +774,16 @@ export class VideoPlayerEngine {
 
     const next = this.adapters.find((a) => a.canPlay(src)) ?? null;
     if (this.activeAdapter && this.activeAdapter !== next) this.releaseAdapter();
-    if (!next) { this.currentSrc = null; return false; }
+    if (!next) { this.currentSrc = null; this.pendingSrc = null; return false; }
     if (this.activeAdapter === next && this.currentSrc === src) return true;
+    if (this.loadOnPlay && !this.started) {
+      // Nothing is attached and nothing is requested until the first play.
+      this.pendingSrc = src;
+      this.currentSrc = null;
+      this.store.getState().setLoading(false);
+      return true;
+    }
+    this.pendingSrc = null;
 
     this.activeAdapter = next;
     this.currentSrc = src;
@@ -1120,7 +1142,30 @@ export class VideoPlayerEngine {
 
   // ── Playback ───────────────────────────────────────────────────────────────
 
+  /** Start loading a source that `loadOnPlay` held back. No-op otherwise. */
+  load(): void {
+    this.started = true;
+    const src = this.pendingSrc;
+    if (src === null) return;
+    this.pendingSrc = null;
+    void this.loadSource(src);
+  }
+
+  /** Change `loadOnPlay`; turning it off loads a waiting source now. */
+  setLoadOnPlay(on: boolean): void {
+    this.loadOnPlay = on;
+    if (!on) this.load();
+  }
+
   play(): void {
+    if (this.pendingSrc !== null) {
+      // Playing starts once the stream is attached: a source change rewinds an
+      // element that is already playing, so ask the restore point to press play.
+      this.captureRestorePoint();
+      if (this.restorePoint) this.restorePoint.playing = true;
+      this.load();
+      return;
+    }
     if (this.suspender.has('presence')) { this.leavePresencePause(); return; }
     void this.video?.play().catch(() => { /* autoplay may be blocked */ });
   }

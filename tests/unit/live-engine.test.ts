@@ -347,3 +347,83 @@ describe('presence check in one player', () => {
     expect(ask).not.toHaveBeenCalled();
   });
 });
+
+describe('load on first play', () => {
+  async function held(options: VideoPlayerEngineOptions = {}) {
+    const { adapter, host } = fakeAdapter();
+    const video = document.createElement('video');
+    document.body.appendChild(video);
+    const engine = new VideoPlayerEngine({ adapters: [adapter], loadOnPlay: true, ...options });
+    engine.attach(video);
+    const claimed = await engine.loadSource('https://x/live.m3u8');
+    return { engine, video, adapter, host, claimed };
+  }
+
+  it('claims an HLS source but attaches nothing and shows no spinner', async () => {
+    const { engine, adapter, claimed } = await held();
+    expect(claimed).toBe(true);
+    expect(adapter.attach).not.toHaveBeenCalled();
+    expect(engine.store.getState().loading).toBe(false);
+  });
+
+  it('attaches on the first play, and plays', async () => {
+    const { engine, video, adapter } = await held();
+    engine.play();
+    expect(adapter.attach).toHaveBeenCalledTimes(1);
+    expect(adapter.attach.mock.calls[0]![1]).toBe('https://x/live.m3u8');
+    // Playback starts when the attached stream is ready, not before it has a source.
+    expect(video.paused).toBe(true);
+    emit(video, 'loadedmetadata', { readyState: 1 });
+    expect(video.paused).toBe(false);
+  });
+
+  it('treats the play button as the first play too', async () => {
+    const { engine, adapter } = await held();
+    engine.togglePlay();
+    expect(adapter.attach).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads at once when turned off, and for sources after the first play', async () => {
+    const a = await held();
+    a.engine.setLoadOnPlay(false);
+    expect(a.adapter.attach).toHaveBeenCalledTimes(1);
+
+    const b = await held();
+    b.engine.play();
+    await b.engine.loadSource('https://x/other.m3u8');
+    expect(b.adapter.attach).toHaveBeenCalledTimes(2);
+  });
+
+  it('follows a source change while it waits, and attaches only the latest', async () => {
+    const { engine, adapter } = await held();
+    await engine.loadSource('https://x/high.m3u8');
+    expect(adapter.attach).not.toHaveBeenCalled();
+    engine.play();
+    expect(adapter.attach).toHaveBeenCalledTimes(1);
+    expect(adapter.attach.mock.calls[0]![1]).toBe('https://x/high.m3u8');
+  });
+
+  it('leaves sources no adapter claims alone', async () => {
+    const { engine, adapter } = await held();
+    expect(await engine.loadSource('https://x/movie.mp4')).toBe(false);
+    engine.play();
+    expect(adapter.attach).not.toHaveBeenCalled();
+  });
+
+  it('makes no requests and asks nothing while it never started: not hidden, not counted as playing', async () => {
+    vi.useFakeTimers();
+    try {
+      const { engine, adapter } = await held({ presence: { everyMs: 1000, graceMs: 500 } });
+      const ask = vi.fn();
+      engine.on('presence:ask', ask);
+      scroll(false);
+      vi.advanceTimersByTime(60_000);
+      expect(callbacks).toHaveLength(0);           // not even watching visibility
+      expect(adapter.suspend).not.toHaveBeenCalled();
+      expect(adapter.attach).not.toHaveBeenCalled();
+      expect(ask).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

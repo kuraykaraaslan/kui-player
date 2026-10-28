@@ -89,6 +89,22 @@ test.describe('live mode', () => {
   });
 });
 
+test.describe('load on first play', () => {
+  test('requests nothing before Play, and the stream after it', async ({ page }) => {
+    const live = watch(page, /^\/live\//);
+    await page.goto('/?live=1&loadonplay=1&autohide=0');
+    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(live).toEqual([]);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Play' }).click();
+    await expect.poll(() => live.length).toBeGreaterThan(1);
+    await expect.poll(() => page.evaluate(() => !document.querySelector('video')!.paused)).toBe(true);
+    await expect(page.getByRole('button', { name: /^(LIVE|Go to live edge)$/ })).toBeVisible();
+  });
+});
+
 test.describe('stop when out of view', () => {
   test('a live player scrolled away makes no requests, and rejoins when it is back', async ({ page }) => {
     const media = watch(page, /^\/live\/s\//);
