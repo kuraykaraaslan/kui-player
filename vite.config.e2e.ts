@@ -153,12 +153,87 @@ function mediaFixtures(): Plugin {
   };
 }
 
+/**
+ * A stand-in for a live HLS origin with sessions, like a media server behind an
+ * auth-redirecting link:
+ *
+ *   /live/cam.m3u8   302 → /live/s/<id>/index.m3u8 and sets a session cookie (?ttl=ms, default 10 min)
+ *   /live/dies.m3u8  like cam.m3u8 the first time, then refuses (403 JSON) — a stream that cannot be reopened
+ *   /live/refused.m3u8, /live/gone.m3u8   403 JSON message / 404 plain text
+ *   /live/s/<id>/…   a media playlist and segments, served on the session cookie alone;
+ *                    401 JSON once the session has ended
+ *
+ * The specs count requests on the page side, so nothing here keeps statistics.
+ */
+function liveFixtures(): Plugin {
+  const sessions = new Map<string, number>();   // id → expiry
+  let opened = 0;
+  let diesOpened = 0;
+
+  const cookieId = (header: string | undefined) => /(?:^|;\s*)kui_live=([\w-]+)/.exec(header ?? '')?.[1];
+
+  return {
+    name: 'kui-e2e-live',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const [path, query = ''] = (req.url ?? '').split('?');
+        if (!path?.startsWith('/live/')) { next(); return; }
+        const json = (status: number, message: string) => {
+          res.statusCode = status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ message }));
+        };
+
+        if (path === '/live/cam.m3u8' || path === '/live/dies.m3u8') {
+          if (path === '/live/dies.m3u8') {
+            diesOpened += 1;
+            if (diesOpened > 1) { json(403, 'This month\'s camera minutes are used up.'); return; }
+          }
+          const ttl = Number(new URLSearchParams(query).get('ttl') ?? 600_000);
+          const id = `s${(opened += 1)}`;
+          sessions.set(id, Date.now() + ttl);
+          res.statusCode = 302;
+          res.setHeader('Set-Cookie', `kui_live=${id}; Path=/live; HttpOnly; SameSite=Lax`);
+          res.setHeader('Location', `/live/s/${id}/index.m3u8`);
+          res.end();
+          return;
+        }
+        if (path === '/live/_reset') { sessions.clear(); opened = 0; diesOpened = 0; res.end('ok'); return; }
+        if (path === '/live/refused.m3u8') { json(403, 'This month\'s camera minutes are used up.'); return; }
+        if (path === '/live/gone.m3u8') {
+          res.statusCode = 404;
+          res.setHeader('Content-Type', 'text/plain');
+          res.end('No such camera.');
+          return;
+        }
+
+        const match = /^\/live\/s\/([\w-]+)\/(index\.m3u8|seg\d+\.ts)$/.exec(path);
+        if (!match) { res.statusCode = 404; res.end(); return; }
+        const [, id, file] = match;
+        const expires = sessions.get(id!);
+        if (cookieId(req.headers.cookie) !== id || expires === undefined || Date.now() > expires) {
+          json(401, 'Session expired.');
+          return;
+        }
+        if (file === 'index.m3u8') {
+          const seq = Math.floor(Date.now() / 2000);
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+          res.end(`#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:${seq}\n#EXTINF:2.0,\nseg${seq}.ts\n`);
+          return;
+        }
+        res.setHeader('Content-Type', 'video/mp2t');
+        res.end(Buffer.alloc(188, 0x47));
+      });
+    },
+  };
+}
+
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   root: resolve(import.meta.dirname, 'tests/e2e/app'),
-  plugins: [react(), mediaFixtures()],
+  plugins: [react(), mediaFixtures(), liveFixtures()],
   resolve: {
     alias: {
       '@kuraykaraaslan/kui-player/react': resolve(import.meta.dirname, 'react/index.ts'),
