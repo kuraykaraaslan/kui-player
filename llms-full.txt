@@ -18,10 +18,10 @@ other than the media you point it at.
 |---|---|
 | `@kuraykaraaslan/kui-player` | `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, `SPEEDS`, `SUBTITLE_SIZES`, `SUBTITLE_SIZE_LABELS`, `AUTO_QUALITY`, `AUTO_QUALITY_VALUE`, all types |
 | `@kuraykaraaslan/kui-player/react` | `VideoPlayer`, `VideoPlayerChrome`, `VideoPlayerEngineContext`, `useVideoPlayerEngine`, `useVideoPlayerStore`, `useVideoPlayerStoreApi`, `Icon`, `IconProvider`, `PLAYER_CSS`, `injectPlayerStyles`, `usePlayerStyles` |
-| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `SKINNED_ATTR`, `defineKuiPlayer`, `KuiPlayerElement` |
+| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `SKINNED_ATTR`, `defineKuiPlayer`, `KuiPlayerElement`, `setPagePresence`, `getPagePresence`, `createPagePresenceGroup`, `mountPresencePrompt`, `createPresenceGroup`, `isPresenceGroup`, types `SkinOptions`, `SkinHandle`, `SkinEventHandlers`, `PagePresenceOptions` |
 | `@kuraykaraaslan/kui-player/locales` | `tr`, `de`, `es`, `fr`, `ar` (English is built in) |
-| `@kuraykaraaslan/kui-player/wrappers/vue` | `KuiPlayer` component for Vue 3 |
-| `@kuraykaraaslan/kui-player/wrappers/svelte` | `kuiPlayer` action for Svelte 5 |
+| `@kuraykaraaslan/kui-player/wrappers/vue` | `KuiPlayer` component for Vue 3, `PresenceGroupProvider`, `usePresenceGroup`, `createPresenceGroup`, `setPagePresence` |
+| `@kuraykaraaslan/kui-player/wrappers/svelte` | `kuiPlayer` action for Svelte 5, `providePresenceGroup`, `getPresenceGroup`, `setPresenceGroup`, `createPresenceGroup`, `setPagePresence`, `mountPresencePrompt` |
 | `@kuraykaraaslan/kui-player/styles.css` | the stylesheet, if you would rather link it than let the component inject it |
 | `dist/embed.js` (script tag) | installs `window.kuiPlayer`, auto-starts from `data-*` attributes |
 
@@ -192,12 +192,71 @@ Neither library is bundled.
     const skins = skinAll("video", { observe: true });   // .refresh() .count .stop()
 
 SkinOptions: `defaultSpeed`, `autoHideControls` (true), `enableKeyboard` (true),
-`accent`, `hideNativeControls` (true), `title`, `cast` (false).
+`accent`, `hideNativeControls` (true), `title`, `cast` (false), `locale` (a dictionary), and the
+live-stream options: `live` (LiveInput), `presence` (`{ everyMs, graceMs }` | PresenceGroup | false),
+`loadOnPlay`, `adapters` + `src` (open `src` through hls.js/dash.js adapters; the element should have no
+`src` of its own), `sources` (+ `preferAlternateInFullscreen`, `onSourceChange(index, source)`) and
+`on` (engine events by name). Without `adapters`/`sources` the page's own media pipeline is untouched.
+`mountSkin` returns `SkinHandle`: `() => void` (unmount) with `.engine` and
+`.update({ live, presence, loadOnPlay })` (in place, no remount).
 SkinAllOptions adds `observe` (true), `root`, `filter`.
 
 Script tag equivalent — `data-auto`, `data-accent`, `data-autohide`, `data-keyboard`,
-`data-observe`, `data-cast`, `data-speed` — installs `window.kuiPlayer` with
-`mount`, `unmount`, `unmountAll`, `isMounted`, `skinAll`, `version`.
+`data-observe`, `data-cast`, `data-speed`, `data-live` (bare | true | false | off | JSON),
+`data-load-on-play`, `data-presence-every-ms` + `data-presence-grace-ms` (make the page's presence
+group), `data-presence="off"` — installs `window.kuiPlayer` with
+`mount`, `unmount`, `unmountAll`, `isMounted`, `skinAll`, `version`, `define`, `setPagePresence(options | group | null)`,
+`getPagePresence()`, `createPagePresenceGroup(options)`.
+
+Page-level presence group (one timer, one prompt for every skinned video): `setPagePresence({ everyMs,
+graceMs, prompt?, locale?, injectStyles? })` makes the group and mounts the one prompt; every `mountSkin`,
+`skinAll`, `<kui-player>` and Vue/Svelte player without a `presence` of its own joins it; `presence: false`
+or `data-kui-presence="off"` on the element opts out. `createPagePresenceGroup(options)` = group + prompt, not
+the default. `mountPresencePrompt(group, { locale?, injectStyles? })` renders the prompt for a group from
+`createPresenceGroup()`; it returns the remover. Each bundle entry keeps its own page group.
+
+### Custom element `<kui-player>`
+
+Attributes: `src poster title accent autoplay muted loop speed cast`, plus `live` (bare | true | false | off |
+JSON), `presence` (`off` | JSON `{"everyMs":…,"graceMs":…}`), `presence-every-ms` + `presence-grace-ms`,
+`load-on-play`, `sources` (JSON `[{label, src}]`), `prefer-alternate-in-fullscreen`. Properties (objects):
+`adapters`, `sources`, `live`, `presence` (also a PresenceGroup), `locale`, read-only `video` and `skin`.
+`live`, `presence` and `load-on-play` change in place; any other change remounts. Events (CustomEvent,
+payload in `detail`): `kui-presence-ask`, `kui-presence-continue`, `kui-presence-timeout`, `kui-suspend`,
+`kui-resume`, `kui-live-reconnect`, `kui-live-recovered`, `kui-error`, `kui-source-change` (`{ index, source }`).
+
+## Vue 3 wrapper
+
+    import { KuiPlayer, PresenceGroupProvider, usePresenceGroup, createPresenceGroup, setPagePresence }
+      from "@kuraykaraaslan/kui-player/wrappers/vue";
+
+    <PresenceGroupProvider :every-ms="600000" :grace-ms="30000">      // or :group="markRaw(createPresenceGroup(...))"
+      <KuiPlayer :src="c.src" :adapters="adapters" live load-on-play @live-reconnect="…" @error="…" />
+    </PresenceGroupProvider>
+
+`KuiPlayer` props: `src`, `poster`, `title`, `accent`, `autoplay`, `loop`, `muted`, `cast`, `options`
+(SkinOptions), `live` (boolean | LiveOptions), `presence` (options | group | false), `loadOnPlay`, `adapters`,
+`sources`, `preferAlternateInFullscreen`, `locale`. Emits: `sourceChange(index, source)`, `presenceAsk({graceMs})`,
+`presenceContinue`, `presenceTimeout`, `suspend({reason})`, `resume({reason})`,
+`liveReconnect({attempt, reason})`, `liveRecovered`, `error(PlayerError)`. Exposes `video` and `engine`.
+With `adapters` claiming `src`, or with `sources`, the `<video>` has no `src` attribute (the skin opens it).
+`live`/`presence`/`loadOnPlay` change in place, other props remount. `PresenceGroupProvider` props: `group`,
+`everyMs`, `graceMs`, `prompt` (true), `locale`, `injectStyles` (true); throws without a group or both times.
+`usePresenceGroup()` = the nearest provider's group or null.
+
+## Svelte 5 wrapper
+
+    import { kuiPlayer, providePresenceGroup, getPresenceGroup } from "@kuraykaraaslan/kui-player/wrappers/svelte";
+
+    <script> const presence = providePresenceGroup({ everyMs: 600_000, graceMs: 30_000 }); </script>   // once, at init
+    <video use:kuiPlayer={{ presence, adapters, src, live: true, loadOnPlay: true,
+                            on: { "live:reconnect": (e) => … }, onSourceChange: (i, s) => … }}></video>
+
+The action takes SkinOptions. `live`/`presence`/`loadOnPlay` change in place, new callbacks are picked up
+without a remount, `src`/`sources`/`adapters`/`accent`/`locale` remount. `providePresenceGroup({ group?, everyMs?,
+graceMs?, prompt?, locale?, injectStyles? })` makes the group, sets it in context, mounts the one prompt on
+mount and removes it on destroy, and returns the group; `getPresenceGroup()` reads the nearest (or null);
+`setPresenceGroup(group)` sets one without a prompt. An action has no context access: pass the group in the options.
 
 ## Theming
 

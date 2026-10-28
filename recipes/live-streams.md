@@ -154,3 +154,39 @@ video keeps its position, a live stream rejoins the edge. With
 `preferAlternateInFullscreen` the second entry plays in fullscreen and the first in the card,
 until the viewer picks one by hand; the next fullscreen change applies the rule again.
 Where `sources` is given the alternates win the menu over a single master's renditions.
+
+## Vue, Svelte and skin mode
+
+The same options exist outside React, with the same behaviour: they all map to the same engine.
+Details and examples are in [wrappers](../wrappers/README.md).
+
+| | React | Vue 3 | Svelte 5 | skin mode / `<kui-player>` |
+|---|---|---|---|---|
+| live | `live` | `live` | `live` | `live` / `data-live` / `live` attribute |
+| presence | `presence` | `:presence` | `presence` | `presence`, `presence-every-ms` + `presence-grace-ms` |
+| one prompt for many | `<PresenceGroupProvider>` | `<PresenceGroupProvider>` | `providePresenceGroup()` + `getPresenceGroup()` | `setPagePresence()` / `data-presence-every-ms` + `data-presence-grace-ms` |
+| load on play | `loadOnPlay` | `load-on-play` | `loadOnPlay` | `loadOnPlay` / `data-load-on-play` / `load-on-play` |
+| alternate sources | `sources`, `onSourceChange` | `:sources`, `@source-change` | `sources`, `onSourceChange` | `sources`, `onSourceChange` / `sources` attribute, `kui-source-change` |
+| events | `engine.on` | emits (`@presence-ask`, `@live-reconnect`, `@error`, ...) | `on: { "presence:ask": ... }` | `on` / `kui-*` DOM events |
+
+```vue
+<PresenceGroupProvider :every-ms="600_000" :grace-ms="30_000">
+  <KuiPlayer v-for="c in cameras" :key="c.id" :src="c.src" :adapters="adapters" live />
+</PresenceGroupProvider>
+```
+
+```svelte
+<script lang="ts">
+  import { kuiPlayer, providePresenceGroup } from "@kuraykaraaslan/kui-player/wrappers/svelte";
+  const presence = providePresenceGroup({ everyMs: 600_000, graceMs: 30_000 });
+</script>
+{#each cameras as c (c.id)}<video use:kuiPlayer={{ presence, adapters, src: c.src, live: true }}></video>{/each}
+```
+
+```html
+<script src=".../dist/embed.js" data-auto="video.camera" data-live
+        data-presence-every-ms="600000" data-presence-grace-ms="30000"></script>
+```
+
+In skin mode and the wrappers the HLS source is opened by the skin through `adapters` (leave the
+element without a `src`); everything else about the page's own pipeline stays untouched.

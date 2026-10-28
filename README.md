@@ -88,6 +88,11 @@ skins.stop();   // every skin removed, native controls back
 import { mountSkin, skinAll } from "@kuraykaraaslan/kui-player/skin";
 ```
 
+Live streams work here too: `live`, `loadOnPlay`, `presence` and `sources` are skin options
+(`data-live`, `data-presence-every-ms` / `data-presence-grace-ms` on the script tag), and
+`kuiPlayer.setPagePresence({ everyMs, graceMs })` makes **one "Still watching?" for every
+skinned video on the page**. See the [recipe](./recipes/skin-mode.md#live-streams-and-still-watching).
+
 There is a [live demo](./skin.html), a [recipe](./recipes/skin-mode.md), and a
 [WordPress plugin](./wordpress/kui-player) that applies it site-wide.
 
@@ -532,10 +537,10 @@ engine.store.subscribe((s) => {
 |---|---|
 | `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
 | `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />`, hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`, `useTouchGestures`), `Icon`/`IconProvider`, `PLAYER_CSS` |
-| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `defineKuiPlayer` — skin mode and the custom element |
+| `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `defineKuiPlayer`, and the page-level presence group: `setPagePresence`, `getPagePresence`, `createPagePresenceGroup`, `mountPresencePrompt`, `createPresenceGroup` — skin mode and the custom element |
 | `@kuraykaraaslan/kui-player/locales` | `tr`, `de`, `es`, `fr`, `ar` |
-| `@kuraykaraaslan/kui-player/wrappers/vue` | `<KuiPlayer>` for Vue 3 |
-| `@kuraykaraaslan/kui-player/wrappers/svelte` | the `kuiPlayer` action for Svelte 5 |
+| `@kuraykaraaslan/kui-player/wrappers/vue` | `<KuiPlayer>` for Vue 3, `<PresenceGroupProvider>`, `usePresenceGroup`, `createPresenceGroup`, `setPagePresence` — [live-stream props and events](wrappers/README.md) |
+| `@kuraykaraaslan/kui-player/wrappers/svelte` | the `kuiPlayer` action for Svelte 5, `providePresenceGroup`, `getPresenceGroup`, `setPresenceGroup`, `createPresenceGroup`, `setPagePresence` |
 | `@kuraykaraaslan/kui-player/styles.css` | The player stylesheet, if you would rather link it than let the component inject it |
 | `dist/embed.js` | The single-script build: installs `window.kuiPlayer` and auto-starts from `data-*` attributes |
 
@@ -549,7 +554,7 @@ engine.store.subscribe((s) => {
 | **Seek previews** | `thumbnails` | A WebVTT storyboard, sprite sheets (`#xywh=`) included |
 | **Playlists** | `playlist` | Advances at the end with an "up next" card the viewer can cancel; `playlistCountdown={0}` skips the wait |
 | **Live streams** | `live` | Detected from the source (an HLS playlist without `EXT-X-ENDLIST`). The clock becomes a LIVE badge — red at the edge, grey behind it, click to catch up — with no seek bar (`live={{ dvr: true }}` brings back a bar over the DVR window). Reloads a session that ended (401 / 403 / 404), reconnects after network errors, stops loading while scrolled away or in a hidden tab. [Recipe](recipes/live-streams.md) |
-| **Presence check** | `presence`, `<PresenceGroupProvider>` | "Still watching?" after a stretch of playback, then stop playing and loading. One timer and one prompt for any number of players on a page. A cost guard for streams that cost something to keep running |
+| **Presence check** | `presence`, `<PresenceGroupProvider>` (React, Vue), `providePresenceGroup()` (Svelte), `setPagePresence()` (skin mode) | "Still watching?" after a stretch of playback, then stop playing and loading. One timer and one prompt for any number of players on a page. A cost guard for streams that cost something to keep running |
 | **Alternate sources** | `sources` | "Standard" / "High" in the quality menu; `preferAlternateInFullscreen` picks High on the big screen |
 | **Resume and preferences** | `persist` | **Off by default.** Volume, speed, subtitle language and size are remembered across sources; position is offered, never forced |
 | **OS media controls** | `mediaSession` | Lock screen, media keys, notification shade. On by default; no network involved |
