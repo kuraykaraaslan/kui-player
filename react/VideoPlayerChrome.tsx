@@ -389,7 +389,10 @@ export function VideoPlayerChrome({
   useEffect(() => {
     if (!showSettings) return;
     const handler = (e: MouseEvent) => {
-      if (!settingsPanelRef.current?.contains(e.target as Node)) {
+      // `composedPath`, not `target`: in skin mode the controls sit in a shadow root,
+      // where a document listener sees the host as the target and would close the
+      // panel on a click inside it, before the click lands.
+      if (!e.composedPath().includes(settingsPanelRef.current as EventTarget)) {
         setShowSettings(false); setSettingsView('main');
       }
     };
