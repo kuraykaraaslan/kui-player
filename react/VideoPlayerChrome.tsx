@@ -8,8 +8,11 @@ import { useVideoPlayerStore } from './hooks/useVideoPlayerStore.js';
 import { ControlRow } from './parts/ControlRow.js';
 import { ProgressBar } from './parts/ProgressBar.js';
 import {
-  ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay,
+  ErrorOverlay, LoadingOverlay, CenterPlayOverlay, SubtitleOverlay, PresencePausedOverlay,
 } from './parts/Overlays.js';
+import { useStore } from './hooks/useStore.js';
+import PresenceCard from './parts/PresenceCard.js';
+import type { PresenceGroup } from '../modules/videoplayer/videoplayer.presence.js';
 import { AUTO_QUALITY_VALUE } from '../modules/videoplayer/adapters/adapter.types.js';
 import { useDictionary, useFormatTime, useTranslate } from './i18n/index.js';
 import type { Chapter, StoryboardTile } from '../modules/videoplayer/videoplayer.vtt.js';
@@ -48,6 +51,12 @@ const CastController = lazy(() => import('./parts/CastController.js'));
 const GestureLayer = lazy(() => import('./parts/GestureLayer.js'));
 const VttLoader = lazy(() => import('./parts/VttLoader.js'));
 
+/** The question a player with its own presence check asks inside itself. */
+function OwnPresencePrompt({ group }: Readonly<{ group: PresenceGroup }>) {
+  const asking = useStore(group.store, (s) => s.phase === 'asking');
+  return asking ? <PresenceCard group={group} mode="player" /> : null;
+}
+
 /** Stable empties, so the fetch hook's identity checks hold. */
 const WAVE_BARS = 160;
 const MAX_DROPPED_SUBTITLE_BYTES = 5 * 1024 * 1024;
@@ -73,7 +82,7 @@ function subscribeCoarsePointer(onChange: () => void): () => void {
 const hasCoarsePointer = () => coarseQuery()?.matches ?? false;
 const hasCoarsePointerOnServer = () => false;
 import type {
-  AudioTrackOption, CastQueueItem, CastState, GestureOptions, PlayerSlots, PlayerTheme,
+  AlternateSource, AudioTrackOption, CastQueueItem, CastState, GestureOptions, PlayerSlots, PlayerTheme,
   QualityOption, SubtitleFontSize, SubtitleTrack, VideoSource,
 } from '../modules/videoplayer/videoplayer.types.js';
 
@@ -104,6 +113,11 @@ export interface VideoPlayerChromeProps {
   poster?: string;
   title?: string;
   qualities?: QualityOption[];
+  /** Several addresses for one stream; with two or more they fill the quality menu. */
+  alternateSources?: AlternateSource[];
+  /** Which of `alternateSources` is playing. */
+  alternateIndex?: number;
+  onAlternateSelect?: (index: number) => void;
   subtitles?: SubtitleTrack[];
   audioTracks?: AudioTrackOption[];
   chapters?: string | Chapter[];
@@ -159,7 +173,7 @@ export interface VideoPlayerChromeProps {
 
 export function VideoPlayerChrome({
   videoRef, children, skin = false, theme, slots, onToggleFullscreen,
-  src = '', poster, title, qualities, subtitles: subtitleProp, audioTracks, chapters, thumbnails,
+  src = '', poster, title, qualities, alternateSources, alternateIndex = 0, onAlternateSelect, subtitles: subtitleProp, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true,
   gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, audioOnly = false, waveform, onCastStateChange,
@@ -197,6 +211,10 @@ export function VideoPlayerChrome({
   const atLiveEdge        = useVideoPlayerStore(s => s.atLiveEdge);
   const dvrStart          = useVideoPlayerStore(s => s.dvrStart);
   const dvrWindow         = useVideoPlayerStore(s => s.dvrWindow);
+  const liveDvr           = useVideoPlayerStore(s => s.liveDvr);
+  const reconnecting      = useVideoPlayerStore(s => s.reconnecting);
+  const presencePaused    = useVideoPlayerStore(s => s.presencePaused);
+  const ownPresence       = useVideoPlayerStore(s => s.ownPresence);
   const airPlaySupported  = useVideoPlayerStore(s => s.airPlaySupported);
   const airPlayAvailable  = useVideoPlayerStore(s => s.airPlayAvailable);
   const airPlaying        = useVideoPlayerStore(s => s.airPlaying);
@@ -304,7 +322,14 @@ export function VideoPlayerChrome({
     if (docPipSupported) void toggleDocPip(); else void engine.togglePictureInPicture();
   }, [engine, docPipSupported, toggleDocPip]);
   useKeyboardShortcuts({ containerRef, engine, keymap, subtitleCount: subtitles?.length ?? 0, onToggleHelp: toggleHelp, onToggleStats: toggleStats, chapters: chapterList, ownerDocument: docPip.pipDocument ?? undefined, onTogglePip: handleTogglePip });
-  const announcement = usePlayerAnnouncements({ qualities, subtitles, audioTracks });
+  // Alternate addresses ("Standard" / "High") take the quality menu over from
+  // any rendition list: they are what the page chose to offer.
+  const alternates = alternateSources && alternateSources.length > 1 ? alternateSources : null;
+  const alternateQualities = useMemo<QualityOption[] | undefined>(
+    () => alternates?.map((a, i) => ({ label: a.label, value: String(i) })),
+    [alternates],
+  );
+  const announcement = usePlayerAnnouncements({ qualities: alternateQualities ?? qualities, subtitles, audioTracks });
   const touchDevice = useSyncExternalStore(subscribeCoarsePointer, hasCoarsePointer, hasCoarsePointerOnServer);
   // One floating mode at a time: the mini player stands down while the PiP window is open.
   const miniOn = miniEnabled(miniPlayer, touchDevice) && !docPip.active;
@@ -340,10 +365,10 @@ export function VideoPlayerChrome({
 
   // An adapter (hls.js / dash.js) publishes real renditions; when it does they
   // replace the consumer's static `qualities` list and gain an "Auto" entry.
-  const adaptive = adaptiveQualities.length > 0;
-  const qualityOptions = adaptive
+  const adaptive = !alternates && adaptiveQualities.length > 0;
+  const qualityOptions = alternateQualities ?? (adaptive
     ? [{ label: t('auto'), value: AUTO_QUALITY_VALUE }, ...adaptiveQualities]
-    : qualities;
+    : qualities);
   const effectiveAudioTracks = adaptiveAudioTracks.length > 1 ? adaptiveAudioTracks : audioTracks;
 
   // Rotating a phone into landscape is the clearest "make this big" signal there is.
@@ -409,6 +434,13 @@ export function VideoPlayerChrome({
   // engine can restore it on the next `loadedmetadata` — whichever way the swap
   // happens (our `switchSource`, or a `src` prop change driven by the callback).
   const applyQuality     = useCallback((v: string) => {
+    if (alternates) {
+      // A different address: the page swaps the source and the engine carries the state over.
+      onAlternateSelect?.(Number.parseInt(v, 10));
+      onQualityChange?.(v);
+      closeSettings();
+      return;
+    }
     if (adaptive) {
       // The adapter switches renditions in place — no source swap, no reload.
       engine.selectQuality(v);
@@ -420,7 +452,7 @@ export function VideoPlayerChrome({
     setSelectedQuality(v);
     onQualityChange?.(v);
     closeSettings();
-  }, [adaptive, engine, setSelectedQuality, onQualityChange, closeSettings]);
+  }, [alternates, onAlternateSelect, adaptive, engine, setSelectedQuality, onQualityChange, closeSettings]);
   const applySecondary   = useCallback((i: number | null) => {
     setSecondarySubtitle(i);
     if (i === null) setSecondaryTranslation(null);   // "Off" switches the second line off, whichever kind it was
@@ -537,6 +569,8 @@ export function VideoPlayerChrome({
   const loopSpan = loopRange && duration > 0
     ? adSpans([{ id: 'loop', start: loopRange.a, end: loopRange.b, duration: null, source: 'cue-out' }], 0, duration)[0] ?? null
     : null;
+  // A live stream shows a seek bar only when asked to (`live.dvr`).
+  const seekable = !isLive || liveDvr;
   const hoverTime = seekHoverRatio !== null ? formatTime(seekHoverRatio * duration) : null;
 
   const pipEnabled = documentPictureInPicture && !skin;
@@ -623,8 +657,10 @@ export function VideoPlayerChrome({
       </div>
 
       {error && <ErrorOverlay error={error} retrying={retrying} onRetry={() => engine.retry()} />}
-      {!error && loading && <LoadingOverlay />}
-      {!error && !loading && <CenterPlayOverlay playing={playing} />}
+      {!error && loading && !presencePaused && <LoadingOverlay label={reconnecting ? t('reconnecting') : undefined} />}
+      {!error && !loading && !presencePaused && <CenterPlayOverlay playing={playing} />}
+      {!error && presencePaused && <PresencePausedOverlay onPlay={() => engine.play()} />}
+      {ownPresence && <OwnPresencePrompt group={ownPresence} />}
       {touchDevice && gestures !== false && (
         <Suspense fallback={null}>
           <GestureLayer
@@ -698,7 +734,7 @@ export function VideoPlayerChrome({
               onSeekTo={(time) => { engine.seek(time); closeSettings(); }}
               subtitles={subtitles}
               audioTracks={effectiveAudioTracks}
-              selectedQuality={selectedQuality}
+              selectedQuality={alternates ? String(alternateIndex) : selectedQuality}
               activeQualityLabel={activeQualityLabel}
               selectedSubtitle={selectedSubtitle}
               secondarySubtitle={secondarySubtitle}
@@ -736,7 +772,7 @@ export function VideoPlayerChrome({
         <div className="kui-controls">
           {slots?.aboveControls}
           {title && <p className="kui-title">{title}</p>}
-          <ProgressBar
+          {seekable && <ProgressBar
             ref={progressRef}
             progress={progress}
             buffered={buffered}
@@ -765,7 +801,7 @@ export function VideoPlayerChrome({
                 ? t('live')
                 : t('behindLive', { time: formatTime(Math.max(0, dvrWindow - (currentTime - dvrStart))) }))
               : t('timeOf', { current: formatTime(currentTime), total: formatTime(duration) })}
-          />
+          />}
           <ControlRow
             slotStart={slots?.controlsStart}
             slotEnd={slots?.controlsEnd}
@@ -785,6 +821,7 @@ export function VideoPlayerChrome({
             isAirPlaying={airPlaying}
             onAirPlay={() => engine.showAirPlayPicker()}
             isLive={isLive}
+            seekable={seekable}
             atLiveEdge={atLiveEdge}
             liveLatency={liveLatency}
             onGoLive={() => engine.seekToLive()}

@@ -22,6 +22,8 @@ import { readUrlTime } from '../modules/videoplayer/videoplayer.share.js';
 import type { ShareOptions } from './parts/ShareController.js';
 import type { PersistOptions } from '../modules/videoplayer/videoplayer.persist.js';
 import type { PlayerSlots } from '../modules/videoplayer/videoplayer.types.js';
+import { usePresenceGroup } from './PresenceGroupContext.js';
+import { isPresenceGroup, type PresenceGroup } from '../modules/videoplayer/videoplayer.presence.js';
 
 // Optional behaviour, each in its own chunk: a player that does not use them
 // never downloads them.
@@ -152,7 +154,34 @@ export function VideoPlayer(props: VideoPlayerComponentProps) {
     adapters: props.adapters,
     preferNativeIosFullscreen: props.preferNativeIosFullscreen,
     seekLockInAds: props.seekLockInAds,
+    // Known before the first source is attached, which happens in a child effect.
+    live: props.live,
   }));
+
+  // Live options after the first render.
+  const liveKey = JSON.stringify(props.live ?? null);
+  useEffect(() => { engine.setLive(props.live); },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [engine, liveKey]);
+
+  // Presence: a group from the nearest <PresenceGroupProvider> (or the prop)
+  // wins over this player's own options, so a wall of players asks once.
+  const contextGroup = usePresenceGroup();
+  const presenceProp = props.presence;
+  const ownEveryMs = presenceProp && !isPresenceGroup(presenceProp) ? presenceProp.everyMs : undefined;
+  const ownGraceMs = presenceProp && !isPresenceGroup(presenceProp) ? presenceProp.graceMs : undefined;
+  const presenceTarget = useMemo<PresenceGroup | { everyMs: number; graceMs: number } | undefined>(() => {
+    if (presenceProp === false) return undefined;
+    if (isPresenceGroup(presenceProp)) return presenceProp;
+    if (contextGroup) return contextGroup;
+    return ownEveryMs !== undefined && ownGraceMs !== undefined
+      ? { everyMs: ownEveryMs, graceMs: ownGraceMs }
+      : undefined;
+  }, [presenceProp, contextGroup, ownEveryMs, ownGraceMs]);
+  useEffect(() => {
+    engine.setPresence(presenceTarget);
+    return () => engine.setPresence(undefined);
+  }, [engine, presenceTarget]);
 
   useEffect(() => {
     engine.updateProps({
@@ -179,7 +208,8 @@ function VideoPlayerInner({
   src, poster, title, autoPlay = false, loop = false, startMuted = false,
   playsInline = true, qualities, subtitles, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange,
-  adapters, enableCast = false, castQueue, castReceiverAppId,
+  adapters, sources: alternateSources, preferAlternateInFullscreen = false, onSourceChange,
+  enableCast = false, castQueue, castReceiverAppId,
   enablePictureInPicture = true, gestures = true,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
   mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, offline, learning, audioDescription, signLanguage, watermark, theme, slots,
@@ -198,7 +228,14 @@ function VideoPlayerInner({
     onPlaylistIndexChange?.(next);
   }, [onPlaylistIndexChange]);
 
-  const effectiveSrc = item?.src ?? src ?? '';
+  // Alternate addresses ("Standard" / "High"): the viewer picks one from the quality
+  // menu, or the fullscreen rule does; the first is the default.
+  const alternates = alternateSources && alternateSources.length > 0 ? alternateSources : null;
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const activeIndex = alternates ? Math.min(sourceIndex, alternates.length - 1) : 0;
+  const alternateSrc = alternates?.[activeIndex]?.src;
+
+  const effectiveSrc = item?.src ?? alternateSrc ?? src ?? '';
   const effectiveTitle = item?.title ?? title;
   const effectivePoster = item?.poster ?? poster;
   const effectiveSubtitles = item?.subtitles ?? subtitles;
@@ -208,6 +245,27 @@ function VideoPlayerInner({
   const urlTime = shareOptions && typeof window !== 'undefined'
     ? readUrlTime(window.location.href, shareOptions.param) : null;
   const persistOptions = persist === true ? EMPTY_PERSIST : persist === false ? null : persist;
+
+  const selectAlternate = useCallback((next: number) => {
+    const list = alternates;
+    if (!list || next === activeIndex || !list[next]) return;
+    // Position and play state travel with the viewer (a live stream rejoins the edge).
+    engine.captureRestorePoint();
+    setSourceIndex(next);
+    onSourceChange?.(next, list[next]);
+  }, [alternates, activeIndex, engine, onSourceChange]);
+
+  // Entering or leaving fullscreen moves between the first and second address.
+  // Only the change does, so a viewer's own pick stays until the next toggle.
+  const fullscreenRule = useRef({ preferAlternateInFullscreen, alternates, selectAlternate });
+  useEffect(() => { fullscreenRule.current = { preferAlternateInFullscreen, alternates, selectAlternate }; });
+  useEffect(() => engine.store.subscribe((now, before) => {
+    if (now.isFullscreen === before.isFullscreen) return;
+    const rule = fullscreenRule.current;
+    if (rule.preferAlternateInFullscreen && rule.alternates && rule.alternates.length > 1) {
+      rule.selectAlternate(now.isFullscreen ? 1 : 0);
+    }
+  }), [engine]);
 
   // Attach video element to engine on mount
   useEffect(() => {
@@ -276,6 +334,9 @@ function VideoPlayerInner({
       poster={effectivePoster}
       title={effectiveTitle}
       qualities={qualities}
+      alternateSources={alternates ?? undefined}
+      alternateIndex={activeIndex}
+      onAlternateSelect={selectAlternate}
       subtitles={effectiveSubtitles}
       audioTracks={audioTracks}
       chapters={effectiveChapters}

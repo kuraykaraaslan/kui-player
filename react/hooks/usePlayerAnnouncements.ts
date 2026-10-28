@@ -40,6 +40,11 @@ export function usePlayerAnnouncements({ qualities, subtitles, audioTracks }: Op
         out.push(say('state.error', { message: state.error.message }));
       } else if (!state.error && previous.error) out.push(say('state.recovered'));
 
+      if (state.reconnecting !== previous.reconnecting) {
+        out.push(say(state.reconnecting ? 'state.reconnecting' : 'state.recovered'));
+      }
+      if (state.presencePaused && !previous.presencePaused) out.push(say('state.presencePaused'));
+
       if (state.playing !== previous.playing) out.push(say(state.playing ? 'state.playing' : 'state.paused'));
       if (state.muted !== previous.muted) out.push(say(state.muted ? 'state.muted' : 'state.unmuted'));
       else if (Math.abs(state.volume - previous.volume) >= 0.05 && !state.muted) {

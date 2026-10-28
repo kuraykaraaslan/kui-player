@@ -164,6 +164,15 @@ export type Dictionary = {
   linkCopyFailed: string;
   playingNext: string;
   cancel: string;
+  presenceTitle: string;
+  presenceCountdown: string;
+  presenceContinue: string;
+  presencePaused: string;
+  reconnecting: string;
+  'error.LIVE_REFUSED': string;
+  'error.LIVE_UNAVAILABLE': string;
+  'state.reconnecting': string;
+  'state.presencePaused': string;
 
   /** Error text, keyed by `PlayerError.name`. */
   'error.MEDIA_ERR_ABORTED': string;
@@ -355,6 +364,15 @@ export const en: Dictionary = {
   linkCopyFailed: 'Could not copy the link',
   playingNext: 'Next in {seconds}s: {title}',
   cancel: 'Cancel',
+  presenceTitle: "Still watching?",
+  presenceCountdown: "Playback stops in {seconds}s to save data.",
+  presenceContinue: "Continue",
+  presencePaused: "Paused to save data",
+  reconnecting: "Reconnecting…",
+  'error.LIVE_REFUSED': "The live stream refused the connection.",
+  'error.LIVE_UNAVAILABLE': "The live stream is not reachable right now.",
+  'state.reconnecting': "Reconnecting to the live stream",
+  'state.presencePaused': "Paused to save data",
 
   'error.MEDIA_ERR_ABORTED': 'Playback was aborted before the video could load.',
   'error.MEDIA_ERR_NETWORK': 'A network error interrupted the video download.',

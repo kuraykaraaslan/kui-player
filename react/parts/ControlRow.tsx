@@ -27,6 +27,8 @@ type ControlRowProps = {
   isAirPlaying: boolean;
   onAirPlay: () => void;
   isLive: boolean;
+  /** `false` for a live stream without a DVR window: nothing to skip back or forward in. */
+  seekable?: boolean;
   atLiveEdge: boolean;
   /** Seconds behind the live edge; `null` when unknown. */
   liveLatency: number | null;
@@ -44,7 +46,7 @@ export function ControlRow({
   slotStart, slotEnd,
   playing, muted, volume, currentTime, duration, isFullscreen, showSettings,
   enableCast, castState, showPip, isPip, onTogglePip,
-  showAirPlay, isAirPlaying, onAirPlay, isLive, atLiveEdge, liveLatency, onGoLive,
+  showAirPlay, isAirPlaying, onAirPlay, isLive, seekable = true, atLiveEdge, liveLatency, onGoLive,
   onPlay, onSeekBy, onToggleMute, onVolumeChange,
   onToggleSettings, onToggleCast, onToggleFullscreen,
 }: ControlRowProps) {
@@ -56,15 +58,19 @@ export function ControlRow({
   return (
     <div className="kui-row">
       {slotStart && <span className="kui-slot kui-slot--controls-start">{slotStart}</span>}
-      <CtrlBtn onClick={() => onSeekBy(-10)} aria-label={t('rewind', { seconds: 10 })}>
-        <Icon name="replay" />
-      </CtrlBtn>
+      {seekable && (
+        <CtrlBtn onClick={() => onSeekBy(-10)} aria-label={t('rewind', { seconds: 10 })}>
+          <Icon name="replay" />
+        </CtrlBtn>
+      )}
       <CtrlBtn onClick={onPlay} aria-label={playing ? t('pause') : t('play')} primary>
         <Icon name={playing ? 'pause' : 'play'} />
       </CtrlBtn>
-      <CtrlBtn onClick={() => onSeekBy(10)} aria-label={t('forward', { seconds: 10 })}>
-        <Icon name="forward" />
-      </CtrlBtn>
+      {seekable && (
+        <CtrlBtn onClick={() => onSeekBy(10)} aria-label={t('forward', { seconds: 10 })}>
+          <Icon name="forward" />
+        </CtrlBtn>
+      )}
 
       <div
         className="kui-volume"
@@ -91,7 +97,7 @@ export function ControlRow({
         <button
           type="button"
           onClick={onGoLive}
-          className={cn('kui-live', atLiveEdge && 'is-edge')}
+          className={cn('kui-live', atLiveEdge && 'is-edge', !seekable && 'kui-live--solo')}
           aria-label={atLiveEdge ? t('live') : t('goLive')}
           disabled={atLiveEdge}
           title={liveLatency !== null && liveLatency >= 1 ? t('behindLive', { time: formatTime(liveLatency) }) : undefined}
@@ -107,7 +113,7 @@ export function ControlRow({
           {formatTime(currentTime)}<span className="kui-time-sep">/</span>{formatTime(duration)}
         </span>
       )}
-      {isLive && <span className="kui-time kui-time--live">{formatTime(currentTime)}</span>}
+      {isLive && seekable && <span className="kui-time kui-time--live">{formatTime(currentTime)}</span>}
 
       <CtrlBtn
         onClick={onToggleSettings}

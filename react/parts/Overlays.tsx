@@ -9,10 +9,28 @@ import type {
   PlayerError, SubtitleEdge, SubtitleFont, SubtitleFontSize,
 } from '../../modules/videoplayer/videoplayer.types.js';
 
-export function LoadingOverlay() {
+export function LoadingOverlay({ label }: { label?: string }) {
   return (
     <div className="kui-overlay kui-overlay--loading">
       <Icon name="spinner" className="kui-spinner kui-spin" />
+      {label && <p className="kui-loading-label">{label}</p>}
+    </div>
+  );
+}
+
+/**
+ * Shown after the presence check stopped this player: nothing is loading, and
+ * one press of Play picks the stream up again.
+ */
+export function PresencePausedOverlay({ onPlay }: { onPlay: () => void }) {
+  const t = useTranslate();
+  return (
+    <div className="kui-overlay kui-overlay--paused" role="status">
+      <p className="kui-error-message">{t('presencePaused')}</p>
+      <button type="button" onClick={onPlay} className="kui-btn-outline">
+        <Icon name="play" />
+        {t('play')}
+      </button>
     </div>
   );
 }
@@ -38,6 +56,7 @@ export function ErrorOverlay({
     <div className="kui-overlay kui-overlay--error" role="alert" aria-live="assertive">
       <Icon name="alert" className="kui-error-icon" />
       <p className="kui-error-message">{message}</p>
+      {error.detail && <p className="kui-error-detail">{error.detail}</p>}
       <p className="kui-error-code">{error.name}</p>
       <button type="button" onClick={onRetry} disabled={retrying} className="kui-btn-outline">
         <Icon name="retry" className={cn(retrying && 'kui-spin')} />

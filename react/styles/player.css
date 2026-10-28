@@ -129,7 +129,19 @@
   pointer-events: none;
 }
 
-.kui-overlay--loading { background: rgba(0, 0, 0, 0.2); }
+.kui-overlay--loading { flex-direction: column; gap: 0.5rem; background: rgba(0, 0, 0, 0.2); }
+.kui-loading-label { margin: 0; font-size: 0.8125rem; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+
+/* The presence check stopped this player; Play picks the stream up again. */
+.kui-overlay--paused {
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1.5rem;
+  text-align: center;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
 
 .kui-overlay--cast {
   flex-direction: column;
@@ -201,6 +213,7 @@
 
 .kui-error-icon { font-size: 2.25rem; color: var(--_kui-text); }
 .kui-error-message { margin: 0; font-size: 0.875rem; font-weight: 500; }
+.kui-error-detail { margin: 0; max-width: 28rem; font-size: 0.8125rem; color: var(--_kui-text-muted); }
 .kui-error-code { margin: 0; font-size: 0.6875rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--_kui-text-faint); }
 
 .kui-btn-outline {
@@ -411,7 +424,9 @@
   font-variant-numeric: tabular-nums;
 }
 .kui-time-sep { margin: 0 0.125rem; color: var(--_kui-text-faint); }
-.kui-time--live { flex: 0 0 auto; padding-left: 0.5rem; }
+.kui-time--live { flex: 0 0 auto; padding-left: 0.5rem; margin-inline-end: auto; }
+/* A live stream without a seek bar: the badge holds the left, the menus the right. */
+.kui-live--solo { margin-inline-end: auto; }
 
 .kui-live {
   display: inline-flex;
@@ -1055,3 +1070,50 @@
 .kui-note { display: flex; align-items: center; gap: 0.25rem; }
 .kui-note .kui-search-hit { flex: 1; }
 .kui-note-input { flex: 1; min-width: 0; }
+
+/* ── presence check ("Still watching?") ──────────────────────────────────── */
+
+/* The page-level prompt lives outside every player, so unlike the rest of this
+   file it cannot be scoped under `.kui-player`: it reads the public `--kui-*`
+   properties directly, with the same fallbacks. */
+.kui-presence {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kui-font, system-ui, -apple-system, "Segoe UI", sans-serif);
+  font-size: var(--kui-font-size, 0.875rem);
+  line-height: 1.4;
+  color: var(--kui-text, #ffffff);
+}
+.kui-presence *, .kui-presence *::before, .kui-presence *::after { box-sizing: border-box; }
+.kui-presence--page { position: fixed; inset: 0; z-index: 2147483000; background: rgba(0, 0, 0, 0.6); }
+.kui-presence--player { position: absolute; inset: 0; z-index: 35; background: rgba(0, 0, 0, 0.78); }
+.kui-presence-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  border: 1px solid var(--kui-border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--kui-radius, 12px);
+  background: var(--kui-surface-raised, #16181d);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+.kui-presence--player .kui-presence-card { padding: 0 1rem; border: 0; background: transparent; box-shadow: none; }
+.kui-presence-title { margin: 0; font-size: 1.125rem; font-weight: 600; }
+.kui-presence-text { margin: 0; color: var(--kui-text-muted, rgba(255, 255, 255, 0.7)); font-variant-numeric: tabular-nums; }
+.kui-presence-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border: 0;
+  border-radius: var(--kui-radius-sm, 6px);
+  background: var(--kui-accent, #2563eb);
+  color: var(--kui-accent-contrast, #ffffff);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kui-presence-btn:hover { filter: brightness(1.1); }
+.kui-presence-btn:focus-visible { outline: 2px solid var(--kui-focus, #ffffff); outline-offset: 2px; }

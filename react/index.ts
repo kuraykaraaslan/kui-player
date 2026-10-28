@@ -6,6 +6,14 @@ export { Icon, IconProvider } from './icons/index.js';
 export type { IconName, IconOverrides } from './icons/index.js';
 export { PLAYER_CSS, injectPlayerStyles, usePlayerStyles } from './styles/index.js';
 export { VideoPlayerChrome } from './VideoPlayerChrome.js';
+export { PresenceGroupProvider, PresencePrompt } from './presence.js';
+export type { PresenceGroupProviderProps, PresencePromptProps } from './presence.js';
+export { usePresenceGroup } from './PresenceGroupContext.js';
+export { createPresenceGroup } from '../modules/videoplayer/videoplayer.presence.js';
+export type {
+  PresenceGroup, PresenceOptions, PresenceState, PresencePhase, PresenceMember, PresenceEvent,
+} from '../modules/videoplayer/videoplayer.presence.js';
+export type { LiveOptions, LiveReauthOptions } from '../modules/videoplayer/videoplayer.live.js';
 export type { VideoPlayerChromeProps } from './VideoPlayerChrome.js';
 export { VideoPlayerEngineContext } from './VideoPlayerEngineContext.js';
 export { useVideoPlayerEngine } from './hooks/useVideoPlayerEngine.js';
@@ -20,6 +28,7 @@ export type {
   VideoPlayerProps,
   VideoSource,
   QualityOption,
+  AlternateSource,
   SubtitleTrack,
   AudioTrackOption,
   SubtitleFontSize,
