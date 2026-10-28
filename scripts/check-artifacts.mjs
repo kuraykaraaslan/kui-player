@@ -83,6 +83,9 @@ check('the core and React entries carry no ad code',
 const skin = await load('dist/skin/index.js');
 check('skin exports mountSkin and skinAll', typeof skin.mountSkin === 'function' && typeof skin.skinAll === 'function');
 check('skin exports the custom element', typeof skin.defineKuiPlayer === 'function');
+check('skin exports the page-level presence group',
+  ['setPagePresence', 'getPagePresence', 'createPagePresenceGroup', 'mountPresencePrompt', 'createPresenceGroup']
+    .every((name) => typeof skin[name] === 'function'));
 
 const locales = await load('dist/locales/index.js');
 for (const tag of ['tr', 'de', 'es', 'fr', 'ar']) {
@@ -90,8 +93,16 @@ for (const tag of ['tr', 'de', 'es', 'fr', 'ar']) {
 }
 check('the Arabic locale is right-to-left', locales.ar?.dir === 'rtl');
 
-check('vue wrapper loads', typeof (await load('dist/wrappers/vue.js')).KuiPlayer === 'object');
-check('svelte wrapper loads', typeof (await load('dist/wrappers/svelte.js')).kuiPlayer === 'function');
+const vue = await load('dist/wrappers/vue.js');
+check('vue wrapper loads', typeof vue.KuiPlayer === 'object');
+check('vue wrapper exports the presence group provider',
+  typeof vue.PresenceGroupProvider === 'object' && typeof vue.usePresenceGroup === 'function'
+  && typeof vue.createPresenceGroup === 'function' && typeof vue.setPagePresence === 'function');
+const svelte = await load('dist/wrappers/svelte.js');
+check('svelte wrapper loads', typeof svelte.kuiPlayer === 'function');
+check('svelte wrapper exports the presence group helpers',
+  ['providePresenceGroup', 'getPresenceGroup', 'setPresenceGroup', 'createPresenceGroup', 'setPagePresence', 'mountPresencePrompt']
+    .every((name) => typeof svelte[name] === 'function'));
 
 // ── the single-script embed, in a real document ──────────────────────────────
 const dom = new JSDOM('<!doctype html><html><body><video id="v"></video></body></html>', {
@@ -102,7 +113,8 @@ dom.window.eval(readFileSync(resolve(root, 'dist/embed.js'), 'utf8'));
 const api = dom.window.kuiPlayer;
 check('embed installs window.kuiPlayer', typeof api === 'object');
 check('embed reports the published version', api?.version === pkg.version, `${api?.version} vs ${pkg.version}`);
-check('embed exposes its API', ['mount', 'unmount', 'unmountAll', 'isMounted', 'skinAll', 'define']
+check('embed exposes its API', ['mount', 'unmount', 'unmountAll', 'isMounted', 'skinAll', 'define',
+  'setPagePresence', 'getPagePresence', 'createPagePresenceGroup']
   .every((name) => typeof api?.[name] === 'function'));
 check('embed keeps the pre-0.1.0 global as an alias', dom.window.__tepegozVideoPlayer === api);
 

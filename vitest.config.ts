@@ -1,20 +1,39 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { compile } from 'svelte/compiler';
 import { minifiedCssRaw } from './vite.plugin.css-raw.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'path';
 
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8')) as { version: string };
 
+/**
+ * The Svelte wrapper's context helpers only work inside a component, so its
+ * tests compile a few tiny fixture components (`tests/component/fixtures/*.svelte`).
+ * Node would load Svelte's server build; the alias below picks the client one,
+ * the same code a browser bundle gets.
+ */
+function svelteFixtures(): Plugin {
+  return {
+    name: 'kui-svelte-fixtures',
+    transform(code, id) {
+      if (!id.endsWith('.svelte')) return null;
+      const { js } = compile(code, { filename: id, generate: 'client', dev: false });
+      return { code: js.code, map: js.map as never };
+    },
+  };
+}
+
 export default defineConfig({
   define: { __KUI_VERSION__: JSON.stringify(pkg.version) },
   // Same stylesheet transform the shipped bundles get, so tests see what users do.
-  plugins: [react(), minifiedCssRaw()],
+  plugins: [react(), minifiedCssRaw(), svelteFixtures()],
   resolve: {
-    alias: {
-      '@kuraykaraaslan/kui-player/react': resolve(import.meta.dirname, 'react/index.ts'),
-      '@': resolve(import.meta.dirname, '.'),
-    },
+    alias: [
+      { find: /^svelte$/, replacement: resolve(import.meta.dirname, 'node_modules/svelte/src/index-client.js') },
+      { find: '@kuraykaraaslan/kui-player/react', replacement: resolve(import.meta.dirname, 'react/index.ts') },
+      { find: '@', replacement: resolve(import.meta.dirname, '.') },
+    ],
   },
   test: {
     environment: 'jsdom',
