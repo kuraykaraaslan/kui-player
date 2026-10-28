@@ -5,6 +5,7 @@ import type {
 } from './videoplayer.types.js';
 import type { AdBreak } from './videoplayer.adbreaks.js';
 import type { LoopRange } from './videoplayer.loop.js';
+import type { PresenceGroup } from './videoplayer.presence.js';
 
 export type OfflineStatus = {
   /** `unavailable`: not enabled, no storage, or a stream that cannot be saved as one file. */
@@ -40,6 +41,14 @@ export type VideoPlayerState = {
   /** Start of the seekable window, and its length — the DVR buffer. */
   dvrStart: number;
   dvrWindow: number;
+  /** Whether a live stream offers a seek bar over its DVR window (`live.dvr`). */
+  liveDvr: boolean;
+  /** A live source was lost and is being opened again. */
+  reconnecting: boolean;
+  /** Loading was stopped because nobody answered the presence check. */
+  presencePaused: boolean;
+  /** The group this player created for its own `presence` option; `null` inside a shared group. */
+  ownPresence: PresenceGroup | null;
   /** Whether the element can offer AirPlay at all, and whether a target exists. */
   airPlaySupported: boolean;
   airPlayAvailable: boolean;
@@ -116,6 +125,10 @@ export type VideoPlayerActions = {
   setIsLive:             (v: boolean) => void;
   setAtLiveEdge:         (v: boolean) => void;
   setDvrWindow:          (start: number, window: number) => void;
+  setLiveDvr:            (v: boolean) => void;
+  setReconnecting:       (v: boolean) => void;
+  setPresencePaused:     (v: boolean) => void;
+  setOwnPresence:        (v: PresenceGroup | null) => void;
   setAirPlaySupported:   (v: boolean) => void;
   setAirPlayAvailable:   (v: boolean) => void;
   setAirPlaying:         (v: boolean) => void;
@@ -179,6 +192,10 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     atLiveEdge: false,
     dvrStart: 0,
     dvrWindow: 0,
+    liveDvr: false,
+    reconnecting: false,
+    presencePaused: false,
+    ownPresence: null,
     airPlaySupported: false,
     airPlayAvailable: false,
     airPlaying: false,
@@ -232,6 +249,10 @@ export function createVideoPlayerStore(opts: InitOpts = {}): VideoPlayerStoreApi
     setIsLive:             (v) => set({ isLive: v }),
     setAtLiveEdge:         (v) => set({ atLiveEdge: v }),
     setDvrWindow:          (start, window) => set({ dvrStart: start, dvrWindow: window }),
+    setLiveDvr:            (v) => set({ liveDvr: v }),
+    setReconnecting:       (v) => set({ reconnecting: v }),
+    setPresencePaused:     (v) => set({ presencePaused: v }),
+    setOwnPresence:        (v) => set({ ownPresence: v }),
     setAirPlaySupported:   (v) => set({ airPlaySupported: v }),
     setAirPlayAvailable:   (v) => set({ airPlayAvailable: v }),
     setAirPlaying:         (v) => set({ airPlaying: v }),

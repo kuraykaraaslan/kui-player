@@ -16,6 +16,13 @@ export { nextWatermarkSlot } from './videoplayer/videoplayer.watermark.js';
 export type { WatermarkOptions } from './videoplayer/videoplayer.watermark.js';
 export type { QoeSummary, Rendition } from './videoplayer/videoplayer.qoe.js';
 export type { Diagnostics } from './videoplayer/videoplayer.diagnostics.js';
+export { createPresenceGroup, isPresenceGroup } from './videoplayer/videoplayer.presence.js';
+export type {
+  PresenceGroup, PresenceOptions, PresenceState, PresencePhase, PresenceMember, PresenceEvent,
+} from './videoplayer/videoplayer.presence.js';
+export { resolveLive, DEFAULT_REAUTH } from './videoplayer/videoplayer.live.js';
+export type { LiveOptions, LiveReauthOptions, LiveInput, ResolvedLive } from './videoplayer/videoplayer.live.js';
+export type { SuspendReason } from './videoplayer/videoplayer.suspend.js';
 export { chapterKind, chapterIndexAt, skippableAt, creditsAt, chapterJumpTarget } from './videoplayer/videoplayer.chapters.js';
 export type { ChapterKind } from './videoplayer/videoplayer.chapters.js';
 export type { MiniOptions, MiniCorner } from './videoplayer/videoplayer.mini.js';
@@ -56,6 +63,7 @@ export type {
   VideoPlayerProps,
   VideoSource,
   QualityOption,
+  AlternateSource,
   SubtitleTrack,
   AudioTrackOption,
   SubtitleFontSize,

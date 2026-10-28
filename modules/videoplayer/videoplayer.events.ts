@@ -39,6 +39,20 @@ export type PlayerEventMap = {
    */
   ready: { startupMs: number; timeToFirstFrameMs: number };
   sourcechange: { src: string };
+  /** The "Still watching?" question just appeared; `graceMs` is how long the viewer has. */
+  'presence:ask': { graceMs: number };
+  /** The viewer answered (or pressed Play). */
+  'presence:continue': Record<string, never>;
+  /** Nobody answered: playback and loading stopped for this player. */
+  'presence:timeout': Record<string, never>;
+  /** Loading stopped (`hidden`: scrolled away / tab hidden; `presence`: no answer). */
+  suspend: { reason: 'hidden' | 'presence' };
+  /** Loading started again, at the live edge for a live stream. */
+  resume: { reason: 'hidden' | 'presence' };
+  /** A live source was refused or lost and is being opened again. */
+  'live:reconnect': { attempt: number; reason: 'auth' | 'network' };
+  /** The live source is flowing again after a reconnect. */
+  'live:recovered': Record<string, never>;
 };
 
 export type PlayerEventName = keyof PlayerEventMap;

@@ -1,6 +1,7 @@
 import type { AudioTrackOption, PlayerError, QualityOption } from '../videoplayer.types.js';
 import type { AdBreak } from '../videoplayer.adbreaks.js';
 import type { Rendition } from '../videoplayer.qoe.js';
+import type { ResolvedLive } from '../videoplayer.live.js';
 
 /**
  * What an adapter may push back into the player while it is attached — level
@@ -20,6 +21,22 @@ export interface MediaAdapterHost {
   updateAudioTracks(tracks: AudioTrackOption[], activeIndex: number): void;
   /** Surface a fatal streaming error through the player's normal error UI. */
   reportError(error: PlayerError): void;
+  /**
+   * The live options in force (the page's `live` prop, resolved). Adapters read
+   * it for back-off, credentials and small-tile defaults.
+   */
+  readonly live?: ResolvedLive;
+  /**
+   * The stream has no end (`live`) or has one. `edgeToleranceS` is how far
+   * behind the edge still counts as "live" for this stream — a few segments for
+   * HLS, which plays that far behind on purpose.
+   */
+  updateLive?(live: boolean, edgeToleranceS?: number): void;
+  /**
+   * The adapter lost the stream and is opening it again (`reconnecting`), or
+   * data is flowing once more. Not an error: the player shows its spinner.
+   */
+  updateRecovery?(state: { reconnecting: boolean; attempt?: number; reason?: 'auth' | 'network' }): void;
 }
 
 /**
@@ -48,6 +65,16 @@ export interface MediaAdapter {
   setAudioTrack?(index: number): void;
   /** The streaming engine's own throughput estimate, bits/s, when it keeps one. */
   getBandwidth?(): number | undefined;
+  /**
+   * Stop loading media (no playlist or segment requests) without tearing the
+   * session down. Used when a live player leaves the viewport or its viewer
+   * stops answering the presence check.
+   */
+  suspend?(): void;
+  /** Start loading again, at the live edge for a live stream. */
+  resume?(): void;
+  /** Where "live" is, in media time, when the engine keeps its own idea of it. */
+  getLiveEdge?(): number | null;
   /** Release the streaming engine and any listeners. Must be idempotent. */
   detach(): void;
 }

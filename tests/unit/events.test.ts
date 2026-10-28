@@ -3,10 +3,10 @@ import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine'
 import { QuartileTracker } from '../../modules/videoplayer/videoplayer.events';
 import { emit, mediaTasks } from '../setup';
 
-function setup() {
+function setup(options: ConstructorParameters<typeof VideoPlayerEngine>[0] = {}) {
   const video = document.createElement('video');
   document.body.appendChild(video);
-  const engine = new VideoPlayerEngine();
+  const engine = new VideoPlayerEngine(options);
   engine.attach(video);
   return { engine, video };
 }
@@ -174,7 +174,8 @@ describe('engine events', () => {
 
 describe('live and DVR', () => {
   function liveVideo(start: number, end: number) {
-    const { engine, video } = setup();
+    // A seek bar over the DVR window is opt-in (`live: { dvr: true }`).
+    const { engine, video } = setup({ live: { dvr: true } });
     Object.defineProperty(video, 'seekable', {
       configurable: true,
       value: { length: 1, start: () => start, end: () => end },

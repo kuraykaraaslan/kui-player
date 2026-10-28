@@ -11,6 +11,13 @@ import { chapterIndexAt, chapterKind } from './videoplayer.chapters.js';
 import type { Chapter } from './videoplayer.vtt.js';
 import { AdBreakTracker, type AdBreak } from './videoplayer.adbreaks.js';
 import type { Diagnostics } from './videoplayer.diagnostics.js';
+import { resolveLive, type LiveInput, type ResolvedLive } from './videoplayer.live.js';
+import { LoadSuspender } from './videoplayer.suspend.js';
+import { watchVisibility } from './videoplayer.visibility.js';
+import {
+  createPresenceGroup, isPresenceGroup,
+  type PresenceEvent, type PresenceGroup, type PresenceOptions,
+} from './videoplayer.presence.js';
 import type {
   AudioTrackOption, PlayerError, RemotePlayer, RemotePlayerController,
 } from './videoplayer.types.js';
@@ -74,6 +81,14 @@ export type VideoPlayerEngineOptions = {
   preferNativeIosFullscreen?: boolean;
   /** Period of the `qoe` summary event while playing, ms (default 10000; `0` = off). */
   qoeIntervalMs?: number;
+  /** Live-stream behaviour — see `LiveOptions`. Live is detected whether or not this is set. */
+  live?: LiveInput;
+  /**
+   * The "Still watching?" check: ask after `everyMs` of playback, stop playing
+   * and loading if `graceMs` pass without an answer. Pass a group from
+   * `createPresenceGroup()` to share one timer and one question between players.
+   */
+  presence?: PresenceOptions | PresenceGroup;
 };
 
 /** State carried across a source swap so the viewer lands where they left off. */
@@ -147,6 +162,24 @@ export class VideoPlayerEngine {
   private firstFrameReported = false;
   private seekFrom = 0;
 
+  private liveCfg: ResolvedLive = resolveLive(undefined);
+  /** What the adapter says about the stream having an end; `null` while it has said nothing. */
+  private adapterLive: boolean | null = null;
+  private edgeToleranceS = LIVE_EDGE_TOLERANCE_S;
+  private lastLiveEndedAt = 0;
+  private reconnecting = false;
+  private visible = true;
+  private stopVisibility: (() => void) | null = null;
+  private presenceGroup: PresenceGroup | null = null;
+  private presenceLeave: (() => void) | null = null;
+  private presenceUnsubscribe: (() => void) | null = null;
+  private readonly suspender = new LoadSuspender({
+    video: () => this.video,
+    adapter: () => this.activeAdapter,
+    play: () => this.play(),
+    changed: (event, reason) => this.emitter.emit(event, { reason }),
+  });
+
   private adapters: MediaAdapter[] = [];
   private activeAdapter: MediaAdapter | null = null;
   private currentSrc: string | null = null;
@@ -188,6 +221,8 @@ export class VideoPlayerEngine {
     this.seekLockInAds = opts.seekLockInAds ?? false;
     this.preferNativeIosFullscreen = opts.preferNativeIosFullscreen ?? false;
     if (opts.adapters) this.adapters = [...opts.adapters];
+    this.setLive(opts.live);
+    if (opts.presence) this.setPresence(opts.presence);
   }
 
   // ── Attach / Detach ────────────────────────────────────────────────────────
@@ -334,6 +369,13 @@ export class VideoPlayerEngine {
       this.emitter.emit('pause', { currentTime: video.currentTime });
     };
     const onEnded = () => {
+      // A stream that still has no end does not finish: a buffer that ran dry at
+      // the edge is a stall, so go back to the edge instead of showing "ended".
+      if (this.adapterLive === true && Date.now() - this.lastLiveEndedAt > 2000) {
+        this.lastLiveEndedAt = Date.now();
+        this.seekToLive();
+        return;
+      }
       s().setPlaying(false);
       this.forceShow();
       this.setQoePlaying(false);
@@ -444,6 +486,11 @@ export class VideoPlayerEngine {
   }
 
   detach(): void {
+    this.stopVisibility?.();
+    this.stopVisibility = null;
+    this.visible = true;
+    this.suspender.reset();
+    this.store.getState().setPresencePaused(false);
     this.exitFakeFullscreen();
     this.releaseAdapter();
     this.stopQoeTimer();
@@ -581,7 +628,7 @@ export class VideoPlayerEngine {
     if (!v) return;
     const s = this.store.getState();
     this.restorePoint = {
-      time: s.currentTime,
+      time: s.isLive ? 0 : s.currentTime,
       playing: s.playing || this.restorePoint?.playing || false,
       rate: v.playbackRate,
       muted: v.muted,
@@ -623,7 +670,8 @@ export class VideoPlayerEngine {
     const v = this.video;
     if (!v) return;
     this.restorePoint = {
-      time: v.currentTime,
+      // A live stream has no position worth returning to: the new connection starts at the edge.
+      time: this.store.getState().isLive ? 0 : v.currentTime,
       playing: !v.paused && !v.ended,
       rate: v.playbackRate,
       muted: v.muted,
@@ -719,7 +767,8 @@ export class VideoPlayerEngine {
     this.cancelAutoRetry();
     this.store.getState().setLoading(true);
     try {
-      await next.attach(v, src, this.adapterHost);
+      this.adapterLive = null;
+      await next.attach(v, src, { ...this.adapterHost, live: this.liveCfg });
     } catch {
       this.store.getState().setError({
         code: 4, name: 'ADAPTER_ATTACH_FAILED', recoverable: false,
@@ -734,7 +783,11 @@ export class VideoPlayerEngine {
     this.activeAdapter?.detach();
     this.activeAdapter = null;
     this.currentSrc = null;
+    this.adapterLive = null;
+    this.edgeToleranceS = LIVE_EDGE_TOLERANCE_S;
+    this.reconnecting = false;
     const s = this.store.getState();
+    s.setReconnecting(false);
     s.setAdaptiveQualities([]);
     s.setAdaptiveAudioTracks([]);
     s.setQualityAuto(false);
@@ -761,8 +814,33 @@ export class VideoPlayerEngine {
     },
     reportError: (error) => {
       const s = this.store.getState();
+      this.reconnecting = false;
+      s.setReconnecting(false);
       s.setLoading(false);
       s.setError(error);
+      this.emitter.emit('error', error);
+    },
+    updateLive: (live, edgeToleranceS) => {
+      this.adapterLive = live;
+      this.edgeToleranceS = edgeToleranceS ?? LIVE_EDGE_TOLERANCE_S;
+      if (this.video) this.syncLive(this.video);
+    },
+    updateRecovery: ({ reconnecting, attempt, reason }) => {
+      const s = this.store.getState();
+      if (reconnecting) {
+        if (!this.reconnecting) {
+          this.reconnecting = true;
+          // The new connection rebuilds the element's source, which pauses it.
+          if (!this.restorePoint) this.captureRestorePoint();
+          s.setReconnecting(true);
+          s.setLoading(true);
+        }
+        this.emitter.emit('live:reconnect', { attempt: attempt ?? 1, reason: reason ?? 'network' });
+      } else if (this.reconnecting) {
+        this.reconnecting = false;
+        s.setReconnecting(false);
+        this.emitter.emit('live:recovered', {});
+      }
     },
   };
 
@@ -850,14 +928,19 @@ export class VideoPlayerEngine {
   // ── Live and DVR ───────────────────────────────────────────────────────────
 
   /**
-   * A stream is live when its duration is unbounded. The seekable range is the
-   * DVR window: how far back the viewer may scrub, and where "live" is.
+   * A stream is live when its playlist has no end (the adapter says so) or, with
+   * nothing to ask, when its duration is unbounded. The seekable range is the
+   * DVR window: how far back a viewer may scrub, and where "live" is.
    */
   private syncLive(video: HTMLVideoElement): void {
     const s = this.store.getState();
-    const live = video.duration === Infinity
-      || (video.seekable.length > 0 && !Number.isFinite(video.duration));
-    if (live !== s.isLive) s.setIsLive(live);
+    const live = this.adapterLive
+      ?? (video.duration === Infinity
+        || (video.seekable.length > 0 && !Number.isFinite(video.duration)));
+    if (live !== s.isLive) {
+      s.setIsLive(live);
+      this.updateVisibilityWatch();
+    }
     if (!live) {
       if (s.dvrWindow !== 0) s.setDvrWindow(0, 0);
       if (s.atLiveEdge) s.setAtLiveEdge(false);
@@ -869,17 +952,127 @@ export class VideoPlayerEngine {
     const start = ranges.start(0);
     const end = ranges.end(ranges.length - 1);
     if (start !== s.dvrStart || end - start !== s.dvrWindow) s.setDvrWindow(start, end - start);
-    // Within ten seconds of the edge counts as live; below that a viewer is
-    // watching the DVR window and the badge should say so.
-    s.setAtLiveEdge(end - video.currentTime <= LIVE_EDGE_TOLERANCE_S);
+    // Within a few segments of the edge counts as live; further back a viewer is
+    // watching the past and the badge should say so.
+    const edge = this.activeAdapter?.getLiveEdge?.() ?? end;
+    s.setAtLiveEdge(edge - video.currentTime <= this.edgeToleranceS);
   }
 
   /** Jump to the live edge of a stream. No-op for on-demand media. */
   seekToLive(): void {
     const v = this.video;
-    if (!v || v.seekable.length === 0) return;
-    v.currentTime = v.seekable.end(v.seekable.length - 1);
+    if (!v) return;
+    const adapterEdge = this.activeAdapter?.getLiveEdge?.() ?? null;
+    if (adapterEdge === null && v.seekable.length === 0) return;
+    v.currentTime = adapterEdge ?? v.seekable.end(v.seekable.length - 1);
     if (v.paused) this.play();
+  }
+
+  /** Change the live options (the constructor takes the same). */
+  setLive(input: LiveInput): void {
+    this.liveCfg = resolveLive(input);
+    this.store.getState().setLiveDvr(this.liveCfg.dvr);
+    this.updateVisibilityWatch();
+  }
+
+  /** A live stream with no DVR window has nothing to seek in. */
+  private get seekLocked(): boolean {
+    const s = this.store.getState();
+    return s.isLive && !this.liveCfg.dvr;
+  }
+
+  // ── Stop when hidden ───────────────────────────────────────────────────────
+
+  /**
+   * A live player nobody can see — scrolled out of view, or in a hidden tab —
+   * makes no requests; it picks the stream up at the live edge when it is seen
+   * again. Playback that someone is still watching elsewhere (Picture-in-Picture,
+   * AirPlay, Cast) is left alone.
+   */
+  private updateVisibilityWatch(): void {
+    const video = this.video;
+    const want = video !== null && this.liveCfg.stopWhenHidden && this.store.getState().isLive;
+    if (want && !this.stopVisibility) {
+      // Only live players are watched: an on-demand video costs nothing to leave loaded.
+      this.visible = true;
+      this.stopVisibility = watchVisibility(video, (visible) => {
+        this.visible = visible;
+        this.applyVisibility();
+      });
+    } else if (!want && this.stopVisibility) {
+      this.stopVisibility();
+      this.stopVisibility = null;
+      this.visible = true;
+      this.applyVisibility();
+    }
+  }
+
+  private applyVisibility(): void {
+    const s = this.store.getState();
+    const elsewhere = s.isPip || s.airPlaying || this.isCasting;
+    const stop = this.liveCfg.stopWhenHidden && s.isLive && !this.visible && !elsewhere;
+    if (stop) this.suspender.suspend('hidden');
+    else if (this.suspender.has('hidden')) this.suspender.resume('hidden');
+  }
+
+  // ── Presence ("Still watching?") ───────────────────────────────────────────
+
+  /**
+   * Join a presence group, or create one for this player alone. `undefined`
+   * leaves it. A player in a shared group shows no prompt of its own: the
+   * group's owner renders the single page-level one.
+   */
+  setPresence(input: PresenceOptions | PresenceGroup | false | undefined): void {
+    this.presenceUnsubscribe?.();
+    this.presenceUnsubscribe = null;
+    this.presenceLeave?.();
+    this.presenceLeave = null;
+    if (this.presenceGroup && this.store.getState().ownPresence === this.presenceGroup) this.presenceGroup.dispose();
+    this.presenceGroup = null;
+    const s = this.store.getState();
+    s.setOwnPresence(null);
+    if (this.suspender.has('presence')) { s.setPresencePaused(false); this.suspender.resume('presence'); }
+    if (!input) return;
+
+    const group = isPresenceGroup(input) ? input : createPresenceGroup(input);
+    this.presenceGroup = group;
+    if (group !== input) s.setOwnPresence(group);
+    this.presenceLeave = group.join({
+      isPlaying: () => this.store.getState().playing,
+      onEvent: (event) => this.onPresenceEvent(event),
+    });
+    // Playing and stopping move the timer; the element events reach the store first.
+    this.presenceUnsubscribe = this.store.subscribe((now, before) => {
+      if (now.playing !== before.playing) group.update();
+    });
+  }
+
+  private onPresenceEvent(event: PresenceEvent): void {
+    switch (event.type) {
+      case 'ask':
+        this.emitter.emit('presence:ask', { graceMs: event.graceMs });
+        break;
+      case 'continue':
+        this.emitter.emit('presence:continue', {});
+        break;
+      case 'timeout':
+        this.store.getState().setPresencePaused(true);
+        this.suspender.suspend('presence');
+        this.emitter.emit('presence:timeout', {});
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Answer the question for this player's own group ("Continue"). */
+  confirmPresence(): void { this.presenceGroup?.confirm(); }
+
+  /** The viewer asked to play again after the presence check stopped this player. */
+  private leavePresencePause(): void {
+    this.store.getState().setPresencePaused(false);
+    this.suspender.resume('presence', true);
+    this.presenceGroup?.confirm();
   }
 
   // ── AirPlay ────────────────────────────────────────────────────────────────
@@ -925,17 +1118,24 @@ export class VideoPlayerEngine {
 
   // ── Playback ───────────────────────────────────────────────────────────────
 
-  play():  void { void this.video?.play().catch(() => { /* autoplay may be blocked */ }); }
+  play(): void {
+    if (this.suspender.has('presence')) { this.leavePresencePause(); return; }
+    void this.video?.play().catch(() => { /* autoplay may be blocked */ });
+  }
   pause(): void { this.video?.pause(); }
 
   togglePlay(): void {
     if (this.isCasting && this.remoteController) { this.remoteController.playOrPause(); return; }
     if (!this.video) return;
-    if (this.video.paused) this.play(); else this.video.pause();
+    if (this.video.paused || this.suspender.has('presence')) {
+      this.play();
+      // Pressing Play is the viewer saying they are here.
+      this.presenceGroup?.confirm();
+    } else this.video.pause();
   }
 
   seek(seconds: number): void {
-    if (!this.video) return;
+    if (!this.video || this.seekLocked) return;
     if (this.seekLockInAds && this.store.getState().inAdBreak) return;
     this.video.currentTime = Math.max(0, Math.min(this.video.duration || 0, seconds));
   }
@@ -1011,7 +1211,7 @@ export class VideoPlayerEngine {
       return;
     }
     const v = this.video;
-    if (!v) return;
+    if (!v || this.seekLocked) return;
     const s = this.store.getState();
     if (s.isLive && s.dvrWindow > 0) {
       v.currentTime = s.dvrStart + r * s.dvrWindow;
@@ -1217,6 +1417,7 @@ export class VideoPlayerEngine {
 
   dispose(): void {
     this.detach();
+    this.setPresence(undefined);
     this.emitter.clear();
   }
 }

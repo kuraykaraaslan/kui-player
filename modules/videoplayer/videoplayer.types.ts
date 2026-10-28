@@ -1,5 +1,7 @@
 import type { MediaAdapter } from './adapters/adapter.types.js';
 import type { Chapter } from './videoplayer.vtt.js';
+import type { LiveInput } from './videoplayer.live.js';
+import type { PresenceGroup, PresenceOptions } from './videoplayer.presence.js';
 
 export type QualityOption = { label: string; value: string };
 export type SubtitleTrack = {
@@ -18,6 +20,19 @@ export type AudioTrackKind = 'main' | 'description' | 'commentary';
 export type AudioTrackOption = { label: string; language?: string; kind?: AudioTrackKind };
 
 export type VideoSource = { src: string; type?: string };
+
+/**
+ * One of several addresses for the same stream — "Standard" and "High", say.
+ * Unlike `src` (a list of fallbacks for the browser to pick from), the viewer
+ * chooses between these in the quality menu.
+ */
+export type AlternateSource = {
+  /** Shown in the quality menu. */
+  label: string;
+  src: string;
+  /** MIME type, when the address does not say (`.m3u8`, `.mp4`). */
+  type?: string;
+};
 export type SubtitleFontSize = 'sm' | 'md' | 'lg' | 'xl';
 /** How cue text is separated from the picture behind it. */
 export type SubtitleEdge = 'none' | 'shadow' | 'outline';
@@ -60,6 +75,11 @@ export type PlayerError = {
   message: string;
   /** Whether a retry has a plausible chance of succeeding (network / decode). */
   recoverable: boolean;
+  /**
+   * What the source itself said when it refused the request — the `message` of
+   * a JSON answer or a short plain-text body. Shown under `message`, verbatim.
+   */
+  detail?: string;
 };
 
 /** Which touch gestures are live. `true` enables the safe defaults. */
@@ -152,6 +172,32 @@ export type VideoPlayerProps = {
   theme?: PlayerTheme;
   /** Streaming adapters to consult for `src` — see `createHlsAdapter`. */
   adapters?: MediaAdapter[];
+  /**
+   * Several addresses for the same stream, chosen from the quality menu. Replaces
+   * `src` when given. The first is the default.
+   */
+  sources?: AlternateSource[];
+  /**
+   * With `sources`: play the second one in fullscreen and the first in the card,
+   * for as long as the viewer has not picked one by hand. Default `false`.
+   */
+  preferAlternateInFullscreen?: boolean;
+  /** Called when the viewer (or the fullscreen rule) changes the active `sources` entry. */
+  onSourceChange?: (index: number, source: AlternateSource) => void;
+  /**
+   * Live behaviour. Live is detected from the stream, so this is optional:
+   * `true` / an object says "this source is live" up front (small-tile quality
+   * defaults), `{ dvr: true }` keeps a seek bar, `false` turns the live
+   * behaviours off. See `LiveOptions`.
+   */
+  live?: LiveInput;
+  /**
+   * Ask "Still watching?" after `everyMs` of playback and stop playing and
+   * loading when nobody answers within `graceMs`. Inside a presence group the
+   * group's timer and prompt are used instead. `false` opts a player out of its
+   * group.
+   */
+  presence?: PresenceOptions | PresenceGroup | false;
   /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
   enablePictureInPicture?: boolean;
   /** Touch gestures. `false` disables them entirely. Default `true`. */
