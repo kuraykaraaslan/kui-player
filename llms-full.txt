@@ -44,6 +44,11 @@ other than the media you point it at.
 | `playsInline` | `boolean` | `true` | `false` hands iOS Safari its native fullscreen player |
 | `adapters` | `MediaAdapter[]` | — | HLS/DASH adapters; build the array outside render |
 | `qualities` | `QualityOption[]` | — | ignored once an adapter reports renditions |
+| `sources` | `AlternateSource[]` | — | `{ label, src }[]` — alternate addresses for one stream ("Standard", "High"), listed in the quality menu; replaces `src`; the first is the default; one entry is ignored |
+| `preferAlternateInFullscreen` | `boolean` | `false` | with `sources`: play the second in fullscreen, the first in the card, until the viewer picks one by hand |
+| `onSourceChange` | `(index: number, source: AlternateSource) => void` | — | the viewer or the fullscreen rule changed the active source |
+| `live` | `boolean \| LiveOptions` | auto | live behaviour; live itself is detected. `true`/object = "this source is live" (hint). `false` = all live behaviour off. See Live streams below |
+| `presence` | `{ everyMs: number; graceMs: number } \| PresenceGroup \| false` | — | "Still watching?" check; `false` opts out of an enclosing `<PresenceGroupProvider>` |
 | `defaultQuality` | `string` | first quality | |
 | `subtitles` | `SubtitleTrack[]` | — | rendered as a styled overlay, not by the browser |
 | `audioTracks` | `AudioTrackOption[]` | — | fallback only; tracks are discovered from the element or adapter |
@@ -89,7 +94,8 @@ other than the media you point it at.
 ### Constructor options
 
 `defaultQuality`, `startMuted`, `autoHideControls` (true), `controlsVisible`,
-`maxAutoRetries` (3), `adapters`, `preferNativeIosFullscreen` (false).
+`maxAutoRetries` (3), `adapters`, `preferNativeIosFullscreen` (false),
+`live` (`LiveInput`, see Live streams), `presence` (`{ everyMs, graceMs }` or a `PresenceGroup`).
 
 ### Methods
 
@@ -119,7 +125,10 @@ other than the media you point it at.
     attachCast(player, controller) / detachCast()
     on(event, handler)       subscribe; returns an unsubscribe function
     off(event, handler)
-    seekToLive()             jump to the live edge of a stream
+    seekToLive()             jump to the live edge of a stream (the adapter's sync position when it has one)
+    setLive(input)           change the live options
+    setPresence(opts|group|undefined)  join a presence group, create a private one, or leave
+    confirmPresence()        answer "Still watching?" for this player's own group
     showAirPlayPicker()      Safari's AirPlay target picker
 
 ### Store
@@ -134,7 +143,10 @@ State: `playing`, `currentTime`, `duration`, `buffered` (0–100), `volume`, `mu
 `selectedAudioTrack`, `adaptiveAudioTracks`, `subtitleFontSize`, `castState`,
 `castDeviceName`, `castError`, `castQueueIndex`, `castQueueLength`, `isLive`,
 `atLiveEdge`, `dvrStart`, `dvrWindow`, `airPlaySupported`, `airPlayAvailable`,
-`airPlaying`, `subtitleColor`, `subtitleBackground`, `subtitleEdge`, `subtitleFont`.
+`airPlaying`, `subtitleColor`, `subtitleBackground`, `subtitleEdge`, `subtitleFont`,
+`liveDvr` (live stream keeps a seek bar), `reconnecting` (a live source is being reopened),
+`presencePaused` (stopped because nobody answered), `ownPresence` (the group this player
+made for its own `presence` option, else `null`).
 
 Every field has a `setX` action. The element is the source of truth: state is written
 from element events, so mutating `video.volume` or `video.playbackRate` directly stays
@@ -152,6 +164,9 @@ in sync.
       setQuality(index: number): void;            // -1 = auto
       getAudioTracks?(): AudioTrackOption[];
       setAudioTrack?(index: number): void;
+      suspend?(): void;                           // stop requesting (scrolled away / presence timeout)
+      resume?(): void;                            // load again, at the live edge for a live stream
+      getLiveEdge?(): number | null;              // where "live" is, in media time
       detach(): void;
     }
 
@@ -159,9 +174,12 @@ in sync.
       updateQualities(qualities, activeIndex, auto): void;
       updateAudioTracks(tracks, activeIndex): void;
       reportError(error: PlayerError): void;
+      readonly live?: ResolvedLive;               // the live options in force
+      updateLive?(live: boolean, edgeToleranceS?: number): void;     // the stream has / has no end
+      updateRecovery?(state: { reconnecting: boolean; attempt?: number; reason?: 'auth' | 'network' }): void;
     }
 
-Built in: `createHlsAdapter({ Hls?, config?, preferNative? })` and
+Built in: `createHlsAdapter({ Hls?, config?, lowLatency?, drm?, preferNative? })` and
 `createDashAdapter({ dashjs?, settings? })`. Omit `Hls`/`dashjs` to pick up a global.
 Neither library is bundled.
 
@@ -239,8 +257,67 @@ function, and a listener that throws cannot break playback.
 
 Chapters segment the seek bar and appear in the settings menu. Storyboards
 support sprite sheets through the `#xywh=` media fragment. Live streams are
-detected from the source: the clock becomes a LIVE badge and the bar spans the
-seekable DVR window.
+detected from the source (see Live streams).
+
+## Live streams, presence check, alternate sources
+
+All generic: nothing knows what is streamed. Recipe: recipes/live-streams.md.
+
+    type LiveOptions = {
+      dvr?: boolean;                 // seek bar over the DVR window; default false
+      stopWhenHidden?: boolean;      // default true
+      reauth?: boolean | { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number };  // 5 / 1000 / 15000
+      credentials?: 'same-origin' | 'include';   // default 'same-origin'
+    };
+    <VideoPlayer src="…/live.m3u8" adapters={adapters} live />
+
+- Live = the HLS playlist has no `EXT-X-ENDLIST` (the hls adapter reads `details.live` on
+  every refresh; Safari: unbounded `duration`). A live stream shows a LIVE badge, "Go to live edge"
+  when behind (tolerance = hls.js target latency + one segment, at least 10 s), no seek bar, no
+  ±10 s buttons, no seek shortcuts, and never "ended" (a live playlist that repeats one segment
+  with `EXT-X-DISCONTINUITY` is just a live playlist).
+- `live` as a hint (true / object) makes `createHlsAdapter` pass `startLevel: 0` and
+  `capLevelToPlayerSize: true` (override with `config`). The adapter always passes
+  `liveDurationInfinity: true`.
+- Reload: on 401 / 403 / 404 (a deleted path, an ended session) for a live source the adapter
+  destroys the hls.js instance and loads the ORIGINAL url again at once (redirects followed,
+  same-origin cookies sent), then backs off (1 s, 2 s, 4 s ... ≤ 15 s); network errors reconnect with the
+  same back-off; after `maxAttempts` the error `LIVE_REFUSED` / `LIVE_UNAVAILABLE` with a Try again
+  button. A segment that loads resets the count. A source never seen playing is not reopened: its
+  refusal is shown at once. The refusal text (JSON `message` or short plain text) is
+  `PlayerError.detail`. Safari's native HLS gives no status codes: the ordinary network retry applies.
+- Stop when hidden (live only): out of the viewport (IntersectionObserver) or a hidden tab →
+  the element is paused and `adapter.suspend()` runs (hls.js `stopLoad()`; native: the source is
+  dropped); back in view → `adapter.resume()` (`startLoad(-1)` + jump to the live edge) and play if it
+  was playing. Not while in Picture-in-Picture, AirPlay or Cast.
+
+Presence ("Still watching?"):
+
+    import { createPresenceGroup } from "@kuraykaraaslan/kui-player";        // also from /react
+    import { PresenceGroupProvider, PresencePrompt, usePresenceGroup } from "@kuraykaraaslan/kui-player/react";
+
+    <VideoPlayer presence={{ everyMs: 600_000, graceMs: 30_000 }} />
+    <PresenceGroupProvider everyMs={600_000} graceMs={30_000}>   // or group={createPresenceGroup(...)}
+      <VideoPlayer … /> × N                                       // one timer, one page-level prompt
+    </PresenceGroupProvider>
+
+`PresenceGroupProvider` props: `group?`, `everyMs?`, `graceMs?`, `prompt?` (true; false = render
+`<PresencePrompt group />` yourself), `locale?`, `injectStyles?`. `PresenceGroup`: `options`, `store`
+(`{ phase: 'idle' | 'watching' | 'asking', remainingMs, everyMs, graceMs }`), `join(member)`,
+`update()`, `confirm()`, `dispose()`. The timer counts playback only and runs while at least one member
+plays. `confirm()` (the Continue button, Esc, or a viewer pressing Play) restarts the count. With no
+answer within `graceMs` every playing member pauses and stops loading; each shows "Paused to save data" +
+Play. A player inside a provider uses the group's timing and prompt; `presence={false}` opts out.
+
+Alternate sources: `sources=[{label, src}]` (+ `preferAlternateInFullscreen`, `onSourceChange`).
+They take the Quality menu (values `"0"`, `"1"` ...); switching keeps position for on-demand video and
+rejoins the edge for live.
+
+Events (engine.on): `presence:ask {graceMs}`, `presence:continue`, `presence:timeout`,
+`suspend {reason: 'hidden'|'presence'}`, `resume {reason}`, `live:reconnect {attempt, reason: 'auth'|'network'}`,
+`live:recovered`; adapter errors now also reach `error`. New dictionary keys (all six locales):
+`presenceTitle`, `presenceCountdown` (`{seconds}`), `presenceContinue`, `presencePaused`, `reconnecting`,
+`error.LIVE_REFUSED`, `error.LIVE_UNAVAILABLE`, `state.reconnecting`, `state.presencePaused`.
 
 ## Subtitles
 
@@ -260,7 +337,7 @@ source-independent; position is per source, expires after 30 days, and is
 
 ## Errors
 
-`store.error` is a `PlayerError { code, name, message, recoverable }` mapped from
+`store.error` is a `PlayerError { code, name, message, recoverable, detail? }` mapped from
 `MediaError`, plus the `<source>`-only failure browsers report on the source element.
 Network errors retry automatically with backoff (500 ms / 1 s / 2 s, three attempts);
 `engine.retry()` is the manual path and both restore the previous position.

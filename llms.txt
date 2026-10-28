@@ -18,7 +18,7 @@ layer: accessible, themeable through CSS custom properties, and mountable over a
 
 - [README](https://github.com/kuraykaraaslan/kui-player/blob/main/README.md): install, props, theming, streaming, accessibility, bundle budgets
 - [llms-full.txt](https://github.com/kuraykaraaslan/kui-player/blob/main/llms-full.txt): the complete API surface, types and recipes in one file
-- [Recipes](https://github.com/kuraykaraaslan/kui-player/tree/main/recipes): copy-pasteable integrations (Next.js, Vite, WordPress, skin mode, hls.js, DRM, analytics)
+- [Recipes](https://github.com/kuraykaraaslan/kui-player/tree/main/recipes): copy-pasteable integrations (Next.js, Vite, WordPress, skin mode, hls.js, live streams and the presence check, DRM, analytics)
 - [Wrappers](https://github.com/kuraykaraaslan/kui-player/tree/main/wrappers): Vue, Svelte and the custom element
 - [CONTRIBUTING](https://github.com/kuraykaraaslan/kui-player/blob/main/CONTRIBUTING.md): the rules a change has to satisfy
 - [Roadmap](https://github.com/kuraykaraaslan/kui-player/tree/main/docs/phases): what is built, what is next, and why
@@ -33,7 +33,9 @@ layer: accessible, themeable through CSS custom properties, and mountable over a
 
 - Chapters and seek-preview storyboards from WebVTT sidecars
 - Playlists with a cancellable "up next" card
-- Live streams with a DVR window and a LIVE badge
+- Live streams: LIVE badge, "go to live edge", reload on 401/403/404 and network errors, stop loading when scrolled away
+- A "Still watching?" presence check, one timer and one prompt for a whole page of players
+- Alternate sources ("Standard" / "High") in the quality menu, High in fullscreen on request
 - SRT and ASS subtitles, plus caption colour/background/edge/font controls
 - OS media controls (Media Session), AirPlay, Picture-in-Picture, Google Cast with queues
 - Six languages with RTL layout, and localised durations

@@ -458,6 +458,9 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `playsInline` | `boolean` | defaults to `true`; `false` hands iOS Safari its native fullscreen player |
 | `adapters` | `MediaAdapter[]` | HLS/DASH adapters — see [Streaming formats](#streaming-formats) |
 | `qualities` | `QualityOption[]` | switchable sources (ignored once an adapter reports renditions) |
+| `sources` / `preferAlternateInFullscreen` / `onSourceChange` | `AlternateSource[]` (`{ label, src }`) / `boolean` / `(index, source) => void` | several addresses for one stream (say *Standard* and *High*) listed in the quality menu; the first is the default. With `preferAlternateInFullscreen` the second plays in fullscreen and the first in the card, until the viewer picks one by hand. Replaces `src`. See [recipes/live-streams.md](recipes/live-streams.md) |
+| `live` | `boolean \| { dvr?, stopWhenHidden?, reauth?, credentials? }` | live behaviour. Live is detected from the playlist (no `EXT-X-ENDLIST`); `true` / an object also says so up front (small-tile defaults: `startLevel: 0`, `capLevelToPlayerSize`). A live stream shows a LIVE badge and **no seek bar** (`dvr: true` keeps one), stops loading when scrolled out of view or in a hidden tab and resumes at the live edge (`stopWhenHidden`), and on a 401 / 403 / 404 or a network error reloads the original URL once, then backs off, then shows Retry (`reauth`: `false` or `{ maxAttempts?, baseDelayMs?, maxDelayMs? }`). `false` turns it all off. See [recipes/live-streams.md](recipes/live-streams.md) |
+| `presence` | `{ everyMs, graceMs } \| PresenceGroup \| false` | "Still watching?" after `everyMs` of playback; with no answer within `graceMs` playback and loading stop (*Paused to save data* + Play). Inside a `<PresenceGroupProvider>` every player shares one timer and one page-level prompt — nine tiles ask once |
 | `defaultQuality` | `string` | initial quality `value` |
 | `subtitles` | `SubtitleTrack[]` | WebVTT tracks |
 | `audioTracks` | `AudioTrackOption[]` | selectable audio tracks |
@@ -544,7 +547,9 @@ engine.store.subscribe((s) => {
 | **Chapters** | `chapters` | A WebVTT `chapters` file or an array. Segments the seek bar, names the section under the cursor, and adds a jump list to the menu |
 | **Seek previews** | `thumbnails` | A WebVTT storyboard, sprite sheets (`#xywh=`) included |
 | **Playlists** | `playlist` | Advances at the end with an "up next" card the viewer can cancel; `playlistCountdown={0}` skips the wait |
-| **Live and DVR** | — | Detected from the source. The clock becomes a LIVE badge — red at the edge, grey behind it, click to catch up — and the bar spans the DVR window |
+| **Live streams** | `live` | Detected from the source (an HLS playlist without `EXT-X-ENDLIST`). The clock becomes a LIVE badge — red at the edge, grey behind it, click to catch up — with no seek bar (`live={{ dvr: true }}` brings back a bar over the DVR window). Reloads a session that ended (401 / 403 / 404), reconnects after network errors, stops loading while scrolled away or in a hidden tab. [Recipe](recipes/live-streams.md) |
+| **Presence check** | `presence`, `<PresenceGroupProvider>` | "Still watching?" after a stretch of playback, then stop playing and loading. One timer and one prompt for any number of players on a page. A cost guard for streams that cost something to keep running |
+| **Alternate sources** | `sources` | "Standard" / "High" in the quality menu; `preferAlternateInFullscreen` picks High on the big screen |
 | **Resume and preferences** | `persist` | **Off by default.** Volume, speed, subtitle language and size are remembered across sources; position is offered, never forced |
 | **OS media controls** | `mediaSession` | Lock screen, media keys, notification shade. On by default; no network involved |
 | **AirPlay** | — | The button appears only once Safari reports a target |
