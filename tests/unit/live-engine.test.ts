@@ -216,6 +216,14 @@ describe('stop when hidden', () => {
     expect(off.adapter.suspend).not.toHaveBeenCalled();
   });
 
+  it('starts watching again when the player is attached anew', async () => {
+    const { engine, video } = await liveEngine();
+    engine.detach();
+    callbacks = [];
+    engine.attach(video);   // the store still says live: the watch must come back with the element
+    expect(callbacks).toHaveLength(1);
+  });
+
   it('stops watching when the stream turns out to be on demand', async () => {
     const { adapter, host } = await liveEngine();
     scroll(false);

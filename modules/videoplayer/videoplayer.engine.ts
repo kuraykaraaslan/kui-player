@@ -483,6 +483,8 @@ export class VideoPlayerEngine {
     // adopts live elements) — seed from it rather than waiting for an event.
     if (video.readyState >= 1) onLoadedMetadata();
     if (video.error) this.handleError(video);
+    // Attaching again (a remount) to a player already known to be live.
+    this.updateVisibilityWatch();
   }
 
   detach(): void {
