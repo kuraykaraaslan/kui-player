@@ -129,7 +129,7 @@
     {
       "name": "embed (single script)",
       "path": "dist/embed.js",
-      "limit": "57.6 kB"
+      "limit": "59.6 kB"
     },
     {
       "name": "stylesheet",
@@ -142,7 +142,7 @@
         "dist/skin/index.js",
         "dist/skin/skin.js"
       ],
-      "limit": "41.4 kB"
+      "limit": "43.8 kB"
     },
     {
       "name": "locales (all six)",

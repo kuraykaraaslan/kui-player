@@ -3,6 +3,27 @@ import { VideoPlayerEngine } from '../modules/videoplayer/videoplayer.engine.js'
 import { VideoPlayerEngineContext } from '../react/VideoPlayerEngineContext.js';
 import { VideoPlayerChrome } from '../react/VideoPlayerChrome.js';
 import { PLAYER_CSS } from '../react/styles/index.js';
+import { I18nProvider, resolveDictionary, type PartialDictionary } from '../react/i18n/index.js';
+import type { MediaAdapter } from '../modules/videoplayer/adapters/adapter.types.js';
+import type { LiveInput } from '../modules/videoplayer/videoplayer.live.js';
+import { isPresenceGroup, type PresenceGroup, type PresenceOptions } from '../modules/videoplayer/videoplayer.presence.js';
+import type { PlayerEventHandler, PlayerEventName } from '../modules/videoplayer/videoplayer.events.js';
+import type { AlternateSource } from '../modules/videoplayer/videoplayer.types.js';
+import { getPagePresence } from './pagePresence.js';
+
+/** Handlers for the engine's events, by name: `{ 'presence:ask': ({ graceMs }) => … }`. */
+export type SkinEventHandlers = { [K in PlayerEventName]?: PlayerEventHandler<K> };
+
+/** What changes on a mounted skin without tearing it down. */
+export type SkinLiveUpdate = Pick<SkinOptions, 'live' | 'presence' | 'loadOnPlay'>;
+
+/** The function `mountSkin` returns: unmounts, and carries the engine and a light `update`. */
+export type SkinHandle = (() => void) & {
+  /** The engine driving the element — for `seekToLive()`, `confirmPresence()`, `store`. */
+  readonly engine: VideoPlayerEngine;
+  /** Change `live`, `presence` and `loadOnPlay` in place, without remounting. */
+  update(next: SkinLiveUpdate): void;
+};
 
 export interface SkinOptions {
   /** Playback rate to apply on mount (leaves the element's rate alone if omitted). */
@@ -27,6 +48,59 @@ export interface SkinOptions {
    * can make, and only when you ask for it.
    */
   cast?: boolean;
+  /** Dictionary for the controls and the presence prompt — anything it leaves out is English. */
+  locale?: PartialDictionary;
+
+  /**
+   * Live behaviour: `true` / an object says "this source is live" up front,
+   * `{ dvr: true }` keeps a seek bar, `false` turns the live behaviours off.
+   * Live is detected from the element regardless (an unbounded duration, or the
+   * adapter's playlist). See `LiveOptions`.
+   */
+  live?: LiveInput;
+  /**
+   * "Still watching?": `{ everyMs, graceMs }` for this player alone, or a
+   * `PresenceGroup` shared with other players (one timer, one prompt). `false`
+   * keeps the player out of the page's group (`setPagePresence`), which every
+   * skinned element joins otherwise. A `data-kui-presence="off"` attribute on the
+   * element does the same for one video.
+   */
+  presence?: PresenceOptions | PresenceGroup | false;
+  /**
+   * Hold an adapter-managed (HLS) source back until the first play. Does nothing
+   * for a source the page's own pipeline feeds, and `autoplay` loads at once.
+   */
+  loadOnPlay?: boolean;
+
+  /**
+   * Streaming adapters (`createHlsAdapter`) the skin should open `src` / `sources`
+   * with. **This is the one place skin mode touches the media pipeline** — leave
+   * it out and the page's own pipeline keeps feeding the element.
+   */
+  adapters?: MediaAdapter[];
+  /**
+   * The address to open through `adapters`. Give it when the element has no
+   * `src` of its own; an element that already plays this address is left alone.
+   */
+  src?: string;
+  /**
+   * Several addresses for one stream, picked from the quality menu; the first is
+   * the default. The skin sets the element's source (or hands it to `adapters`).
+   */
+  sources?: AlternateSource[];
+  /** With `sources`: the second plays in fullscreen and the first in the card. */
+  preferAlternateInFullscreen?: boolean;
+  /** Called when the viewer (or the fullscreen rule) changes the active `sources` entry. */
+  onSourceChange?: (index: number, source: AlternateSource) => void;
+
+  /** Engine events: `presence:ask`, `live:reconnect`, `suspend`, `error`, … */
+  on?: SkinEventHandlers;
+}
+
+/** Same items in the same order — so an inline `[hls]` that is a new array on every render is not a change. */
+export function sameItems<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
+  if (a === b) return true;
+  return !!a && !!b && a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
 /** Marks a skinned element, so a second pass can skip it. */
@@ -49,8 +123,19 @@ function embedStyleSheet(): CSSStyleSheet {
  * site's media pipeline (progressive / hls.js / MSE / blob) is untouched; only the
  * controls are replaced. Returns an idempotent unmount function.
  */
-export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () => void {
-  const engine = new VideoPlayerEngine({ autoHideControls: opts.autoHideControls ?? true });
+export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): SkinHandle {
+  // Autoplay is a play intent already: it loads at once.
+  const holdFirstLoad = (loadOnPlay: boolean | undefined) => !!loadOnPlay && !video.autoplay;
+  const engine = new VideoPlayerEngine({
+    autoHideControls: opts.autoHideControls ?? true,
+    adapters: opts.adapters,
+    live: opts.live,
+    loadOnPlay: holdFirstLoad(opts.loadOnPlay),
+  });
+  // Before `attach`, so nothing the engine reports while attaching is missed.
+  for (const [name, handler] of Object.entries(opts.on ?? {})) {
+    if (handler) engine.on(name as PlayerEventName, handler as PlayerEventHandler<PlayerEventName>);
+  }
   engine.attach(video);
 
   // Take over the element's own controls; `unmount` restores exactly what it
@@ -70,6 +155,29 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () =
   if (Number.isFinite(video.duration)) st.setDuration(video.duration || 0);
   st.setCurrentTime(video.currentTime);
   if (typeof opts.defaultSpeed === 'number') engine.setSpeed(opts.defaultSpeed);
+
+  // ── Presence: this player's own options, a group, the page's group, or none. ──
+  const elementOptedOut = ['off', 'false', '0'].includes(video.getAttribute('data-kui-presence') ?? '');
+  function presenceTarget(input: SkinOptions['presence']): PresenceOptions | PresenceGroup | undefined {
+    if (input === false || (input === undefined && elementOptedOut)) return undefined;
+    if (input && typeof input === 'object') return input;   // a group, or this player's own options
+    return getPagePresence() ?? undefined;
+  }
+  // After the seed above: a group joined by a player that is already playing starts its timer at once.
+  engine.setPresence(presenceTarget(opts.presence));
+
+  // ── Sources: `sources` (alternates) or `src`, opened through adapters when one claims them. ──
+  const alternates = opts.sources && opts.sources.length > 0 ? opts.sources : null;
+  let alternateIndex = 0;
+  const initialSrc = alternates ? alternates[0]?.src : opts.src;
+
+  /** Point the element at `src`: an adapter that claims it opens it, otherwise the element does. */
+  function openSource(src: string): void {
+    // Releases an adapter that no longer applies; resolves at once when none claims `src`.
+    void engine.loadSource(src);
+    if (!engine.hasAdapterFor(src) && video.getAttribute('src') !== src) engine.switchSource(src);
+  }
+  if (initialSrc) openSource(initialSrc);
 
   // Overlay host (light DOM) + shadow root for style isolation.
   const host = document.createElement('div');
@@ -217,24 +325,55 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () =
   document.addEventListener('keydown', onKey);
 
   const root: Root = createRoot(mountEl);
-  root.render(
-    <VideoPlayerEngineContext.Provider value={engine}>
+  const dictionary = opts.locale ? resolveDictionary(opts.locale) : null;
+
+  function selectAlternate(next: number): void {
+    const target = alternates?.[next];
+    if (!alternates || !target || next === alternateIndex) return;
+    // Position and play state travel with the viewer (a live stream rejoins the edge).
+    engine.captureRestorePoint();
+    alternateIndex = next;
+    openSource(target.src);
+    opts.onSourceChange?.(next, target);
+    render();
+  }
+
+  function render(): void {
+    const chrome = (
       <VideoPlayerChrome
         skin
         videoRef={videoRef}
         title={opts.title ?? video.title ?? undefined}
-        src={video.currentSrc || video.src}
+        src={initialSrc ?? (video.currentSrc || video.src)}
         poster={video.poster || undefined}
         enableCast={opts.cast ?? false}
+        alternateSources={alternates ?? undefined}
+        alternateIndex={alternateIndex}
+        onAlternateSelect={selectAlternate}
         onToggleFullscreen={toggleFullscreen}
       />
-    </VideoPlayerEngineContext.Provider>,
-  );
+    );
+    root.render(
+      <VideoPlayerEngineContext.Provider value={engine}>
+        {dictionary ? <I18nProvider value={dictionary}>{chrome}</I18nProvider> : chrome}
+      </VideoPlayerEngineContext.Provider>,
+    );
+  }
+  render();
+
+  // Entering or leaving fullscreen moves between the first and second address.
+  // Only the change does, so a viewer's own pick stays until the next toggle.
+  const stopFullscreenRule = alternates && alternates.length > 1 && opts.preferAlternateInFullscreen
+    ? engine.store.subscribe((now, before) => {
+      if (now.isFullscreen !== before.isFullscreen) selectAlternate(now.isFullscreen ? 1 : 0);
+    })
+    : null;
 
   let disposed = false;
-  return function unmount(): void {
+  function unmount(): void {
     if (disposed) return;
     disposed = true;
+    stopFullscreenRule?.();
     document.removeEventListener('keydown', onKey);
     document.removeEventListener('fullscreenchange', onFsChange);
     if (document.fullscreenElement === fsWrapper && fsWrapper) void document.exitFullscreen();
@@ -248,5 +387,37 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): () =
     video.removeAttribute(SKINNED_ATTR);
     video.controls = hadControls;
     if (hadControlsAttr) video.setAttribute('controls', ''); else video.removeAttribute('controls');
+  }
+
+  // What is applied now, so `update` leaves alone what did not change: re-applying
+  // `presence` would restart its timer, and `live` would re-run its visibility watch.
+  let appliedLive = JSON.stringify(opts.live ?? null);
+  let appliedPresence = presenceTarget(opts.presence);
+  let appliedLoadOnPlay = !!opts.loadOnPlay;
+  /** A group is compared by identity, plain options by value (an inline `{ everyMs, graceMs }` is new each render). */
+  const samePresence = (a: ReturnType<typeof presenceTarget>, b: ReturnType<typeof presenceTarget>): boolean => {
+    if (!a || !b || isPresenceGroup(a) || isPresenceGroup(b)) return a === b;
+    return a.everyMs === b.everyMs && a.graceMs === b.graceMs;
   };
+
+  return Object.assign(unmount, {
+    engine,
+    update(next: SkinLiveUpdate): void {
+      if ('live' in next && JSON.stringify(next.live ?? null) !== appliedLive) {
+        appliedLive = JSON.stringify(next.live ?? null);
+        engine.setLive(next.live);
+      }
+      if ('loadOnPlay' in next && !!next.loadOnPlay !== appliedLoadOnPlay) {
+        appliedLoadOnPlay = !!next.loadOnPlay;
+        engine.setLoadOnPlay(holdFirstLoad(next.loadOnPlay));
+      }
+      if ('presence' in next) {
+        const target = presenceTarget(next.presence);
+        if (!samePresence(target, appliedPresence)) {
+          appliedPresence = target;
+          engine.setPresence(target);
+        }
+      }
+    },
+  });
 }

@@ -1,6 +1,12 @@
 import { mountSkin, type SkinOptions } from './mountSkin.js';
 import { skinAll, type SkinAllHandle, type SkinAllOptions } from './skinAll.js';
 import { defineKuiPlayer } from './webComponent.js';
+import {
+  createPagePresenceGroup, getPagePresence, setPagePresence,
+  type PagePresenceOptions,
+} from './pagePresence.js';
+import { isOff, parseFlag, parseLive, parsePresence } from './attributes.js';
+import type { PresenceGroup } from '../modules/videoplayer/videoplayer.presence.js';
 
 // Injected by Vite `define` at build time (see vite.config.embed.ts).
 declare const __KUI_EMBED_VERSION__: string;
@@ -16,6 +22,16 @@ export interface KuiPlayerApi {
   isMounted(video: HTMLVideoElement): boolean;
   /** Register `<kui-player>` as a custom element. */
   define(tagName?: string): void;
+  /**
+   * Make a "Still watching?" group the page's default: every player skinned after
+   * this joins it (one timer, one prompt) unless it opts out. Pass options to have
+   * the group and its prompt made, a group of your own, or `null` to remove it.
+   */
+  setPagePresence(input: PagePresenceOptions | PresenceGroup | null): PresenceGroup | null;
+  /** The page's default group, or `null`. */
+  getPagePresence(): PresenceGroup | null;
+  /** A group with its page-level prompt (`prompt: false` to leave the prompt out). Not made the default. */
+  createPagePresenceGroup(options: PagePresenceOptions): PresenceGroup;
 }
 
 declare global {
@@ -56,6 +72,9 @@ const api: KuiPlayerApi = {
   define(tagName) {
     defineKuiPlayer(tagName);
   },
+  setPagePresence,
+  getPagePresence,
+  createPagePresenceGroup,
 };
 
 // ─── zero-config auto-start ──────────────────────────────────────────────────
@@ -72,8 +91,16 @@ const api: KuiPlayerApi = {
 function autoStart(): void {
   const script = document.currentScript as HTMLScriptElement | null
     ?? document.querySelector<HTMLScriptElement>('script[data-auto]');
-  const selector = script?.dataset.auto;
   if (!script) return;
+
+  // A page-level "Still watching?" group, for every player skinned from here on.
+  // It is made before anything is skinned, so the first players already join it.
+  if (!isOff(script.dataset.presence)) {
+    const presence = parsePresence(script.dataset.presence, script.dataset.presenceEveryMs, script.dataset.presenceGraceMs);
+    if (presence) setPagePresence(presence);
+  }
+
+  const selector = script.dataset.auto;
   if (selector === undefined && script.dataset.define === undefined) {
     // Still register the element if the page uses the tag.
     if (document.querySelector('kui-player')) defineKuiPlayer();
@@ -97,6 +124,10 @@ function autoStart(): void {
       cast: flag('cast', false),
       observe: flag('observe', true),
       defaultSpeed: script.dataset.speed ? Number(script.dataset.speed) : undefined,
+      live: parseLive(script.dataset.live),
+      loadOnPlay: parseFlag(script.dataset.loadOnPlay),
+      // `data-presence="off"` keeps the skinned players out of the page's group.
+      presence: isOff(script.dataset.presence) ? false : undefined,
     });
   };
 
