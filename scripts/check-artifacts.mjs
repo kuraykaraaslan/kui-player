@@ -30,6 +30,7 @@ const core = await load('dist/index.js');
 check('core exports the engine', typeof core.VideoPlayerEngine === 'function');
 check('core exports the store factory', typeof core.createVideoPlayerStore === 'function');
 check('core exports the adapters', typeof core.createHlsAdapter === 'function' && typeof core.createDashAdapter === 'function');
+check('core exports the presence group', typeof core.createPresenceGroup === 'function' && typeof core.isPresenceGroup === 'function');
 check('core exports the parsers', typeof core.parseVtt === 'function' && typeof core.parseSubtitles === 'function');
 check('core reports the published version', core.PLAYER_META?.version === pkg.version,
   `${core.PLAYER_META?.version} vs ${pkg.version}`);
@@ -56,6 +57,8 @@ check('engine exposes the event API', typeof engine.on === 'function' && typeof 
 const react = await load('dist/react/index.js');
 check('react subpath exports the component', typeof react.VideoPlayer === 'function');
 check('react subpath exports the chrome', typeof react.VideoPlayerChrome === 'function');
+check('react subpath exports the presence group provider',
+  typeof react.PresenceGroupProvider === 'function' && typeof react.createPresenceGroup === 'function' && typeof react.usePresenceGroup === 'function');
 check('react subpath exports the hooks', typeof react.useVideoPlayerEngine === 'function');
 check('react subpath ships the stylesheet', typeof react.PLAYER_CSS === 'string' && react.PLAYER_CSS.includes('.kui-player'));
 check('react entry declares the client boundary',
@@ -83,7 +86,7 @@ check('skin exports the custom element', typeof skin.defineKuiPlayer === 'functi
 
 const locales = await load('dist/locales/index.js');
 for (const tag of ['tr', 'de', 'es', 'fr', 'ar']) {
-  check(`locale ${tag} is present and complete`, typeof locales[tag]?.play === 'string');
+  check(`locale ${tag} is present and complete`, typeof locales[tag]?.play === 'string' && typeof locales[tag]?.presenceTitle === 'string');
 }
 check('the Arabic locale is right-to-left', locales.ar?.dir === 'rtl');
 
