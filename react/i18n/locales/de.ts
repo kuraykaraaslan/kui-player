@@ -25,7 +25,7 @@ export const de: PartialDictionary = {
   airPlay: 'AirPlay',
   seek: 'Position',
   live: 'LIVE',
-  goLive: 'Zum Live-Rand springen',
+  goLive: 'Zurück zu Live',
   behindLive: '{time} hinter Live',
   timeOf: '{current} von {total}',
   quality: 'Qualität',
