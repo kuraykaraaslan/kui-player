@@ -27,6 +27,12 @@ type HlsInstance = {
   liveSyncPosition?: number | null;
   /** The latency it aims for behind the live edge, seconds. */
   targetLatency?: number | null;
+  /** The config the instance runs with; hls.js reads some keys again while it runs. */
+  config?: Record<string, unknown>;
+  /** Level of the first fragment of a (re)start; `-1` lets hls.js choose. */
+  startLevel?: number;
+  /** Runtime switch for size capping (hls.js 1.5+; older ones only read `config`). */
+  capLevelToPlayerSize?: boolean;
   on(event: string, cb: (event: string, data: unknown) => void): void;
 };
 
@@ -71,7 +77,11 @@ export type HlsAdapterOptions = {
    * `<script>` tag install leaves behind.
    */
   Hls?: HlsConstructor;
-  /** Passed straight to the `Hls` constructor; wins over `lowLatency` where they overlap. */
+  /**
+   * Passed straight to the `Hls` constructor; wins over `lowLatency` and over the
+   * live quality defaults (`startLevel: 0`, `capLevelToPlayerSize: true`) where
+   * they overlap.
+   */
   config?: Record<string, unknown>;
   /**
    * Low-latency HLS tuning for live streams (hls.js only — native Safari
@@ -117,6 +127,38 @@ export function lowLatencyConfig(option: boolean | LowLatencyOptions | undefined
     liveMaxLatencyDuration,
     maxLiveSyncPlaybackRate: Math.max(1, Math.min(o.catchUpRate ?? 1.1, 2)),
   };
+}
+
+/**
+ * hls.js settings for a live source unless the page's own `config` sets them:
+ * start on the first variant and climb only as far as the player is large, so a
+ * small tile stays cheap and full screen still gets the top variant. On-demand
+ * sources keep hls.js's own choices.
+ */
+const LIVE_QUALITY_DEFAULTS = { startLevel: 0, capLevelToPlayerSize: true } as const;
+
+/**
+ * Turn the live quality defaults on for an hls.js instance that is already
+ * running, once its first playlist shows the source has no end. Keys the page
+ * set in `config` are left alone.
+ *
+ * Size capping takes effect from the first segment's codecs (`BUFFER_CODECS`),
+ * which come after the first playlist, so a stream found to be live is capped
+ * before the bandwidth estimate climbs. `startLevel` cannot move the fragment
+ * already chosen (hls.js's default bandwidth test loads it from the first
+ * variant anyway); it applies to every later start.
+ */
+function applyLiveQualityDefaults(
+  instance: Pick<HlsInstance, 'config' | 'startLevel' | 'capLevelToPlayerSize'>,
+  callerConfig: Record<string, unknown> = {},
+): void {
+  if (!('capLevelToPlayerSize' in callerConfig)) {
+    // The setter (hls.js 1.5+) records it in `config` too; older versions only
+    // look at `config`, so set both.
+    instance.capLevelToPlayerSize = true;
+    if (instance.config) instance.config.capLevelToPlayerSize = true;
+  }
+  if (!('startLevel' in callerConfig)) instance.startLevel = LIVE_QUALITY_DEFAULTS.startLevel;
 }
 
 const HLS_PATTERN = /\.m3u8(\?|#|$)/i;
@@ -257,13 +299,18 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         if (feed(queued)) publishBreaks();
       });
 
+      // Whether a new hls.js instance starts with the live quality defaults: the
+      // page said the source is live, or an earlier instance found it was (a
+      // reload after a refusal or a reconnect builds a new instance).
+      const liveDefaultsUpFront = () => !live.off && (live.hinted || sawLive);
       const config = () => ({
         // Without this a live stream reports a finite, growing duration and
         // looks like a very long video to everything that reads the element.
         liveDurationInfinity: true,
-        // A page that says the source is live gets small-tile defaults: stay on
-        // the first variant and climb only as far as the player is large.
-        ...(live.hinted ? { startLevel: 0, capLevelToPlayerSize: true } : {}),
+        // Small-tile defaults: stay on the first variant and climb only as far
+        // as the player is large. Without a hint they are switched on below,
+        // once the first playlist turns out to have no end.
+        ...(liveDefaultsUpFront() ? LIVE_QUALITY_DEFAULTS : {}),
         ...(live.credentials === 'include'
           ? { xhrSetup: (xhr: XMLHttpRequest) => { xhr.withCredentials = true; } }
           : {}),
@@ -276,6 +323,7 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
         const instance = new ctor(config());
         hls = instance;
         const E = ctor.Events;
+        let liveDefaultsApplied = liveDefaultsUpFront();
 
         instance.on(E.MANIFEST_PARSED, () => {
           qualities = levelsToQualities(instance.levels);
@@ -301,6 +349,10 @@ export function createHlsAdapter(opts: HlsAdapterOptions = {}): MediaAdapter {
           }
           if (typeof details.live !== 'boolean') return;
           sawLive = details.live;
+          if (details.live && !liveDefaultsApplied && !live.off) {
+            liveDefaultsApplied = true;
+            applyLiveQualityDefaults(instance, opts.config);
+          }
           // HLS plays a few segments behind the edge by design; that is "live".
           const tolerance = Math.max(10, (instance.targetLatency ?? 0) + (details.targetduration ?? 0));
           host.updateLive?.(details.live, details.live ? tolerance : undefined);

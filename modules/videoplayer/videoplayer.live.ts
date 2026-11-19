@@ -51,6 +51,12 @@ export type ResolvedLive = {
    * known. Without it, live is still detected from the playlist.
    */
   hinted: boolean;
+  /**
+   * The page passed `live: false`: no live behaviour at all, including the
+   * small-tile quality defaults an adapter would otherwise apply once it finds
+   * the playlist has no end.
+   */
+  off: boolean;
   dvr: boolean;
   stopWhenHidden: boolean;
   reauth: false | Required<LiveReauthOptions>;
@@ -67,7 +73,7 @@ export function resolveLive(input: LiveInput): ResolvedLive {
   // `false` is the opt-out: the pre-live-mode behaviour (seek bar over the DVR
   // window, nothing stopped, nothing reloaded).
   if (input === false) {
-    return { hinted: false, dvr: true, stopWhenHidden: false, reauth: false, credentials: 'same-origin' };
+    return { hinted: false, off: true, dvr: true, stopWhenHidden: false, reauth: false, credentials: 'same-origin' };
   }
   const o: LiveOptions = typeof input === 'object' ? input : {};
   const reauth = o.reauth === false
@@ -75,6 +81,7 @@ export function resolveLive(input: LiveInput): ResolvedLive {
     : { ...DEFAULT_REAUTH, ...(typeof o.reauth === 'object' ? o.reauth : {}) };
   return {
     hinted: input !== undefined,
+    off: false,
     dvr: o.dvr ?? false,
     stopWhenHidden: o.stopWhenHidden ?? true,
     reauth,

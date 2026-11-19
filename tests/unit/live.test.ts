@@ -7,7 +7,7 @@ import { LiveRecovery, parseRefusal, readRefusal } from '../../modules/videoplay
 describe('resolveLive', () => {
   it('defaults to a live stream without a seek bar that stops when hidden and reconnects', () => {
     expect(resolveLive(undefined)).toEqual({
-      hinted: false, dvr: false, stopWhenHidden: true, reauth: DEFAULT_REAUTH, credentials: 'same-origin',
+      hinted: false, off: false, dvr: false, stopWhenHidden: true, reauth: DEFAULT_REAUTH, credentials: 'same-origin',
     });
   });
 
@@ -21,7 +21,7 @@ describe('resolveLive', () => {
 
   it('turns every live behaviour off with false, keeping the old seek bar', () => {
     expect(resolveLive(false)).toEqual({
-      hinted: false, dvr: true, stopWhenHidden: false, reauth: false, credentials: 'same-origin',
+      hinted: false, off: true, dvr: true, stopWhenHidden: false, reauth: false, credentials: 'same-origin',
     });
   });
 });

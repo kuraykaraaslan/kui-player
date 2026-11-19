@@ -21,6 +21,8 @@ class FakeHls {
   audioTrack = 0;
   liveSyncPosition: number | null = 118;
   targetLatency: number | null = 24;
+  startLevel?: number;
+  capLevelToPlayerSize?: boolean;
   destroyed = false;
   stopped = 0;
   started: (number | undefined)[] = [];
@@ -237,6 +239,56 @@ describe('hls adapter: small-tile defaults and credentials', () => {
   it('lets an explicit config win', async () => {
     const { first } = await attach(true, { config: { startLevel: 2, capLevelToPlayerSize: false } });
     expect(first.config).toMatchObject({ startLevel: 2, capLevelToPlayerSize: false });
+  });
+
+  it('switches the defaults on once the first playlist of an unhinted source has no end', async () => {
+    const { first } = await attach(null);
+    expect(first.capLevelToPlayerSize).toBeUndefined();
+    first.fire(EVENTS.LEVEL_LOADED, livePlaylist);
+    expect(first.capLevelToPlayerSize).toBe(true);
+    expect(first.config).toMatchObject({ capLevelToPlayerSize: true });   // what hls.js reads at BUFFER_CODECS
+    expect(first.startLevel).toBe(0);
+  });
+
+  it('keeps hls.js\'s own choices for an on-demand source', async () => {
+    const { first } = await attach(null);
+    first.fire(EVENTS.LEVEL_LOADED, { details: { live: false, fragments: [] } });
+    expect(first.capLevelToPlayerSize).toBeUndefined();
+    expect(first.startLevel).toBeUndefined();
+    expect(first.config).not.toHaveProperty('capLevelToPlayerSize');
+    expect(first.config).not.toHaveProperty('startLevel');
+  });
+
+  it('lets an explicit config win over the defaults found at runtime too', async () => {
+    const { first } = await attach(null, { config: { startLevel: 3, capLevelToPlayerSize: false } });
+    first.fire(EVENTS.LEVEL_LOADED, livePlaylist);
+    expect(first.capLevelToPlayerSize).toBeUndefined();
+    expect(first.startLevel).toBeUndefined();
+    expect(first.config).toMatchObject({ startLevel: 3, capLevelToPlayerSize: false });
+  });
+
+  it('overrides one default and keeps the other', async () => {
+    const { first } = await attach(null, { config: { startLevel: -1 } });
+    first.fire(EVENTS.LEVEL_LOADED, livePlaylist);
+    expect(first.capLevelToPlayerSize).toBe(true);
+    expect(first.startLevel).toBeUndefined();
+  });
+
+  it('builds a reopened instance with the defaults once the source showed it is live', async () => {
+    const { first } = await attach(null);
+    first.fire(EVENTS.LEVEL_LOADED, livePlaylist);
+    first.fire(EVENTS.ERROR, refusal(401));
+    vi.advanceTimersByTime(0);
+    expect(FakeHls.instances).toHaveLength(2);
+    expect(last().config).toMatchObject({ startLevel: 0, capLevelToPlayerSize: true });
+  });
+
+  it('applies nothing when the page turned live behaviour off', async () => {
+    const { first } = await attach(false);
+    expect(first.config).not.toHaveProperty('capLevelToPlayerSize');
+    first.fire(EVENTS.LEVEL_LOADED, livePlaylist);
+    expect(first.capLevelToPlayerSize).toBeUndefined();
+    expect(first.startLevel).toBeUndefined();
   });
 
   it('sends nothing special for same-origin requests (cookies and redirects are the browser\'s defaults)', async () => {
