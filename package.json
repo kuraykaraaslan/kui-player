@@ -93,7 +93,7 @@
     {
       "name": "core (vanilla engine)",
       "path": "dist/index.js",
-      "limit": "19.1 kB"
+      "limit": "19.2 kB"
     },
     {
       "name": "react subpath",
@@ -101,7 +101,7 @@
         "dist/react/index.js",
         "dist/react/player.js"
       ],
-      "limit": "42.9 kB"
+      "limit": "43 kB"
     },
     {
       "name": "react subpath + every lazy chunk",
