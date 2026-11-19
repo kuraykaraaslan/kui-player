@@ -18,10 +18,24 @@ const adapters = [createHlsAdapter({ Hls })];   // once, outside render
 ```
 
 Detection needs no option: the adapter reads `details.live` from every playlist refresh.
-What `live` adds is a *hint* ("this source is live"), which lets the adapter pick small-tile
-defaults before the first playlist arrives: `startLevel: 0` and
+
+A live source gets small-tile quality defaults in hls.js: `startLevel: 0` and
 `capLevelToPlayerSize: true`, so a small tile stays on the first variant and a full-screen
-player climbs. Both can be overridden with `createHlsAdapter({ config })`.
+player climbs. On-demand sources keep hls.js's own choices. When the defaults apply:
+
+- With `live` (a *hint*: "this source is live") they go into the hls.js config, before the
+  first playlist arrives.
+- Without it they are switched on once the first playlist turns out to have no end. Size
+  capping then starts with the first segment, before the bandwidth estimate climbs (hls.js
+  loads that first segment from the first variant anyway, for its bandwidth test). A reload or
+  reconnect of a source already seen live starts with both in its config.
+- `live={false}` applies neither.
+
+Either key set in `createHlsAdapter({ config })` wins, including `false`:
+
+```ts
+createHlsAdapter({ Hls, config: { capLevelToPlayerSize: false } });   // keep the start level, never cap
+```
 
 While a live stream plays:
 

@@ -62,7 +62,9 @@ createHlsAdapter({ Hls, lowLatency: { liveSyncDuration: 2, liveMaxLatencyDuratio
 `lowLatency` maps to hls.js `lowLatencyMode`, `liveSyncDuration`,
 `liveMaxLatencyDuration` and `maxLiveSyncPlaybackRate`. When the viewer drifts past the
 max latency, hls.js plays slightly faster (`catchUpRate`, default 1.1×; `1` disables it)
-until it is back near the edge. An explicit `config` still wins over these values.
+until it is back near the edge. An explicit `config` still wins over these values, and over the
+live quality defaults (`startLevel: 0`, `capLevelToPlayerSize: true`, see
+[live streams](live-streams.md#live-mode)).
 
 The live badge shows the current delay (`LIVE −4s`) and its tooltip spells it out; click it to jump to the edge.
 

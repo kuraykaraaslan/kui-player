@@ -336,8 +336,13 @@ All generic: nothing knows what is streamed. Recipe: recipes/live-streams.md.
   when behind (tolerance = hls.js target latency + one segment, at least 10 s), no seek bar, no
   ±10 s buttons, no seek shortcuts, and never "ended" (a live playlist that repeats one segment
   with `EXT-X-DISCONTINUITY` is just a live playlist).
-- `live` as a hint (true / object) makes `createHlsAdapter` pass `startLevel: 0` and
-  `capLevelToPlayerSize: true` (override with `config`). The adapter always passes
+- Live quality defaults in `createHlsAdapter`: `startLevel: 0` and `capLevelToPlayerSize: true`
+  for a live source only (on-demand keeps hls.js's choices). With `live` as a hint (true /
+  object) they are in the constructor config; without it the adapter sets
+  `hls.capLevelToPlayerSize` / `hls.config.capLevelToPlayerSize` and `hls.startLevel` when the
+  first playlist has no end (capping starts at the first segment's `BUFFER_CODECS`), and a
+  reload / reconnect of a source seen live gets them in its config. A key the caller set in
+  `config` wins (even `false`); `live={false}` applies neither. The adapter always passes
   `liveDurationInfinity: true`.
 - Reload: on 401 / 403 / 404 (a deleted path, an ended session) for a live source the adapter
   destroys the hls.js instance and loads the ORIGINAL url again at once (redirects followed,
