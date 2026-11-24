@@ -122,6 +122,7 @@ function autoStart(): void {
       enableKeyboard: flag('keyboard', true),
       hideNativeControls: flag('nativeControls', false) ? false : true,
       cast: flag('cast', false),
+      hideAbout: flag('hideAbout', false),
       observe: flag('observe', true),
       defaultSpeed: script.dataset.speed ? Number(script.dataset.speed) : undefined,
       live: parseLive(script.dataset.live),

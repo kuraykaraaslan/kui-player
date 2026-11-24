@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { defineKuiPlayer, type KuiPlayerElement } from '../../embed/webComponent';
 import { setPagePresence } from '../../embed/pagePresence';
 import { emit } from '../setup';
@@ -148,6 +149,39 @@ describe('<kui-player>: live-stream options', () => {
   });
 });
 
+/** The skinned chrome of the `index`th player, inside its shadow root. */
+const chromeOf = (index = 0) => {
+  const host = document.querySelectorAll<HTMLElement>('[data-tepegoz-video-player]')[index]!;
+  return within(host.shadowRoot as unknown as HTMLElement);
+};
+
+/** Open the settings menu of the first player and say whether it has an About row. */
+async function hasAboutRow(): Promise<boolean> {
+  // The embed script skins on its own schedule, so wait for the chrome.
+  await userEvent.setup().click(await chromeOf().findByRole('button', { name: 'Settings' }));
+  await chromeOf().findByRole('menu');
+  return chromeOf().queryByRole('menuitem', { name: /About/ }) !== null;
+}
+
+describe('<kui-player>: hide-about', () => {
+  it('shows the About entry by default', async () => {
+    element({ src: 'https://example.com/a.mp4' });
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('leaves the About entry out with hide-about, and puts it back when the attribute goes', async () => {
+    const el = element({ src: 'https://example.com/a.mp4', 'hide-about': '' });
+    expect(await hasAboutRow()).toBe(false);
+    act(() => { el.removeAttribute('hide-about'); });
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('reads hide-about="false" as off', async () => {
+    element({ src: 'https://example.com/a.mp4', 'hide-about': 'false' });
+    expect(await hasAboutRow()).toBe(true);
+  });
+});
+
 describe('the embed script', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -222,6 +256,13 @@ describe('the embed script', () => {
     script({ auto: 'video', presence: 'off', 'presence-every-ms': '1000', 'presence-grace-ms': '1000' });
     await import('../../embed/index');
     expect(window.kuiPlayer!.getPagePresence()).toBeNull();
+  });
+
+  it('data-hide-about leaves the About entry out of the skinned videos', async () => {
+    document.body.innerHTML = '<video src="a.mp4"></video>';
+    script({ auto: 'video', 'hide-about': 'true' });
+    await import('../../embed/index');
+    expect(await hasAboutRow()).toBe(false);
   });
 
   it('makes a group on demand from the global', async () => {

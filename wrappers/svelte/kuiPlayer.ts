@@ -47,8 +47,9 @@ function needsRemount(prev: SkinOptions, next: SkinOptions): boolean {
  * `presence` (`{ everyMs, graceMs }`, a group from `providePresenceGroup()`, or
  * `false`), `loadOnPlay`, `adapters` + `src`, `sources` +
  * `preferAlternateInFullscreen`, and the callbacks `onSourceChange(index, source)`
- * and `on: { 'presence:ask': …, 'live:reconnect': …, error: … }`. `live`,
- * `presence` and `loadOnPlay` change in place; the rest remount.
+ * and `on: { 'presence:ask': …, 'live:reconnect': …, error: … }`. `hideAbout`
+ * leaves the About entry out of the settings menu. `live`, `presence` and
+ * `loadOnPlay` change in place; the rest remount.
  */
 export function kuiPlayer(node: HTMLVideoElement, options: SkinOptions = {}) {
   let current = options;

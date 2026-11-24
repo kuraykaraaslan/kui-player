@@ -131,6 +131,8 @@ export interface VideoPlayerChromeProps {
   castReceiverAppId?: string;
   /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
   enablePictureInPicture?: boolean;
+  /** Hide the About entry of the settings menu; its dialog is then never loaded. Default `false`. */
+  hideAbout?: boolean;
   /** Touch gestures; `false` turns them all off. Default `true`. */
   gestures?: boolean | GestureOptions;
   /** Enter fullscreen when a phone rotates to landscape while playing. Default `false`. */
@@ -175,7 +177,7 @@ export function VideoPlayerChrome({
   videoRef, children, skin = false, theme, slots, onToggleFullscreen,
   src = '', poster, title, qualities, alternateSources, alternateIndex = 0, onAlternateSelect, subtitles: subtitleProp, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
-  enablePictureInPicture = true,
+  enablePictureInPicture = true, hideAbout = false,
   gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, audioOnly = false, waveform, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
@@ -731,7 +733,7 @@ export function VideoPlayerChrome({
               ref={settingsPanelRef}
               view={settingsView}
               onChangeView={setSettingsView}
-              onAbout={() => { setShowAbout(true); closeSettings(); }}
+              onAbout={hideAbout ? undefined : () => { setShowAbout(true); closeSettings(); }}
               qualities={qualityOptions}
               chapters={chapterList}
               onSeekTo={(time) => { engine.seek(time); closeSettings(); }}
@@ -888,7 +890,7 @@ export function VideoPlayerChrome({
         </Suspense>
       )}
 
-      {showAbout && (
+      {showAbout && !hideAbout && (
         <Suspense fallback={null}>
           <AboutModal open onClose={() => setShowAbout(false)} />
         </Suspense>

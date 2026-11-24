@@ -60,6 +60,7 @@ other than the media you point it at.
 | `castReceiverAppId` | `string` | default receiver | brand the TV side |
 | `onCastStateChange` | `(state: CastState) => void` | — | |
 | `enablePictureInPicture` | `boolean` | `true` | button hides itself where unsupported |
+| `hideAbout` | `boolean` | `false` | no About entry in the settings menu and no About dialog (white-label) |
 | `gestures` | `boolean \| GestureOptions` | `true` | touch only; loaded lazily on coarse pointers |
 | `autoFullscreenOnLandscape` | `boolean` | `false` | phones only |
 | `preferNativeIosFullscreen` | `boolean` | `false` | use the OS player instead of emulated fullscreen |
@@ -192,7 +193,7 @@ Neither library is bundled.
     const skins = skinAll("video", { observe: true });   // .refresh() .count .stop()
 
 SkinOptions: `defaultSpeed`, `autoHideControls` (true), `enableKeyboard` (true),
-`accent`, `hideNativeControls` (true), `title`, `cast` (false), `locale` (a dictionary), and the
+`accent`, `hideNativeControls` (true), `title`, `cast` (false), `hideAbout` (false), `locale` (a dictionary), and the
 live-stream options: `live` (LiveInput), `presence` (`{ everyMs, graceMs }` | PresenceGroup | false),
 `loadOnPlay`, `adapters` + `src` (open `src` through hls.js/dash.js adapters; the element should have no
 `src` of its own), `sources` (+ `preferAlternateInFullscreen`, `onSourceChange(index, source)`) and
@@ -202,7 +203,7 @@ live-stream options: `live` (LiveInput), `presence` (`{ everyMs, graceMs }` | Pr
 SkinAllOptions adds `observe` (true), `root`, `filter`.
 
 Script tag equivalent — `data-auto`, `data-accent`, `data-autohide`, `data-keyboard`,
-`data-observe`, `data-cast`, `data-speed`, `data-live` (bare | true | false | off | JSON),
+`data-observe`, `data-cast`, `data-hide-about`, `data-speed`, `data-live` (bare | true | false | off | JSON),
 `data-load-on-play`, `data-presence-every-ms` + `data-presence-grace-ms` (make the page's presence
 group), `data-presence="off"` — installs `window.kuiPlayer` with
 `mount`, `unmount`, `unmountAll`, `isMounted`, `skinAll`, `version`, `define`, `setPagePresence(options | group | null)`,
@@ -219,7 +220,7 @@ the default. `mountPresencePrompt(group, { locale?, injectStyles? })` renders th
 
 Attributes: `src poster title accent autoplay muted loop speed cast`, plus `live` (bare | true | false | off |
 JSON), `presence` (`off` | JSON `{"everyMs":…,"graceMs":…}`), `presence-every-ms` + `presence-grace-ms`,
-`load-on-play`, `sources` (JSON `[{label, src}]`), `prefer-alternate-in-fullscreen`. Properties (objects):
+`load-on-play`, `sources` (JSON `[{label, src}]`), `prefer-alternate-in-fullscreen`, `hide-about`. Properties (objects):
 `adapters`, `sources`, `live`, `presence` (also a PresenceGroup), `locale`, read-only `video` and `skin`.
 `live`, `presence` and `load-on-play` change in place; any other change remounts. Events (CustomEvent,
 payload in `detail`): `kui-presence-ask`, `kui-presence-continue`, `kui-presence-timeout`, `kui-suspend`,
@@ -234,7 +235,7 @@ payload in `detail`): `kui-presence-ask`, `kui-presence-continue`, `kui-presence
       <KuiPlayer :src="c.src" :adapters="adapters" live load-on-play @live-reconnect="…" @error="…" />
     </PresenceGroupProvider>
 
-`KuiPlayer` props: `src`, `poster`, `title`, `accent`, `autoplay`, `loop`, `muted`, `cast`, `options`
+`KuiPlayer` props: `src`, `poster`, `title`, `accent`, `autoplay`, `loop`, `muted`, `cast`, `hideAbout`, `options`
 (SkinOptions), `live` (boolean | LiveOptions), `presence` (options | group | false), `loadOnPlay`, `adapters`,
 `sources`, `preferAlternateInFullscreen`, `locale`. Emits: `sourceChange(index, source)`, `presenceAsk({graceMs})`,
 `presenceContinue`, `presenceTimeout`, `suspend({reason})`, `resume({reason})`,

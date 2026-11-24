@@ -39,6 +39,9 @@ theme's `functions.php` and travels with your code:
 	return $settings;
 } );`
 
+For a white-label site, `$settings['hide_about'] = true;` leaves the player's
+*About* entry (and its dialog) out of the settings menu.
+
 To serve the bundle yourself instead of from the CDN:
 
 `add_filter( 'kui_player_script_url', function () {

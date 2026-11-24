@@ -162,6 +162,26 @@ describe('Svelte action: alternate sources', () => {
   });
 });
 
+describe('Svelte action: hideAbout', () => {
+  async function hasAboutRow(): Promise<boolean> {
+    await userEvent.setup().click(chromeOf().getByRole('button', { name: 'Settings' }));
+    await chromeOf().findByRole('menu');
+    return chromeOf().queryByRole('menuitem', { name: /About/ }) !== null;
+  }
+
+  it('shows the About entry by default', async () => {
+    useAction(pageVideo({ src: 'https://example.com/a.mp4' }), {});
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('leaves it out with hideAbout, and remounts when the option changes', async () => {
+    const action = useAction(pageVideo({ src: 'https://example.com/a.mp4' }), { hideAbout: true });
+    expect(await hasAboutRow()).toBe(false);
+    act(() => { action.update({ hideAbout: false }); });
+    expect(await hasAboutRow()).toBe(true);
+  });
+});
+
 describe('Svelte: presence', () => {
   beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: false }); });
   afterEach(() => { vi.useRealTimers(); });

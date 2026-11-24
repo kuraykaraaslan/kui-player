@@ -25,7 +25,8 @@ import type {
 type SettingsPanelProps = {
   view: SettingsView;
   onChangeView: (view: SettingsView) => void;
-  onAbout: () => void;
+  /** Opens the About dialog. Without it there is no About row (`hideAbout`). */
+  onAbout?: () => void;
   qualities?: QualityOption[];
   subtitles?: SubtitleTrack[];
   audioTracks?: AudioTrackOption[];
@@ -147,7 +148,7 @@ export const SettingsPanel = forwardRef<HTMLDivElement, SettingsPanelProps>(func
                 onClick={() => onChangeView('chapters')}
               />
             )}
-            <SettingsRow label={t('about')} value={`v${PLAYER_META.version}`} onClick={onAbout} />
+            {onAbout && <SettingsRow label={t('about')} value={`v${PLAYER_META.version}`} onClick={onAbout} />}
           </div>
         </>
       )}

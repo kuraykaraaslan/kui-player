@@ -12,7 +12,7 @@ element stays a real media element with its own `src`, events and methods.
 | Angular, Solid, Qwik, plain HTML | `<kui-player>`, the custom element |
 
 All of them take the same options as the React `<VideoPlayer>` for live streams, the
-"Still watching?" check and alternate sources, spelled the way the framework spells things:
+"Still watching?" check, alternate sources and the About entry, spelled the way the framework spells things:
 
 | Option | What it does |
 |---|---|
@@ -22,6 +22,7 @@ All of them take the same options as the React `<VideoPlayer>` for live streams,
 | `adapters` | `createHlsAdapter(...)` and friends, to open `src` / `sources` |
 | `sources`, `preferAlternateInFullscreen` | "Standard" / "High" in the quality menu; the second in fullscreen on request |
 | `locale` | a dictionary for the controls and the presence prompt |
+| `hideAbout` | leave the *About* entry and its dialog out of the settings menu (white-label products) |
 
 > **Skin mode normally leaves the media pipeline alone** — the page's own hls.js or
 > `<video src>` keeps feeding the element. Two of these options touch it, and only when
@@ -74,6 +75,7 @@ import { KuiPlayer } from "@kuraykaraaslan/kui-player/wrappers/vue";
 | `adapters` | `MediaAdapter[]` | keep the array stable (an inline `[hls]` is fine: only a different item counts as a change) |
 | `sources` | `{ label, src }[]` | the first is the default |
 | `prefer-alternate-in-fullscreen` | `boolean` | the second plays in fullscreen, the first in the card |
+| `hide-about` | `boolean` | no *About* entry in the settings menu, and no About dialog |
 | `locale` | `PartialDictionary` | for the controls and the presence prompt |
 | `accent`, `title`, `cast`, `poster`, `autoplay`, `loop`, `muted`, `options` | | as before; `options` takes any `SkinOptions` |
 
@@ -252,6 +254,7 @@ and exposes the underlying element as `.video` for everything else.
 | `load-on-play` | hold an HLS source back until Play |
 | `sources` | JSON: `'[{"label":"Standard","src":"…"},{"label":"High","src":"…"}]'` |
 | `prefer-alternate-in-fullscreen` | the second plays in fullscreen |
+| `hide-about` | no *About* entry in the settings menu, and no About dialog (`hide-about="false"` keeps it) |
 
 Properties for what an attribute cannot carry: `adapters`, `sources`, `live`, `presence` (a
 `PresenceGroup` too) and `locale`. `live`, `presence` and `load-on-play` change in place; the others

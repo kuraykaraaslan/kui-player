@@ -207,6 +207,11 @@ export type VideoPlayerProps = {
   presence?: PresenceOptions | PresenceGroup | false;
   /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
   enablePictureInPicture?: boolean;
+  /**
+   * Hide the About entry of the settings menu and its dialog (author, website),
+   * for white-label products. Default `false`.
+   */
+  hideAbout?: boolean;
   /** Touch gestures. `false` disables them entirely. Default `true`. */
   gestures?: boolean | GestureOptions;
   /** Go fullscreen automatically when a phone is rotated to landscape. Default `false`. */

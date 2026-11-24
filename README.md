@@ -505,6 +505,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `castQueue` | `CastQueueItem[]` | cast a playlist; the receiver owns the queue |
 | `castReceiverAppId` | `string` | custom receiver application id |
 | `enablePictureInPicture` | `boolean` | defaults to `true`; the button hides itself where PiP is unsupported |
+| `hideAbout` | `boolean` | default `false`. Leaves the *About* entry out of the settings menu, so its dialog (author, website) can never open: for white-label products. Skin mode: `hideAbout`, `<kui-player hide-about>`, `data-hide-about` on the script tag |
 | `gestures` | `boolean \| GestureOptions` | touch gestures, see [Touch gestures](#touch-gestures) |
 | `autoFullscreenOnLandscape` | `boolean` | fullscreen when a phone rotates while playing |
 | `preferNativeIosFullscreen` | `boolean` | use the iOS OS player instead of emulated fullscreen |

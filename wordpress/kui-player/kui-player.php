@@ -43,16 +43,19 @@ function kui_player_script_url() {
  * cast       Show the Google Cast button. Off by default: turning it on loads
  *            Google's sender SDK from gstatic.com, which is the only external
  *            request the player can make.
+ * hide_about Hide the About entry of the settings menu and its dialog, for
+ *            white-label sites.
  */
 function kui_player_settings() {
 	return apply_filters(
 		'kui_player_settings',
 		array(
-			'selector' => 'video',
-			'accent'   => '',
-			'autohide' => true,
-			'keyboard' => true,
-			'cast'     => false,
+			'selector'   => 'video',
+			'accent'     => '',
+			'autohide'   => true,
+			'keyboard'   => true,
+			'cast'       => false,
+			'hide_about' => false,
 		)
 	);
 }
@@ -95,6 +98,9 @@ function kui_player_script_attributes( $tag, $handle ) {
 	}
 	if ( ! empty( $settings['cast'] ) ) {
 		$attrs .= ' data-cast="true"';
+	}
+	if ( ! empty( $settings['hide_about'] ) ) {
+		$attrs .= ' data-hide-about="true"';
 	}
 
 	return str_replace( ' src=', $attrs . ' src=', $tag );

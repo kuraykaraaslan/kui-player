@@ -1594,3 +1594,28 @@ describe('study mode', () => {
     expect(within(dialog).getByText(/No notes yet/)).toBeInTheDocument();
   });
 });
+
+describe('the About entry', () => {
+  async function openSettings(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('menu');
+  }
+
+  it('is in the settings menu by default and opens the About dialog', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    await openSettings(user);
+    await user.click(screen.getByRole('menuitem', { name: /About/ }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('is left out with hideAbout, and no About dialog can open', async () => {
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} hideAbout />);
+    await openSettings(user);
+    expect(screen.queryByRole('menuitem', { name: /About/ })).not.toBeInTheDocument();
+    // The rest of the menu is unaffected.
+    expect(screen.getByRole('menuitem', { name: /Speed/ })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});

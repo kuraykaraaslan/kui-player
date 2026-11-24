@@ -25,6 +25,7 @@ That is the whole integration. The bundle reads its configuration from its own t
 | `data-keyboard` | `true` | keyboard shortcuts while the pointer is over the player |
 | `data-observe` | `true` | keep skinning videos added later (single-page apps) |
 | `data-cast` | `false` | show the Cast button — loads Google's sender SDK |
+| `data-hide-about` | `false` | leave the *About* entry (and its dialog) out of the settings menu, for white-label sites |
 | `data-speed` | — | playback rate to apply on mount |
 | `data-live` | — | live behaviour for every skinned video: bare / `true` says "live", `false` / `off` turns the live behaviours off, JSON gives options (`'{"dvr":true}'`) |
 | `data-load-on-play` | `false` | hold an adapter-managed source back until Play (no effect on the page's own pipeline) |
@@ -93,6 +94,7 @@ Options added to `SkinOptions` (all optional; leave them out and skin mode behav
 | `on` | engine events by name: `{ "presence:ask": …, "live:reconnect": …, error: … }` |
 | `adapters`, `src` | open `src` through `createHlsAdapter(...)`; the element should have no `src` of its own |
 | `sources`, `preferAlternateInFullscreen`, `onSourceChange` | "Standard" / "High" in the quality menu |
+| `hideAbout` | leave the *About* entry and its dialog out of the settings menu (white-label) |
 
 `mountSkin` returns the function that unmounts, which also carries `.engine` and
 `.update({ live, presence, loadOnPlay })` to change those three without a remount.
@@ -103,7 +105,7 @@ address). A page whose own hls.js already feeds the element should pass neither 
 the guarantee below.
 
 `<kui-player>` takes the same options as attributes (`live`, `presence`, `presence-every-ms`,
-`presence-grace-ms`, `load-on-play`, `sources`, `prefer-alternate-in-fullscreen`), properties
+`presence-grace-ms`, `load-on-play`, `sources`, `prefer-alternate-in-fullscreen`, `hide-about`), properties
 (`adapters`, `sources`, `live`, `presence`, `locale`) and `kui-*` events — see
 [wrappers](../wrappers/README.md).
 

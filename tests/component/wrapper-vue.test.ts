@@ -206,6 +206,27 @@ describe('Vue wrapper: alternate sources', () => {
   });
 });
 
+describe('Vue wrapper: hideAbout', () => {
+  async function hasAboutRow(): Promise<boolean> {
+    await userEvent.setup().click(chromeOf().getByRole('button', { name: 'Settings' }));
+    await chromeOf().findByRole('menu');
+    return chromeOf().queryByRole('menuitem', { name: /About/ }) !== null;
+  }
+
+  it('shows the About entry by default', async () => {
+    await mount(() => h(KuiPlayer, { src: 'https://example.com/a.mp4' }));
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('leaves it out with hide-about, and remounts when the prop changes', async () => {
+    const state = reactive({ hideAbout: true });
+    await mount(() => h(KuiPlayer, { src: 'https://example.com/a.mp4', hideAbout: state.hideAbout }));
+    expect(await hasAboutRow()).toBe(false);
+    await act(async () => { state.hideAbout = false; await nextTick(); });
+    expect(await hasAboutRow()).toBe(true);
+  });
+});
+
 describe('Vue wrapper: presence', () => {
   beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: false }); });
   afterEach(() => { vi.useRealTimers(); });

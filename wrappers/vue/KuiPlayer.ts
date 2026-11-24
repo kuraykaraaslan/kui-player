@@ -43,6 +43,8 @@ export const KuiPlayer = defineComponent({
     loop: { type: Boolean, default: false },
     muted: { type: Boolean, default: false },
     cast: { type: Boolean, default: false },
+    /** Hide the About entry of the settings menu and its dialog (white-label products). */
+    hideAbout: { type: Boolean, default: false },
     options: { type: Object as PropType<SkinOptions>, default: () => ({}) },
 
     /**
@@ -126,6 +128,7 @@ export const KuiPlayer = defineComponent({
             ...(props.accent ? { accent: props.accent } : {}),
             ...(props.title ? { title: props.title } : {}),
             cast: props.cast,
+            hideAbout: props.hideAbout,
             live: props.live,
             presence: presence(),
             loadOnPlay: props.loadOnPlay,
@@ -147,7 +150,7 @@ export const KuiPlayer = defineComponent({
     // (An array of getters, so each is compared on its own: a getter that returns an array is "changed" every time it runs.)
     watch(
       [
-        () => props.accent, () => props.cast, () => props.title, adapters, () => props.locale,
+        () => props.accent, () => props.cast, () => props.hideAbout, () => props.title, adapters, () => props.locale,
         () => props.preferAlternateInFullscreen, managed, () => (managed() ? props.src : undefined),
         () => JSON.stringify(props.sources ?? null), () => group?.value,
       ],

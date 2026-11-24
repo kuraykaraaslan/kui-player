@@ -44,7 +44,7 @@ export interface KuiPlayerElement extends HTMLElement {
 const OBSERVED = [
   'src', 'poster', 'title', 'accent', 'autoplay', 'muted', 'loop', 'controls', 'speed',
   'live', 'presence', 'presence-every-ms', 'presence-grace-ms', 'load-on-play',
-  'sources', 'prefer-alternate-in-fullscreen',
+  'sources', 'prefer-alternate-in-fullscreen', 'hide-about',
 ];
 
 /**
@@ -187,6 +187,7 @@ function elementClass(): CustomElementConstructor {
         // The attribute is what the element was given; the skin opens it when it is not the element's own.
         src: this.managed() ? (this.getAttribute('src') ?? undefined) : undefined,
         preferAlternateInFullscreen: parseFlag(this.getAttribute('prefer-alternate-in-fullscreen')),
+        hideAbout: parseFlag(this.getAttribute('hide-about')),
         onSourceChange: (index, source) => {
           this.dispatchEvent(new CustomEvent('kui-source-change', { detail: { index, source } }));
         },
