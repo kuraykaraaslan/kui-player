@@ -187,7 +187,8 @@ function elementClass(): CustomElementConstructor {
         // The attribute is what the element was given; the skin opens it when it is not the element's own.
         src: this.managed() ? (this.getAttribute('src') ?? undefined) : undefined,
         preferAlternateInFullscreen: parseFlag(this.getAttribute('prefer-alternate-in-fullscreen')),
-        hideAbout: parseFlag(this.getAttribute('hide-about')),
+        // Absent: the library-wide default (`configurePlayer`) decides.
+        hideAbout: this.hasAttribute('hide-about') ? parseFlag(this.getAttribute('hide-about')) : undefined,
         onSourceChange: (index, source) => {
           this.dispatchEvent(new CustomEvent('kui-source-change', { detail: { index, source } }));
         },

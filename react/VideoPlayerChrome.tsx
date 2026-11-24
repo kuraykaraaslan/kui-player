@@ -25,6 +25,7 @@ import { miniEnabled, type MiniCorner, type MiniOptions } from '../modules/video
 import { useMiniPlayer } from './hooks/useMiniPlayer.js';
 import type { SkipOptions } from './parts/SkipController.js';
 import { buildKeymap, type ShortcutOverrides } from '../modules/videoplayer/videoplayer.shortcuts.js';
+import { resolveHideAbout } from '../modules/videoplayer/videoplayer.config.js';
 import { Icon } from './icons/index.js';
 import { formatSubtitleOffset } from '../modules/videoplayer/videoplayer.subtitles.js';
 import { useTranslatedCues, useTranslationTargets } from './hooks/useTranslatedCues.js';
@@ -131,7 +132,7 @@ export interface VideoPlayerChromeProps {
   castReceiverAppId?: string;
   /** Show the Picture-in-Picture button where the browser supports it. Default `true`. */
   enablePictureInPicture?: boolean;
-  /** Hide the About entry of the settings menu; its dialog is then never loaded. Default `false`. */
+  /** Hide the About entry of the settings menu; its dialog is then never loaded. Default: `configurePlayer`'s, else `false`. */
   hideAbout?: boolean;
   /** Touch gestures; `false` turns them all off. Default `true`. */
   gestures?: boolean | GestureOptions;
@@ -177,7 +178,7 @@ export function VideoPlayerChrome({
   videoRef, children, skin = false, theme, slots, onToggleFullscreen,
   src = '', poster, title, qualities, alternateSources, alternateIndex = 0, onAlternateSelect, subtitles: subtitleProp, audioTracks, chapters, thumbnails,
   onQualityChange, onAudioTrackChange, enableCast = false, castQueue, castReceiverAppId,
-  enablePictureInPicture = true, hideAbout = false,
+  enablePictureInPicture = true, hideAbout: hideAboutProp,
   gestures = true, autoFullscreenOnLandscape = false, shortcuts, skipSegments = true, miniPlayer = false, audioDescription: audioDescriptionDefault, documentPictureInPicture = false, translation, audioOnly = false, waveform, onCastStateChange,
   onControlsVisibilityChange, className,
 }: VideoPlayerChromeProps) {
@@ -189,6 +190,8 @@ export function VideoPlayerChrome({
   const progressRef = useRef<HTMLDivElement>(null);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
   const [showAbout, setShowAbout] = useState(false);
+  // The player's own value, else the library-wide default (`configurePlayer`).
+  const hideAbout = resolveHideAbout(hideAboutProp);
   const [showHelp, setShowHelp] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const toggleStats = useCallback(() => setShowStats((v) => !v), []);

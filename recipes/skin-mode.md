@@ -25,7 +25,7 @@ That is the whole integration. The bundle reads its configuration from its own t
 | `data-keyboard` | `true` | keyboard shortcuts while the pointer is over the player |
 | `data-observe` | `true` | keep skinning videos added later (single-page apps) |
 | `data-cast` | `false` | show the Cast button — loads Google's sender SDK |
-| `data-hide-about` | `false` | leave the *About* entry (and its dialog) out of the settings menu, for white-label sites |
+| `data-hide-about` | `configurePlayer` default, else `false` | leave the *About* entry (and its dialog) out of the settings menu, for white-label sites; `false` keeps it whatever the default |
 | `data-speed` | — | playback rate to apply on mount |
 | `data-live` | — | live behaviour for every skinned video: bare / `true` says "live", `false` / `off` turns the live behaviours off, JSON gives options (`'{"dvr":true}'`) |
 | `data-load-on-play` | `false` | hold an adapter-managed source back until Play (no effect on the page's own pipeline) |
@@ -94,7 +94,7 @@ Options added to `SkinOptions` (all optional; leave them out and skin mode behav
 | `on` | engine events by name: `{ "presence:ask": …, "live:reconnect": …, error: … }` |
 | `adapters`, `src` | open `src` through `createHlsAdapter(...)`; the element should have no `src` of its own |
 | `sources`, `preferAlternateInFullscreen`, `onSourceChange` | "Standard" / "High" in the quality menu |
-| `hideAbout` | leave the *About* entry and its dialog out of the settings menu (white-label) |
+| `hideAbout` | leave the *About* entry and its dialog out of the settings menu (white-label). Left out: the `configurePlayer({ hideAbout })` default, which also covers `<kui-player>` (`kuiPlayer.configurePlayer(...)` in the script build) |
 
 `mountSkin` returns the function that unmounts, which also carries `.engine` and
 `.update({ live, presence, loadOnPlay })` to change those three without a remount.

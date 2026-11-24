@@ -8,6 +8,8 @@ export {
 export type { ProvidePresenceGroupOptions, PresenceGroup } from './presence.js';
 export { mountPresencePrompt } from '../../embed/pagePresence.js';
 export { setPagePresence };
+export { configurePlayer, playerDefaults } from '../../modules/videoplayer/videoplayer.config.js';
+export type { PlayerDefaults } from '../../modules/videoplayer/videoplayer.config.js';
 export type { SkinOptions, SkinEventHandlers } from '../../embed/mountSkin.js';
 export type { PresenceOptions } from '../../modules/videoplayer/videoplayer.presence.js';
 export type { LiveInput } from '../../modules/videoplayer/videoplayer.live.js';

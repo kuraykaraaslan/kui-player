@@ -16,7 +16,7 @@ other than the media you point it at.
 
 | Specifier | Contents |
 |---|---|
-| `@kuraykaraaslan/kui-player` | `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, `SPEEDS`, `SUBTITLE_SIZES`, `SUBTITLE_SIZE_LABELS`, `AUTO_QUALITY`, `AUTO_QUALITY_VALUE`, all types |
+| `@kuraykaraaslan/kui-player` | `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, `configurePlayer`, `playerDefaults` (also on react, skin, wrappers/vue, wrappers/svelte), `SPEEDS`, `SUBTITLE_SIZES`, `SUBTITLE_SIZE_LABELS`, `AUTO_QUALITY`, `AUTO_QUALITY_VALUE`, all types |
 | `@kuraykaraaslan/kui-player/react` | `VideoPlayer`, `VideoPlayerChrome`, `VideoPlayerEngineContext`, `useVideoPlayerEngine`, `useVideoPlayerStore`, `useVideoPlayerStoreApi`, `Icon`, `IconProvider`, `PLAYER_CSS`, `injectPlayerStyles`, `usePlayerStyles` |
 | `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `SKINNED_ATTR`, `defineKuiPlayer`, `KuiPlayerElement`, `setPagePresence`, `getPagePresence`, `createPagePresenceGroup`, `mountPresencePrompt`, `createPresenceGroup`, `isPresenceGroup`, types `SkinOptions`, `SkinHandle`, `SkinEventHandlers`, `PagePresenceOptions` |
 | `@kuraykaraaslan/kui-player/locales` | `tr`, `de`, `es`, `fr`, `ar` (English is built in) |
@@ -60,7 +60,7 @@ other than the media you point it at.
 | `castReceiverAppId` | `string` | default receiver | brand the TV side |
 | `onCastStateChange` | `(state: CastState) => void` | — | |
 | `enablePictureInPicture` | `boolean` | `true` | button hides itself where unsupported |
-| `hideAbout` | `boolean` | `false` | no About entry in the settings menu and no About dialog (white-label) |
+| `hideAbout` | `boolean` | `configurePlayer` default, else `false` | no About entry in the settings menu and no About dialog (white-label) |
 | `gestures` | `boolean \| GestureOptions` | `true` | touch only; loaded lazily on coarse pointers |
 | `autoFullscreenOnLandscape` | `boolean` | `false` | phones only |
 | `preferNativeIosFullscreen` | `boolean` | `false` | use the OS player instead of emulated fullscreen |
@@ -80,6 +80,14 @@ other than the media you point it at.
 | `slots` | `PlayerSlots` | — | `top`, `aboveControls`, `controlsStart`, `controlsEnd` |
 | `injectStyles` | `boolean` | `true` | `false` if you link `styles.css` yourself |
 | `className` | `string` | — | on the root element |
+
+### Library-wide defaults
+
+`configurePlayer(defaults: PlayerDefaults)` sets defaults for every player on the page (all bindings);
+`playerDefaults()` returns them (frozen snapshot). `PlayerDefaults = { hideAbout?: boolean }`, the start of
+the library's configuration standard. Resolution: the player's own option, else the configured default,
+else the built-in default. Keys merge; `undefined` resets a key. Stored on `globalThis` under
+`Symbol.for('kui-player.defaults')`, so two bundled copies agree. Call before players mount.
 
 ### GestureOptions
 
@@ -193,7 +201,7 @@ Neither library is bundled.
     const skins = skinAll("video", { observe: true });   // .refresh() .count .stop()
 
 SkinOptions: `defaultSpeed`, `autoHideControls` (true), `enableKeyboard` (true),
-`accent`, `hideNativeControls` (true), `title`, `cast` (false), `hideAbout` (false), `locale` (a dictionary), and the
+`accent`, `hideNativeControls` (true), `title`, `cast` (false), `hideAbout` (configured default, else false), `locale` (a dictionary), and the
 live-stream options: `live` (LiveInput), `presence` (`{ everyMs, graceMs }` | PresenceGroup | false),
 `loadOnPlay`, `adapters` + `src` (open `src` through hls.js/dash.js adapters; the element should have no
 `src` of its own), `sources` (+ `preferAlternateInFullscreen`, `onSourceChange(index, source)`) and
@@ -206,7 +214,7 @@ Script tag equivalent — `data-auto`, `data-accent`, `data-autohide`, `data-key
 `data-observe`, `data-cast`, `data-hide-about`, `data-speed`, `data-live` (bare | true | false | off | JSON),
 `data-load-on-play`, `data-presence-every-ms` + `data-presence-grace-ms` (make the page's presence
 group), `data-presence="off"` — installs `window.kuiPlayer` with
-`mount`, `unmount`, `unmountAll`, `isMounted`, `skinAll`, `version`, `define`, `setPagePresence(options | group | null)`,
+`mount`, `unmount`, `unmountAll`, `isMounted`, `skinAll`, `version`, `define`, `configurePlayer(defaults)`, `playerDefaults()`, `setPagePresence(options | group | null)`,
 `getPagePresence()`, `createPagePresenceGroup(options)`.
 
 Page-level presence group (one timer, one prompt for every skinned video): `setPagePresence({ everyMs,

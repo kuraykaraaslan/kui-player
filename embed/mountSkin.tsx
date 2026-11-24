@@ -50,7 +50,8 @@ export interface SkinOptions {
   cast?: boolean;
   /**
    * Hide the About entry of the settings menu and its dialog (author, website),
-   * for white-label products. Default `false`.
+   * for white-label products. Default: the `configurePlayer({ hideAbout })`
+   * default, else `false`.
    */
   hideAbout?: boolean;
   /** Dictionary for the controls and the presence prompt — anything it leaves out is English. */
@@ -352,7 +353,7 @@ export function mountSkin(video: HTMLVideoElement, opts: SkinOptions = {}): Skin
         src={initialSrc ?? (video.currentSrc || video.src)}
         poster={video.poster || undefined}
         enableCast={opts.cast ?? false}
-        hideAbout={opts.hideAbout ?? false}
+        hideAbout={opts.hideAbout}
         alternateSources={alternates ?? undefined}
         alternateIndex={alternateIndex}
         onAlternateSelect={selectAlternate}

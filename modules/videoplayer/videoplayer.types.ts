@@ -209,7 +209,8 @@ export type VideoPlayerProps = {
   enablePictureInPicture?: boolean;
   /**
    * Hide the About entry of the settings menu and its dialog (author, website),
-   * for white-label products. Default `false`.
+   * for white-label products. Default: the `configurePlayer({ hideAbout })`
+   * default, else `false`.
    */
   hideAbout?: boolean;
   /** Touch gestures. `false` disables them entirely. Default `true`. */

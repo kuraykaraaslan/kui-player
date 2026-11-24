@@ -214,7 +214,7 @@ function VideoPlayerInner({
   onQualityChange, onAudioTrackChange,
   adapters, sources: alternateSources, preferAlternateInFullscreen = false, onSourceChange,
   enableCast = false, castQueue, castReceiverAppId,
-  enablePictureInPicture = true, gestures = true, hideAbout = false,
+  enablePictureInPicture = true, gestures = true, hideAbout,
   playlist, playlistIndex, onPlaylistIndexChange, playlistCountdown,
   mediaSession = true, persist = false, share = false, shortcuts, skipSegments, miniPlayer, documentPictureInPicture, translation, frameTools, audioOnly, waveform, offline, learning, audioDescription, signLanguage, watermark, theme, slots,
   autoFullscreenOnLandscape = false, onCastStateChange, onControlsVisibilityChange, className,

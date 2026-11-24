@@ -3,6 +3,7 @@ import { act, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { defineKuiPlayer, type KuiPlayerElement } from '../../embed/webComponent';
 import { setPagePresence } from '../../embed/pagePresence';
+import { configurePlayer } from '../../modules/videoplayer/videoplayer.config';
 import { emit } from '../setup';
 import { fakeAdapter, stubObservers } from './skin-harness';
 
@@ -164,6 +165,8 @@ async function hasAboutRow(): Promise<boolean> {
 }
 
 describe('<kui-player>: hide-about', () => {
+  afterEach(() => configurePlayer({ hideAbout: undefined }));
+
   it('shows the About entry by default', async () => {
     element({ src: 'https://example.com/a.mp4' });
     expect(await hasAboutRow()).toBe(true);
@@ -178,6 +181,14 @@ describe('<kui-player>: hide-about', () => {
 
   it('reads hide-about="false" as off', async () => {
     element({ src: 'https://example.com/a.mp4', 'hide-about': 'false' });
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('follows configurePlayer without the attribute, and hide-about="false" overrides it', async () => {
+    configurePlayer({ hideAbout: true });
+    const el = element({ src: 'https://example.com/a.mp4' });
+    expect(await hasAboutRow()).toBe(false);
+    act(() => { el.setAttribute('hide-about', 'false'); });
     expect(await hasAboutRow()).toBe(true);
   });
 });
@@ -263,6 +274,19 @@ describe('the embed script', () => {
     script({ auto: 'video', 'hide-about': 'true' });
     await import('../../embed/index');
     expect(await hasAboutRow()).toBe(false);
+  });
+
+  it('sets the library-wide defaults from the global, and data-hide-about="false" overrides them', async () => {
+    document.body.innerHTML = '<video src="a.mp4"></video>';
+    script({ auto: 'video', 'hide-about': 'false' });
+    await import('../../embed/index');
+    window.kuiPlayer!.configurePlayer({ hideAbout: true });
+    try {
+      expect(window.kuiPlayer!.playerDefaults()).toEqual({ hideAbout: true });
+      expect(await hasAboutRow()).toBe(true);
+    } finally {
+      window.kuiPlayer!.configurePlayer({ hideAbout: undefined });
+    }
   });
 
   it('makes a group on demand from the global', async () => {

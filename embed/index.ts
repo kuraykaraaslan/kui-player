@@ -6,6 +6,7 @@ import {
   type PagePresenceOptions,
 } from './pagePresence.js';
 import { isOff, parseFlag, parseLive, parsePresence } from './attributes.js';
+import { configurePlayer, playerDefaults, type PlayerDefaults } from '../modules/videoplayer/videoplayer.config.js';
 import type { PresenceGroup } from '../modules/videoplayer/videoplayer.presence.js';
 
 // Injected by Vite `define` at build time (see vite.config.embed.ts).
@@ -32,6 +33,10 @@ export interface KuiPlayerApi {
   getPagePresence(): PresenceGroup | null;
   /** A group with its page-level prompt (`prompt: false` to leave the prompt out). Not made the default. */
   createPagePresenceGroup(options: PagePresenceOptions): PresenceGroup;
+  /** Library-wide defaults (`{ hideAbout }`) for every player on the page; a player's own option wins. */
+  configurePlayer(defaults: PlayerDefaults): void;
+  /** The defaults set with `configurePlayer`. */
+  playerDefaults(): Readonly<PlayerDefaults>;
 }
 
 declare global {
@@ -75,6 +80,8 @@ const api: KuiPlayerApi = {
   setPagePresence,
   getPagePresence,
   createPagePresenceGroup,
+  configurePlayer,
+  playerDefaults,
 };
 
 // ─── zero-config auto-start ──────────────────────────────────────────────────
@@ -122,7 +129,8 @@ function autoStart(): void {
       enableKeyboard: flag('keyboard', true),
       hideNativeControls: flag('nativeControls', false) ? false : true,
       cast: flag('cast', false),
-      hideAbout: flag('hideAbout', false),
+      // Absent: the library-wide default (`configurePlayer`) decides.
+      hideAbout: script.dataset.hideAbout === undefined ? undefined : flag('hideAbout', true),
       observe: flag('observe', true),
       defaultSpeed: script.dataset.speed ? Number(script.dataset.speed) : undefined,
       live: parseLive(script.dataset.live),

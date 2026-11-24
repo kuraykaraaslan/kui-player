@@ -17,6 +17,8 @@ export {
   PresenceGroupProvider, usePresenceGroup, createPresenceGroup,
 } from './presence.js';
 export { setPagePresence };
+export { configurePlayer, playerDefaults } from '../../modules/videoplayer/videoplayer.config.js';
+export type { PlayerDefaults } from '../../modules/videoplayer/videoplayer.config.js';
 export type { PresenceGroup, PresenceOptions, LiveInput, AlternateSource, MediaAdapter };
 
 /**
@@ -43,8 +45,11 @@ export const KuiPlayer = defineComponent({
     loop: { type: Boolean, default: false },
     muted: { type: Boolean, default: false },
     cast: { type: Boolean, default: false },
-    /** Hide the About entry of the settings menu and its dialog (white-label products). */
-    hideAbout: { type: Boolean, default: false },
+    /**
+     * Hide the About entry of the settings menu and its dialog (white-label products).
+     * Left out: the `configurePlayer({ hideAbout })` default, else shown.
+     */
+    hideAbout: { type: Boolean, default: undefined },
     options: { type: Object as PropType<SkinOptions>, default: () => ({}) },
 
     /**

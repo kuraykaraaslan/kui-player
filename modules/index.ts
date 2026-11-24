@@ -6,6 +6,8 @@ export type { StoreApi, StoreListener } from './videoplayer/store.js';
 export type { VideoPlayerState, VideoPlayerActions, VideoPlayerStore, VideoPlayerStoreApi } from './videoplayer/videoplayer.store.js';
 export { formatTime } from './videoplayer/videoplayer.format.js';
 export { PLAYER_META } from './videoplayer/videoplayer.meta.js';
+export { configurePlayer, playerDefaults } from './videoplayer/videoplayer.config.js';
+export type { PlayerDefaults } from './videoplayer/videoplayer.config.js';
 export {
   parseVtt, parseChapters, parseStoryboard, parseTimestamp,
 } from './videoplayer/videoplayer.vtt.js';

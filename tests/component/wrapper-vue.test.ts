@@ -6,6 +6,7 @@ import {
   KuiPlayer, PresenceGroupProvider, createPresenceGroup, setPagePresence, usePresenceGroup as groupOfProvider,
 } from '../../wrappers/vue/KuiPlayer';
 import { tr } from '../../react/i18n/locales/tr';
+import { configurePlayer } from '../../wrappers/vue/KuiPlayer';
 import { fakeAdapter, stubFullscreen, stubObservers } from './skin-harness';
 
 /*
@@ -207,6 +208,8 @@ describe('Vue wrapper: alternate sources', () => {
 });
 
 describe('Vue wrapper: hideAbout', () => {
+  afterEach(() => configurePlayer({ hideAbout: undefined }));
+
   async function hasAboutRow(): Promise<boolean> {
     await userEvent.setup().click(chromeOf().getByRole('button', { name: 'Settings' }));
     await chromeOf().findByRole('menu');
@@ -223,6 +226,18 @@ describe('Vue wrapper: hideAbout', () => {
     await mount(() => h(KuiPlayer, { src: 'https://example.com/a.mp4', hideAbout: state.hideAbout }));
     expect(await hasAboutRow()).toBe(false);
     await act(async () => { state.hideAbout = false; await nextTick(); });
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('follows configurePlayer when the prop is left out', async () => {
+    configurePlayer({ hideAbout: true });
+    await mount(() => h(KuiPlayer, { src: 'https://example.com/a.mp4' }));
+    expect(await hasAboutRow()).toBe(false);
+  });
+
+  it('shows it with :hide-about="false" whatever the default', async () => {
+    configurePlayer({ hideAbout: true });
+    await mount(() => h(KuiPlayer, { src: 'https://example.com/a.mp4', hideAbout: false }));
     expect(await hasAboutRow()).toBe(true);
   });
 });

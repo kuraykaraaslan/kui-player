@@ -22,7 +22,7 @@ All of them take the same options as the React `<VideoPlayer>` for live streams,
 | `adapters` | `createHlsAdapter(...)` and friends, to open `src` / `sources` |
 | `sources`, `preferAlternateInFullscreen` | "Standard" / "High" in the quality menu; the second in fullscreen on request |
 | `locale` | a dictionary for the controls and the presence prompt |
-| `hideAbout` | leave the *About* entry and its dialog out of the settings menu (white-label products) |
+| `hideAbout` | leave the *About* entry and its dialog out of the settings menu (white-label products). Left out: the default from `configurePlayer({ hideAbout: true })` (exported by every entry), set once for all players |
 
 > **Skin mode normally leaves the media pipeline alone** — the page's own hls.js or
 > `<video src>` keeps feeding the element. Two of these options touch it, and only when

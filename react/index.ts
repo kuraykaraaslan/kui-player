@@ -10,6 +10,8 @@ export { PresenceGroupProvider, PresencePrompt } from './presence.js';
 export type { PresenceGroupProviderProps, PresencePromptProps } from './presence.js';
 export { usePresenceGroup } from './PresenceGroupContext.js';
 export { createPresenceGroup } from '../modules/videoplayer/videoplayer.presence.js';
+export { configurePlayer, playerDefaults } from '../modules/videoplayer/videoplayer.config.js';
+export type { PlayerDefaults } from '../modules/videoplayer/videoplayer.config.js';
 export type {
   PresenceGroup, PresenceOptions, PresenceState, PresencePhase, PresenceMember, PresenceEvent,
 } from '../modules/videoplayer/videoplayer.presence.js';

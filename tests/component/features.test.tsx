@@ -2,7 +2,7 @@ import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { VideoPlayer } from '../../react';
+import { VideoPlayer, configurePlayer } from '../../react';
 import { VideoPlayerEngine } from '../../modules/videoplayer/videoplayer.engine';
 import { emit } from '../setup';
 
@@ -1596,6 +1596,8 @@ describe('study mode', () => {
 });
 
 describe('the About entry', () => {
+  afterEach(() => configurePlayer({ hideAbout: undefined }));
+
   async function openSettings(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('menu');
@@ -1617,5 +1619,21 @@ describe('the About entry', () => {
     // The rest of the menu is unaffected.
     expect(screen.getByRole('menuitem', { name: /Speed/ })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('is left out on every player with configurePlayer({ hideAbout: true })', async () => {
+    configurePlayer({ hideAbout: true });
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} />);
+    await openSettings(user);
+    expect(screen.queryByRole('menuitem', { name: /About/ })).not.toBeInTheDocument();
+  });
+
+  it('comes back on a player that says hideAbout={false}, whatever the default', async () => {
+    configurePlayer({ hideAbout: true });
+    const user = userEvent.setup();
+    render(<VideoPlayer src={SRC} enableCast={false} hideAbout={false} />);
+    await openSettings(user);
+    expect(screen.getByRole('menuitem', { name: /About/ })).toBeInTheDocument();
   });
 });

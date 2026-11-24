@@ -505,7 +505,7 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `castQueue` | `CastQueueItem[]` | cast a playlist; the receiver owns the queue |
 | `castReceiverAppId` | `string` | custom receiver application id |
 | `enablePictureInPicture` | `boolean` | defaults to `true`; the button hides itself where PiP is unsupported |
-| `hideAbout` | `boolean` | default `false`. Leaves the *About* entry out of the settings menu, so its dialog (author, website) can never open: for white-label products. Skin mode: `hideAbout`, `<kui-player hide-about>`, `data-hide-about` on the script tag |
+| `hideAbout` | `boolean` | leaves the *About* entry out of the settings menu, so its dialog (author, website) can never open: for white-label products. Left out: the [`configurePlayer`](#library-wide-defaults) default, else `false`. Skin mode: `hideAbout`, `<kui-player hide-about>`, `data-hide-about` on the script tag |
 | `gestures` | `boolean \| GestureOptions` | touch gestures, see [Touch gestures](#touch-gestures) |
 | `autoFullscreenOnLandscape` | `boolean` | fullscreen when a phone rotates while playing |
 | `preferNativeIosFullscreen` | `boolean` | use the iOS OS player instead of emulated fullscreen |
@@ -513,6 +513,23 @@ Pass `preferNativeIosFullscreen` to prefer the OS player on iOS instead, or
 | `className` | `string` | root element class |
 | `icons` | `IconOverrides` | replace any built-in glyph |
 | `injectStyles` | `boolean` | defaults to `true`; `false` if you link `styles.css` yourself |
+
+### Library-wide defaults
+
+Set an option once for every player on the page instead of on each one:
+
+```ts
+import { configurePlayer } from "@kuraykaraaslan/kui-player";
+
+configurePlayer({ hideAbout: true });   // once, at start-up, before the first player
+```
+
+A player's own option still wins (`<VideoPlayer hideAbout={false}>`, `<kui-player hide-about="false">`),
+so the order is: the player's option, else the configured default, else the built-in default.
+React, the facade, skin mode, `<kui-player>`, the Vue and Svelte wrappers and the embed script all read
+it (the embed bundle has it as `kuiPlayer.configurePlayer(...)`); the defaults live on `globalThis`, so
+two copies of the library on one page agree. `playerDefaults()` returns what is set.
+`PlayerDefaults` is the library's configuration standard and starts with `hideAbout`; more keys will follow.
 
 ---
 
@@ -536,7 +553,7 @@ engine.store.subscribe((s) => {
 
 | Specifier | Contents |
 |---|---|
-| `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
+| `@kuraykaraaslan/kui-player` | Vanilla core: `VideoPlayerEngine`, `createVideoPlayerStore`, `createHlsAdapter`, `createDashAdapter`, `formatTime`, `configurePlayer` / `playerDefaults` (library-wide defaults, also on the React, skin, Vue and Svelte entries), constants (`SPEEDS`, `SUBTITLE_SIZES`), and all types |
 | `@kuraykaraaslan/kui-player/react` | React `<VideoPlayer />`, hooks (`useVideoPlayerEngine`, `useVideoPlayerStore`, `useTouchGestures`), `Icon`/`IconProvider`, `PLAYER_CSS` |
 | `@kuraykaraaslan/kui-player/skin` | `mountSkin`, `skinAll`, `defineKuiPlayer`, and the page-level presence group: `setPagePresence`, `getPagePresence`, `createPagePresenceGroup`, `mountPresencePrompt`, `createPresenceGroup` — skin mode and the custom element |
 | `@kuraykaraaslan/kui-player/locales` | `tr`, `de`, `es`, `fr`, `ar` |

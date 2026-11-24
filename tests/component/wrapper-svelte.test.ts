@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { flushSync, mount, unmount } from 'svelte';
-import { kuiPlayer, createPresenceGroup, setPagePresence, type SkinOptions } from '../../wrappers/svelte/kuiPlayer';
+import {
+  kuiPlayer, configurePlayer, createPresenceGroup, setPagePresence, type SkinOptions,
+} from '../../wrappers/svelte/kuiPlayer';
 import { tr } from '../../react/i18n/locales/tr';
 import PresenceHost from './fixtures/PresenceHost.svelte';
 import SetHost from './fixtures/SetHost.svelte';
@@ -163,6 +165,8 @@ describe('Svelte action: alternate sources', () => {
 });
 
 describe('Svelte action: hideAbout', () => {
+  afterEach(() => configurePlayer({ hideAbout: undefined }));
+
   async function hasAboutRow(): Promise<boolean> {
     await userEvent.setup().click(chromeOf().getByRole('button', { name: 'Settings' }));
     await chromeOf().findByRole('menu');
@@ -176,6 +180,14 @@ describe('Svelte action: hideAbout', () => {
 
   it('leaves it out with hideAbout, and remounts when the option changes', async () => {
     const action = useAction(pageVideo({ src: 'https://example.com/a.mp4' }), { hideAbout: true });
+    expect(await hasAboutRow()).toBe(false);
+    act(() => { action.update({ hideAbout: false }); });
+    expect(await hasAboutRow()).toBe(true);
+  });
+
+  it('follows configurePlayer when the option is left out, and hideAbout: false overrides it', async () => {
+    configurePlayer({ hideAbout: true });
+    const action = useAction(pageVideo({ src: 'https://example.com/a.mp4' }), {});
     expect(await hasAboutRow()).toBe(false);
     act(() => { action.update({ hideAbout: false }); });
     expect(await hasAboutRow()).toBe(true);
